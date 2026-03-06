@@ -1,0 +1,306 @@
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { SectionHeader } from "@/components/dashboard/SectionHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Navigate } from "react-router-dom";
+
+type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
+
+interface ProfileRow {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  tenant_id: string | null;
+}
+
+interface RoleRow {
+  id: string;
+  user_id: string;
+  role: AppRole;
+  tenant_id: string | null;
+}
+
+interface ObraRow {
+  id: string;
+  nome: string;
+  endereco: string | null;
+  status: string;
+  data_inicio: string | null;
+  data_previsao: string | null;
+}
+
+const roleBadgeColor: Record<AppRole, string> = {
+  admin: "bg-destructive/20 text-destructive",
+  gestor: "bg-primary/20 text-primary",
+  operacional: "bg-chart-4/20 text-chart-4",
+  visualizador: "bg-muted text-muted-foreground",
+};
+
+export default function AdminPage() {
+  const { isAdmin, profile } = useAuth();
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [userRoles, setUserRoles] = useState<RoleRow[]>([]);
+  const [obras, setObras] = useState<ObraRow[]>([]);
+  const [newObraNome, setNewObraNome] = useState("");
+  const [newObraEndereco, setNewObraEndereco] = useState("");
+  const [obraDialogOpen, setObraDialogOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("visualizador");
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const tenantId = profile?.tenant_id;
+
+  const fetchData = async () => {
+    if (!tenantId) return;
+
+    const [profRes, rolesRes, obrasRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("tenant_id", tenantId),
+      supabase.from("user_roles").select("*").eq("tenant_id", tenantId),
+      supabase.from("obras").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+    ]);
+
+    if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
+    if (rolesRes.data) setUserRoles(rolesRes.data as RoleRow[]);
+    if (obrasRes.data) setObras(obrasRes.data as ObraRow[]);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [tenantId]);
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  const getUserRoles = (userId: string) => userRoles.filter((r) => r.user_id === userId);
+
+  const addRole = async () => {
+    if (!selectedUserId || !tenantId) return;
+    const { error } = await supabase.from("user_roles").insert({
+      user_id: selectedUserId,
+      role: selectedRole,
+      tenant_id: tenantId,
+    } as any);
+    if (error) {
+      toast.error("Erro ao adicionar papel: " + error.message);
+    } else {
+      toast.success("Papel adicionado!");
+      fetchData();
+    }
+  };
+
+  const removeRole = async (roleId: string) => {
+    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
+    if (error) {
+      toast.error("Erro ao remover papel");
+    } else {
+      toast.success("Papel removido");
+      fetchData();
+    }
+  };
+
+  const addObra = async () => {
+    if (!newObraNome.trim() || !tenantId) return;
+    const { error } = await supabase.from("obras").insert({
+      nome: newObraNome,
+      endereco: newObraEndereco || null,
+      tenant_id: tenantId,
+    } as any);
+    if (error) {
+      toast.error("Erro ao criar obra: " + error.message);
+    } else {
+      toast.success("Obra criada!");
+      setNewObraNome("");
+      setNewObraEndereco("");
+      setObraDialogOpen(false);
+      fetchData();
+    }
+  };
+
+  const deleteObra = async (id: string) => {
+    const { error } = await supabase.from("obras").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir obra");
+    } else {
+      toast.success("Obra excluída");
+      fetchData();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Painel Administrativo"
+        subtitle="Gerencie usuários, permissões e obras"
+        icon={<Shield className="h-6 w-6" />}
+      />
+
+      <Tabs defaultValue="usuarios" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="usuarios" className="gap-1.5">
+            <UserPlus className="h-4 w-4" /> Usuários & Permissões
+          </TabsTrigger>
+          <TabsTrigger value="obras" className="gap-1.5">
+            <HardHat className="h-4 w-4" /> Obras
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios" className="space-y-4">
+          {/* Assign role */}
+          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Usuário</label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Selecionar usuário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.full_name || p.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Papel</label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="operacional">Operacional</SelectItem>
+                  <SelectItem value="visualizador">Visualizador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={addRole} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Atribuir
+            </Button>
+          </div>
+
+          {/* Users table */}
+          <div className="glass-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Papéis</TableHead>
+                  <TableHead className="w-[80px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {profiles.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.full_name || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {getUserRoles(p.id).map((r) => (
+                          <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-xs cursor-pointer`} onClick={() => removeRole(r.id)}>
+                            {r.role} ✕
+                          </Badge>
+                        ))}
+                        {getUserRoles(p.id).length === 0 && (
+                          <span className="text-xs text-muted-foreground">Sem papel</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                ))}
+                {profiles.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Nenhum usuário encontrado neste tenant
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="obras" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Obras cadastradas</h3>
+            <Dialog open={obraDialogOpen} onOpenChange={setObraDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Nova Obra
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Nova Obra</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Nome da obra</label>
+                    <Input value={newObraNome} onChange={(e) => setNewObraNome(e.target.value)} placeholder="Ex: Residencial Vila Nova" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Endereço</label>
+                    <Input value={newObraEndereco} onChange={(e) => setNewObraEndereco(e.target.value)} placeholder="Ex: Rua das Flores, 123" />
+                  </div>
+                  <Button onClick={addObra} className="w-full">Criar Obra</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[80px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {obras.map((o) => (
+                  <TableRow key={o.id}>
+                    <TableCell className="font-medium">{o.nome}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{o.endereco || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">
+                        {o.status === "em_andamento" ? "Em andamento" : o.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => deleteObra(o.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {obras.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Nenhuma obra cadastrada
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
