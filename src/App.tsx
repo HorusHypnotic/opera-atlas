@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ObraProvider } from "@/hooks/useObra";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardOverview from "./pages/DashboardOverview";
@@ -34,19 +35,21 @@ const App = () => (
             } />
             <Route path="/*" element={
               <ProtectedRoute>
-                <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<DashboardOverview />} />
-                    <Route path="/organizacao" element={<OrganizacaoPage />} />
-                    <Route path="/padronizacao" element={<PadronizacaoPage />} />
-                    <Route path="/eficiencia" element={<EficienciaPage />} />
-                    <Route path="/reducao-perdas" element={<ReducaoPerdasPage />} />
-                    <Route path="/analise-continua" element={<AnaliseContinuaPage />} />
-                    <Route path="/seguranca-qualidade" element={<SegurancaQualidadePage />} />
-                    <Route path="/admin" element={<AdminPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppLayout>
+                <ObraProvider>
+                  <AppLayout>
+                    <Routes>
+                      <Route path="/" element={<DashboardOverview />} />
+                      <Route path="/organizacao" element={<OrganizacaoPage />} />
+                      <Route path="/padronizacao" element={<PadronizacaoPage />} />
+                      <Route path="/eficiencia" element={<EficienciaPage />} />
+                      <Route path="/reducao-perdas" element={<ReducaoPerdasPage />} />
+                      <Route path="/analise-continua" element={<AnaliseContinuaPage />} />
+                      <Route path="/seguranca-qualidade" element={<SegurancaQualidadePage />} />
+                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AppLayout>
+                </ObraProvider>
               </ProtectedRoute>
             } />
           </Routes>
