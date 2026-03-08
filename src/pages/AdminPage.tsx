@@ -152,6 +152,7 @@ export default function AdminPage() {
     } else {
       toast.success("Obra excluída");
       fetchData();
+      refetchObras();
     }
   };
 
