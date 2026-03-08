@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3, Crown, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
+import { useObra } from "@/hooks/useObra";
 import { BetaUsersTab } from "@/components/admin/BetaUsersTab";
 import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
 import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
@@ -54,6 +55,7 @@ const roleBadgeColor: Record<AppRole, string> = {
 
 export default function AdminPage() {
   const { isAdmin, profile, isSuperAdmin } = useAuth();
+  const { refetch: refetchObras } = useObra();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [userRoles, setUserRoles] = useState<RoleRow[]>([]);
   const [obras, setObras] = useState<ObraRow[]>([]);
@@ -139,6 +141,7 @@ export default function AdminPage() {
       setNewObraEndereco("");
       setObraDialogOpen(false);
       fetchData();
+      refetchObras();
     }
   };
 
@@ -149,6 +152,7 @@ export default function AdminPage() {
     } else {
       toast.success("Obra excluída");
       fetchData();
+      refetchObras();
     }
   };
 
