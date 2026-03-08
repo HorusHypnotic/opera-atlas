@@ -27,7 +27,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { profile, isAdmin, isGuest, signOut } = useAuth();
+  const { profile, isAdmin, isGuest, isSuperAdmin, signOut } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -77,7 +77,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
+              {(isAdmin && !isGuest) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink
