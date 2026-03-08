@@ -134,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: hasRole("admin"),
         isGestor: hasRole("gestor"),
         isGuest,
+        isSuperAdmin: profile?.is_super_admin ?? false,
         signOut,
         enterGuestMode,
       }}
