@@ -3,6 +3,8 @@ import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
+import { FornecedorRankingCard } from "@/components/dashboard/FornecedorRankingCard";
+import { CustoPorCategoriaCard } from "@/components/dashboard/CustoPorCategoriaCard";
 import { useTableData } from "@/hooks/useTableData";
 import { TrendingUp, DollarSign, PiggyBank, AlertTriangle, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -103,6 +105,12 @@ export default function AnaliseContinuaPage() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Intelligence Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <FornecedorRankingCard lancamentos={lancamentos} />
+        <CustoPorCategoriaCard lancamentos={lancamentos} />
+      </div>
 
       <Tabs defaultValue="lancamentos" className="space-y-4">
         <TabsList>

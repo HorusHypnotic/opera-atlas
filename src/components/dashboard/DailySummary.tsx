@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Calendar, Users, DollarSign, AlertTriangle, Package, CheckCircle2 } from "lucide-react";
+import { ShareButton } from "@/components/dashboard/ShareButton";
 
 interface DailySummaryProps {
   registros: any[];
@@ -9,9 +10,10 @@ interface DailySummaryProps {
   acoes: any[];
   checklist: any[];
   colaboradores: any[];
+  obraNome?: string;
 }
 
-export function DailySummary({ registros, presencas, lancamentos, consumo, acoes, checklist, colaboradores }: DailySummaryProps) {
+export function DailySummary({ registros, presencas, lancamentos, consumo, acoes, checklist, colaboradores, obraNome }: DailySummaryProps) {
   const today = new Date().toISOString().substring(0, 10);
 
   const stats = useMemo(() => {
@@ -48,14 +50,17 @@ export function DailySummary({ registros, presencas, lancamentos, consumo, acoes
     { icon: <CheckCircle2 className="h-3.5 w-3.5" />, text: `${stats.checklistPendentes} checklist pendentes`, color: stats.checklistPendentes > 0 ? "text-status-warning" : "text-status-ok" },
   ];
 
+  const summaryText = items.map(i => `${i.text}${i.sub ? ` (${i.sub})` : ""}`).join("\n");
+
   return (
     <div className="glass-card p-4 mb-6">
       <div className="flex items-center gap-2 mb-2">
         <Calendar className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Resumo do dia</h3>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground flex-1">
           {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
         </span>
+        <ShareButton summary={summaryText} obraNome={obraNome || "Obra"} />
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-1.5">
         {items.map((item, i) => (

@@ -3,6 +3,7 @@ import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { GaugeChart } from "@/components/dashboard/GaugeChart";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
+import { WasteRankingCard } from "@/components/dashboard/WasteRankingCard";
 import { useTableData } from "@/hooks/useTableData";
 import { Package, AlertTriangle, TrendingDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +53,11 @@ export default function PadronizacaoPage() {
         </div>
         <KPICard title="Compras Emergenciais" value={compras.length} icon={<AlertTriangle className="h-5 w-5" />} tooltip="Compras fora do planejamento" status={compras.length > 0 ? "critical" : "ok"} subtitle="fora do planejamento" />
         <KPICard title="% Desperdício" value={`${desperdicioTotal.toFixed(1)}%`} icon={<TrendingDown className="h-5 w-5" />} tooltip="Meta: < 5%" status={desperdicioStatus as any} subtitle="Meta: < 5%" />
+      </div>
+
+      {/* Waste Ranking */}
+      <div className="mb-6">
+        <WasteRankingCard consumo={consumo} />
       </div>
 
       <Tabs defaultValue="consumo" className="space-y-4">

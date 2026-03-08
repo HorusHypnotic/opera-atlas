@@ -277,15 +277,26 @@ export default function ObrasPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Orçamento total (R$)</label>
-                    <Input type="number" value={form.orcamento_total} onChange={e => setForm(p => ({ ...p, orcamento_total: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.orcamento_total} onChange={e => {
+                      const orcamento = e.target.value;
+                      const area = parseFloat(form.area_m2) || 0;
+                      const custoM2 = area > 0 ? (parseFloat(orcamento) || 0) / area : 0;
+                      setForm(p => ({ ...p, orcamento_total: orcamento, custo_orcado_m2: custoM2 > 0 ? custoM2.toFixed(2) : p.custo_orcado_m2 }));
+                    }} placeholder="0" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Custo orçado/m² (R$)</label>
-                    <Input type="number" value={form.custo_orcado_m2} onChange={e => setForm(p => ({ ...p, custo_orcado_m2: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.custo_orcado_m2} onChange={e => setForm(p => ({ ...p, custo_orcado_m2: e.target.value }))} placeholder="Auto-calculado" />
+                    <p className="text-[10px] text-muted-foreground">Calculado automaticamente se preencher orçamento e área</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Área total (m²)</label>
-                    <Input type="number" value={form.area_m2} onChange={e => setForm(p => ({ ...p, area_m2: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.area_m2} onChange={e => {
+                      const area = e.target.value;
+                      const orcamento = parseFloat(form.orcamento_total) || 0;
+                      const custoM2 = (parseFloat(area) || 0) > 0 ? orcamento / parseFloat(area) : 0;
+                      setForm(p => ({ ...p, area_m2: area, custo_orcado_m2: custoM2 > 0 ? custoM2.toFixed(2) : p.custo_orcado_m2 }));
+                    }} placeholder="0" />
                   </div>
                 </div>
 
@@ -399,6 +410,38 @@ export default function ObrasPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Progress bars */}
+                <div className="space-y-2">
+                  {obra.data_inicio && obra.data_previsao && (
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> Progresso Temporal
+                        </span>
+                        <span className={`text-[10px] font-mono font-semibold ${
+                          diasRestantes !== null && diasRestantes < 0 ? "text-status-critical" :
+                          diasRestantes !== null && diasRestantes < 30 ? "text-status-warning" : "text-muted-foreground"
+                        }`}>
+                          {(() => {
+                            const totalDias = differenceInDays(parseISO(obra.data_previsao!), parseISO(obra.data_inicio!));
+                            const pct = totalDias > 0 ? Math.min(100, (dias / totalDias) * 100) : 0;
+                            return `${pct.toFixed(0)}%`;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            diasRestantes !== null && diasRestantes < 0 ? "bg-status-critical" :
+                            diasRestantes !== null && diasRestantes < 30 ? "bg-status-warning" : "bg-primary"
+                          }`}
+                          style={{ width: `${Math.min(100, obra.data_previsao ? (dias / Math.max(1, differenceInDays(parseISO(obra.data_previsao), parseISO(obra.data_inicio!)))) * 100 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* PMI badges */}
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary" className={`text-[10px] ${faseInfo.color}`}>
@@ -447,6 +490,11 @@ export default function ObrasPage() {
                   {obra.data_previsao && (
                     <span className="flex items-center gap-1">
                       <Target className="h-3 w-3" /> {format(parseISO(obra.data_previsao), "dd/MM/yyyy")}
+                    </span>
+                  )}
+                  {obra.custo_orcado_m2 > 0 && (
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" /> R$ {obra.custo_orcado_m2.toFixed(2)}/m²
                     </span>
                   )}
                 </div>
