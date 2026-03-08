@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Clock, UserCheck } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, MessageCircle, Copy, Check } from "lucide-react";
+
+const whatsapp = "5594992193129";
 
 interface BetaUser {
   id: string;
@@ -35,6 +37,7 @@ const statusColors: Record<string, string> = {
 export function BetaUsersTab() {
   const [users, setUsers] = useState<BetaUser[]>([]);
   const [filterStatus, setFilterStatus] = useState("todos");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     let q = supabase.from("beta_waitlist").select("*").order("created_at", { ascending: false });
@@ -51,7 +54,34 @@ export function BetaUsersTab() {
     else { toast.success("Status atualizado!"); fetchUsers(); }
   };
 
-  const filtered = users;
+  const approveAndNotify = async (user: BetaUser) => {
+    await updateStatus(user.id, "aprovado");
+    // Open WhatsApp with pre-filled approval message
+    const signupUrl = `${window.location.origin}/login`;
+    const phone = user.telefone?.replace(/\D/g, "") || "";
+    const msg = encodeURIComponent(
+      `Olá ${user.nome}! 🎉\n\n` +
+      `Seu acesso ao Beta do Método O.P.E.R.A. foi *aprovado*!\n\n` +
+      `Crie sua conta acessando:\n${signupUrl}\n\n` +
+      `Use o email: ${user.email}\n\n` +
+      `Qualquer dúvida, estamos aqui!`
+    );
+    if (phone) {
+      window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
+    } else {
+      // Copy message to clipboard if no phone
+      navigator.clipboard.writeText(decodeURIComponent(msg));
+      toast.info("Mensagem copiada! O usuário não tem telefone cadastrado.");
+    }
+  };
+
+  const copySignupLink = (user: BetaUser) => {
+    const link = `${window.location.origin}/login`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(user.id);
+    toast.success("Link de cadastro copiado!");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   return (
     <div className="space-y-4">
@@ -68,7 +98,7 @@ export function BetaUsersTab() {
             <SelectItem value="rejeitado">Rejeitados</SelectItem>
           </SelectContent>
         </Select>
-        <Badge variant="secondary" className="text-xs">{filtered.length} registros</Badge>
+        <Badge variant="secondary" className="text-xs">{users.length} registros</Badge>
       </div>
 
       <div className="glass-card overflow-hidden">
@@ -77,18 +107,20 @@ export function BetaUsersTab() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Telefone</TableHead>
               <TableHead>Empresa</TableHead>
               <TableHead>Código</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead className="w-[180px]">Ações</TableHead>
+              <TableHead className="w-[200px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((u) => (
+            {users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.nome}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{u.telefone || "—"}</TableCell>
                 <TableCell className="text-sm">{u.empresa || "—"}</TableCell>
                 <TableCell className="text-sm font-mono">{u.influencer_code || "—"}</TableCell>
                 <TableCell>
@@ -102,8 +134,13 @@ export function BetaUsersTab() {
                 <TableCell>
                   <div className="flex gap-1">
                     {u.status !== "aprovado" && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Aprovar" onClick={() => updateStatus(u.id, "aprovado")}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Aprovar e notificar via WhatsApp" onClick={() => approveAndNotify(u)}>
                         <CheckCircle2 className="h-3.5 w-3.5 text-status-ok" />
+                      </Button>
+                    )}
+                    {u.status === "aprovado" && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link de cadastro" onClick={() => copySignupLink(u)}>
+                        {copiedId === u.id ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
                     )}
                     {u.status !== "rejeitado" && (
@@ -116,13 +153,20 @@ export function BetaUsersTab() {
                         <Clock className="h-3.5 w-3.5 text-chart-4" />
                       </Button>
                     )}
+                    {u.telefone && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" asChild>
+                        <a href={`https://wa.me/55${u.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && (
+            {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   Nenhum registro encontrado
                 </TableCell>
               </TableRow>
