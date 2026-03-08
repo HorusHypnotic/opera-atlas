@@ -73,15 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let initialSessionHandled = false;
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await fetchProfileAndRoles(session.user.id);
+          setTimeout(() => fetchProfileAndRoles(session.user.id), 0);
         } else {
           setProfile(null);
           setRoles([]);
@@ -90,13 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (initialSessionHandled) return;
-      initialSessionHandled = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchProfileAndRoles(session.user.id);
+        fetchProfileAndRoles(session.user.id);
       }
       setLoading(false);
     });
