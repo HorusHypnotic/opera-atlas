@@ -96,4 +96,24 @@ export const DEMO_DATA: Record<string, any[]> = {
     { id: "ac4", ...base, descricao: "Devolver compactador de solo ocioso ao fornecedor — custo de locação", responsavel: "Pedro Lima", pilar: "eficiencia", prioridade: "media", status: "pendente", prazo: daysAgo(-5), created_at: daysAgo(7), updated_at: daysAgo(7) },
     { id: "ac5", ...base, descricao: "Renegociar prazo de entrega de material elétrico com Eletropaulo", responsavel: "Eduardo Martins", pilar: "analise", prioridade: "baixa", status: "concluida", prazo: daysAgo(1), created_at: daysAgo(14), updated_at: daysAgo(1) },
   ],
+
+  logistica_interna: [
+    { id: "li1", ...base, equipe: "Alvenaria", tempo_deslocamento_min: 18, origem: "Almoxarifado", destino: "3º Pavimento", observacao: "Elevador de carga parado", data_registro: daysAgo(1), created_at: daysAgo(1) },
+    { id: "li2", ...base, equipe: "Elétrica", tempo_deslocamento_min: 12, origem: "Depósito", destino: "4º Pavimento", observacao: null, data_registro: daysAgo(1), created_at: daysAgo(1) },
+    { id: "li3", ...base, equipe: "Hidráulica", tempo_deslocamento_min: 35, origem: "Almoxarifado", destino: "Subsolo", observacao: "Acesso bloqueado por concretagem", data_registro: daysAgo(2), created_at: daysAgo(2) },
+    { id: "li4", ...base, equipe: "Pintura", tempo_deslocamento_min: 8, origem: "Central de tintas", destino: "2º Pavimento", observacao: null, data_registro: daysAgo(3), created_at: daysAgo(3) },
+  ],
+
+  ciclos_tarefa: [
+    { id: "ct1", ...base, tarefa: "Assentamento cerâmico (piso)", tempo_medio_min: 48, tempo_alvo_min: 35, qtd_medicoes: 6, data_registro: daysAgo(1), created_at: daysAgo(1) },
+    { id: "ct2", ...base, tarefa: "Chapisco de parede", tempo_medio_min: 22, tempo_alvo_min: 20, qtd_medicoes: 4, data_registro: daysAgo(2), created_at: daysAgo(2) },
+    { id: "ct3", ...base, tarefa: "Montagem de formas (pilar)", tempo_medio_min: 55, tempo_alvo_min: 50, qtd_medicoes: 3, data_registro: daysAgo(3), created_at: daysAgo(3) },
+    { id: "ct4", ...base, tarefa: "Instalação ponto elétrico", tempo_medio_min: 15, tempo_alvo_min: 18, qtd_medicoes: 8, data_registro: daysAgo(2), created_at: daysAgo(2) },
+  ],
+
+  aditivos_contratuais: [
+    { id: "ad1", ...base, descricao: "Alteração de projeto elétrico — adição de 12 pontos", valor: 18500, tipo: "aditivo", aprovado: true, data: daysAgo(10), created_at: daysAgo(10) },
+    { id: "ad2", ...base, descricao: "Reforço estrutural na laje do 4º pav. — erro de cálculo", valor: 32000, tipo: "desvio", aprovado: false, data: daysAgo(5), created_at: daysAgo(5) },
+    { id: "ad3", ...base, descricao: "Troca de revestimento externo por solicitação do cliente", valor: 45000, tipo: "aditivo", aprovado: true, data: daysAgo(20), created_at: daysAgo(20) },
+  ],
 };
