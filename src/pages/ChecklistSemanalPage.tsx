@@ -4,12 +4,13 @@ import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
-import { ListChecks, ChevronLeft, ChevronRight, CheckCircle2, Circle, MessageSquare } from "lucide-react";
+import { ListChecks, ChevronLeft, ChevronRight, CheckCircle2, Circle, MessageSquare, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // ── Checklist items from the O.P.E.R.A. PDF ──
 const CHECKLIST_ITEMS = [
