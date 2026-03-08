@@ -21,6 +21,7 @@ const GUEST_PROFILE: Profile = {
   avatar_url: null,
   tenant_id: "guest-tenant",
   is_super_admin: false,
+  beta_approved_at: null,
 };
 
 interface AuthContextType {
