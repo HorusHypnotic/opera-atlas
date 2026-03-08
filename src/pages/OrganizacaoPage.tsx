@@ -4,7 +4,8 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
-import { Users, DollarSign, BarChart3, Ruler } from "lucide-react";
+import { useObra } from "@/hooks/useObra";
+import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
 
 interface RegistroDiario {
   id: string;
