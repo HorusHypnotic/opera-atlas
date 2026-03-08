@@ -126,6 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
+  const computeTrialExpired = (): boolean => {
+    if (!profile?.beta_approved_at) return false;
+    if (profile.is_super_admin) return false;
+    const approvedAt = new Date(profile.beta_approved_at);
+    const now = new Date();
+    const diffDays = (now.getTime() - approvedAt.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 30;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -139,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isGestor: hasRole("gestor"),
         isGuest,
         isSuperAdmin: profile?.is_super_admin ?? false,
+        isTrialExpired: computeTrialExpired(),
         signOut,
         enterGuestMode,
       }}
