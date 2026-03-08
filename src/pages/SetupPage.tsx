@@ -12,7 +12,7 @@ import { Building2, LogOut } from "lucide-react";
  * they create their company (tenant) and become admin.
  */
 export default function SetupPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [cnpj, setCnpj] = useState("");
