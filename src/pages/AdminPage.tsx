@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3, Crown } from "lucide-react";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3, Crown, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { BetaUsersTab } from "@/components/admin/BetaUsersTab";
@@ -17,6 +17,7 @@ import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
 import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
 import { BetaMetricsTab } from "@/components/admin/BetaMetricsTab";
 import { SuperAdminTab } from "@/components/admin/SuperAdminTab";
+import { ObraMembrosTab } from "@/components/admin/ObraMembrosTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -201,6 +202,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
+          </TabsTrigger>
+          <TabsTrigger value="equipe-obra" className="gap-1.5">
+            <Users className="h-4 w-4" /> Equipe por Obra
           </TabsTrigger>
           <TabsTrigger value="beta-users" className="gap-1.5">
             <Rocket className="h-4 w-4" /> Beta Users
@@ -438,6 +442,10 @@ export default function AdminPage() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="equipe-obra" className="space-y-4">
+          <ObraMembrosTab />
         </TabsContent>
 
         <TabsContent value="beta-users" className="space-y-4">

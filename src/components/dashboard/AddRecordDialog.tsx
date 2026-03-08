@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export interface FieldDef {
   name: string;
@@ -32,6 +33,9 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
   const [loading, setLoading] = useState(false);
   const { selectedObraId } = useObra();
   const { isGuest } = useAuth();
+  const { canInsert } = usePermissions();
+
+  if (!canInsert) return null;
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -136,6 +140,9 @@ export function EditRecordDialog({ title, fields, record, onSubmit }: EditRecord
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const { canUpdate } = usePermissions();
+
+  if (!canUpdate) return null;
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -219,6 +226,10 @@ interface DeleteRecordButtonProps {
 }
 
 export function DeleteRecordButton({ onConfirm, itemName }: DeleteRecordButtonProps) {
+  const { canDelete } = usePermissions();
+
+  if (!canDelete) return null;
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
