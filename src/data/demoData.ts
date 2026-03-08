@@ -88,4 +88,12 @@ export const DEMO_DATA: Record<string, any[]> = {
     { id: "is6", ...base, tipo: "acidente", status: "resolvido", severidade: "media", descricao: "Queda de material do 2º andar (sem vítimas)", data: daysAgo(22), created_at: daysAgo(22) },
     { id: "is7", ...base, tipo: "inspecao", status: "aprovado", severidade: "baixa", descricao: "Inspeção — sinalização de canteiro", data: daysAgo(14), created_at: daysAgo(14) },
   ],
+
+  acoes_corretivas: [
+    { id: "ac1", ...base, descricao: "Corrigir prumo da parede do 3º pavimento — alvenaria fora de esquadro", responsavel: "Carlos Silva", pilar: "organizacao", prioridade: "alta", status: "em_andamento", prazo: daysAgo(-3), created_at: daysAgo(5), updated_at: daysAgo(2) },
+    { id: "ac2", ...base, descricao: "Instalar guarda-corpo no 4º pavimento — NC de segurança aberta", responsavel: "Roberto Alves", pilar: "seguranca", prioridade: "alta", status: "pendente", prazo: daysAgo(-1), created_at: daysAgo(3), updated_at: daysAgo(3) },
+    { id: "ac3", ...base, descricao: "Recalcular quantitativo de aço para laje do 5º pav. — consumo acima de 8%", responsavel: "Ana Costa", pilar: "padronizacao", prioridade: "media", status: "concluida", prazo: daysAgo(2), created_at: daysAgo(10), updated_at: daysAgo(2) },
+    { id: "ac4", ...base, descricao: "Devolver compactador de solo ocioso ao fornecedor — custo de locação", responsavel: "Pedro Lima", pilar: "eficiencia", prioridade: "media", status: "pendente", prazo: daysAgo(-5), created_at: daysAgo(7), updated_at: daysAgo(7) },
+    { id: "ac5", ...base, descricao: "Renegociar prazo de entrega de material elétrico com Eletropaulo", responsavel: "Eduardo Martins", pilar: "analise", prioridade: "baixa", status: "concluida", prazo: daysAgo(1), created_at: daysAgo(14), updated_at: daysAgo(1) },
+  ],
 };
