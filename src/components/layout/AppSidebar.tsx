@@ -20,6 +20,7 @@ const sections = [
   { title: "Análise Contínua", url: "/analise-continua", icon: TrendingUp, letter: "A" },
   { title: "Segurança & Qualidade", url: "/seguranca-qualidade", icon: ShieldCheck },
   { title: "Ações Corretivas", url: "/acoes-corretivas", icon: ClipboardCheck },
+  { title: "Checklist Semanal", url: "/checklist", icon: ListChecks },
 ];
 
 export function AppSidebar() {
