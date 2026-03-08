@@ -524,9 +524,11 @@ export type Database = {
       invites: {
         Row: {
           created_at: string
+          created_by: string | null
           email: string
           expires_at: string
           id: string
+          obra_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           tenant_id: string
           token: string
@@ -534,9 +536,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           email: string
           expires_at?: string
           id?: string
+          obra_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           tenant_id: string
           token?: string
@@ -544,15 +548,24 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           email?: string
           expires_at?: string
           id?: string
+          obra_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           tenant_id?: string
           token?: string
           used?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "invites_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invites_tenant_id_fkey"
             columns: ["tenant_id"]
