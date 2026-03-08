@@ -310,26 +310,33 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="convites" className="space-y-4">
-          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
-            <div className="space-y-1 flex-1 min-w-[200px]">
-              <label className="text-xs text-muted-foreground">Email do convidado</label>
-              <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
+          <div className="glass-card p-5 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Convide sua equipe</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Convide colaboradores para visualizar e alimentar os indicadores das suas obras. Cada pessoa recebe acesso direto ao papel atribuído — sem precisar de aprovação extra.
+              </p>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Papel</label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="operacional">Operacional</SelectItem>
-                  <SelectItem value="visualizador">Visualizador</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">Email do colaborador</label>
+                <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Papel de acesso</label>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                  <SelectTrigger className="w-full sm:w-[200px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gestor">Gestor — gerencia obras e equipes</SelectItem>
+                    <SelectItem value="operacional">Operacional — alimenta dados</SelectItem>
+                    <SelectItem value="visualizador">Visualizador — acesso somente leitura</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5 w-full sm:w-auto">
+                <UserPlus className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Enviar Convite"}
+              </Button>
             </div>
-            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5 w-full sm:w-auto">
-              <Mail className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Criar Convite"}
-            </Button>
           </div>
 
           <div className="glass-card overflow-x-auto">
