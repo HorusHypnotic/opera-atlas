@@ -34,6 +34,7 @@ interface AuthContextType {
   isGestor: boolean;
   isGuest: boolean;
   isSuperAdmin: boolean;
+  isTrialExpired: boolean;
   signOut: () => Promise<void>;
   enterGuestMode: () => void;
 }
