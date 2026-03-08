@@ -2,34 +2,14 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
-import { AddRecordDialog } from "@/components/dashboard/AddRecordDialog";
+import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { ShieldAlert, AlertTriangle, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface Risco {
-  id: string;
-  risco: string;
-  severidade: string;
-  impacto: string | null;
-  prazo: string | null;
-}
-
-interface Retrabalho {
-  id: string;
-  etapa: string;
-  quantidade: number;
-  descricao: string | null;
-  data_registro: string;
-}
-
-interface SeqEquipe {
-  id: string;
-  equipe: string;
-  semana_inicio: number;
-  semana_fim: number;
-  status: string;
-}
+interface Risco { id: string; risco: string; severidade: string; impacto: string | null; prazo: string | null; }
+interface Retrabalho { id: string; etapa: string; quantidade: number; descricao: string | null; data_registro: string; }
+interface SeqEquipe { id: string; equipe: string; semana_inicio: number; semana_fim: number; status: string; }
 
 const riscoFields = [
   { name: "risco", label: "Descrição do Risco", placeholder: "Ex: Atraso na entrega de aço", required: true },
@@ -59,20 +39,16 @@ const equipeFields = [
 const severityColors: Record<string, any> = { alta: "critical", media: "warning", baixa: "ok" };
 
 export default function ReducaoPerdasPage() {
-  const { data: riscos = [], insert: insertRisco } = useTableData<Risco>("riscos");
-  const { data: retrabalhos = [], insert: insertRetrabalho } = useTableData<Retrabalho>("retrabalhos");
-  const { data: equipes = [], insert: insertEquipe } = useTableData<SeqEquipe>("sequenciamento_equipes");
+  const { data: riscos = [], insert: insertRisco, update: updateRisco, remove: removeRisco } = useTableData<Risco>("riscos");
+  const { data: retrabalhos = [], insert: insertRetrabalho, update: updateRetrabalho, remove: removeRetrabalho } = useTableData<Retrabalho>("retrabalhos");
+  const { data: equipes = [], insert: insertEquipe, update: updateEquipe, remove: removeEquipe } = useTableData<SeqEquipe>("sequenciamento_equipes");
 
   const totalRetrabalhos = retrabalhos.reduce((s, r) => s + r.quantidade, 0);
 
   return (
     <div>
       <GlobalFilters />
-      <SectionHeader
-        title="Redução de Perdas"
-        subtitle="Combate à improdutividade, retrabalhos e riscos"
-        icon={<ShieldAlert className="h-5 w-5" />}
-      />
+      <SectionHeader title="Redução de Perdas" subtitle="Combate à improdutividade, retrabalhos e riscos" icon={<ShieldAlert className="h-5 w-5" />} />
 
       <div className="flex justify-end gap-2 mb-4">
         <AddRecordDialog title="Novo Risco" fields={riscoFields} onSubmit={insertRisco}
@@ -105,7 +81,11 @@ export default function ReducaoPerdasPage() {
                   <div key={r.id} className={`p-3 rounded-lg border ${r.severidade === "alta" ? "bg-status-critical/5 border-status-critical/20" : "bg-status-warning/5 border-status-warning/20"}`}>
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-sm">{r.risco}</span>
-                      <StatusBadge status={severityColors[r.severidade] || "warning"} label={r.severidade.toUpperCase()} />
+                      <div className="flex items-center gap-1">
+                        <StatusBadge status={severityColors[r.severidade] || "warning"} label={r.severidade.toUpperCase()} />
+                        <EditRecordDialog title="Editar Risco" fields={riscoFields} record={r} onSubmit={updateRisco} />
+                        <DeleteRecordButton onConfirm={() => removeRisco(r.id)} itemName={r.risco} />
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{r.impacto || "—"}</p>
                     {r.prazo && <p className="text-xs font-mono mt-1 text-muted-foreground">Em {r.prazo}</p>}
@@ -125,6 +105,7 @@ export default function ReducaoPerdasPage() {
                   <th className="text-right py-2 px-3">Qtd</th>
                   <th className="text-left py-2 px-3">Descrição</th>
                   <th className="text-left py-2 px-3">Data</th>
+                  <th className="text-right py-2 px-3">Ações</th>
                 </tr></thead>
                 <tbody>
                   {retrabalhos.map((r) => (
@@ -133,6 +114,12 @@ export default function ReducaoPerdasPage() {
                       <td className="py-2.5 px-3 text-right font-mono">{r.quantidade}</td>
                       <td className="py-2.5 px-3 text-muted-foreground">{r.descricao || "—"}</td>
                       <td className="py-2.5 px-3 text-xs">{r.data_registro}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <EditRecordDialog title="Editar Retrabalho" fields={retrabalhoFields} record={r} onSubmit={updateRetrabalho} />
+                          <DeleteRecordButton onConfirm={() => removeRetrabalho(r.id)} itemName={r.etapa} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -161,6 +148,8 @@ export default function ReducaoPerdasPage() {
                       </div>
                     </div>
                     <StatusBadge status={eq.status as any} />
+                    <EditRecordDialog title="Editar Equipe" fields={equipeFields} record={eq} onSubmit={updateEquipe} />
+                    <DeleteRecordButton onConfirm={() => removeEquipe(eq.id)} itemName={eq.equipe} />
                   </div>
                 ))}
               </div>

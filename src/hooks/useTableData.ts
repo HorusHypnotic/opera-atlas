@@ -1,19 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useObra } from "@/hooks/useObra";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DEMO_DATA } from "@/data/demoData";
+import { toast } from "sonner";
 
 export function useTableData<T = any>(table: string) {
   const { profile, isGuest } = useAuth();
   const { selectedObraId } = useObra();
   const tenantId = profile?.tenant_id || null;
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: [table, tenantId, selectedObraId, isGuest],
     queryFn: async () => {
       if (isGuest) {
-        // Return demo data filtered by selected obra
         const demoRows = (DEMO_DATA[table] || []) as T[];
         if (selectedObraId) {
           return demoRows.filter((r: any) => r.obra_id === selectedObraId);
@@ -31,17 +32,46 @@ export function useTableData<T = any>(table: string) {
     enabled: isGuest || !!tenantId,
   });
 
+  const refetchAll = () => {
+    queryClient.invalidateQueries({ queryKey: [table] });
+  };
+
   const insert = async (record: Record<string, any>) => {
     if (isGuest) {
-      return { error: { message: "Modo convidado: dados não são salvos" } };
+      toast.info("Modo convidado: dados não são salvos no banco");
+      return { error: null };
     }
     if (!tenantId) return { error: { message: "Sem tenant" } };
     const payload = { ...record, tenant_id: tenantId } as any;
     if (selectedObraId) payload.obra_id = selectedObraId;
     const { error } = await (supabase as any).from(table).insert(payload);
-    if (!error) query.refetch();
+    if (!error) refetchAll();
     return { error };
   };
 
-  return { ...query, insert };
+  const update = async (id: string, values: Record<string, any>) => {
+    if (isGuest) {
+      toast.info("Modo convidado: dados não são salvos no banco");
+      return { error: null };
+    }
+    const { error } = await (supabase as any).from(table).update(values).eq("id", id);
+    if (!error) refetchAll();
+    return { error };
+  };
+
+  const remove = async (id: string) => {
+    if (isGuest) {
+      toast.info("Modo convidado: dados não são salvos no banco");
+      return;
+    }
+    const { error } = await (supabase as any).from(table).delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+    } else {
+      toast.success("Registro excluído");
+      refetchAll();
+    }
+  };
+
+  return { ...query, insert, update, remove };
 }

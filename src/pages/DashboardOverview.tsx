@@ -2,14 +2,16 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
+import { useAuth } from "@/hooks/useAuth";
 import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSign, Heart, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { exportOperaReport } from "@/utils/exportOperaReport";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
-  const { obras } = useObra();
+  const { obras, selectedObra } = useObra();
+  const { profile } = useAuth();
 
   const { data: registros = [] } = useTableData("registros_diarios");
   const { data: consumo = [] } = useTableData("consumo_materiais");
@@ -31,8 +33,6 @@ export default function DashboardOverview() {
   const ociosTotal = ativos.filter((f: any) => f.status === "ocioso").reduce((s: number, f: any) => s + Number(f.valor), 0);
   const ativosPercent = ativos.length > 0 ? (ativos.filter((f: any) => f.status === "ativo").length / ativos.length * 100) : 0;
 
-  const totalRetrabalhos = retrabalhos.reduce((s: number, r: any) => s + r.quantidade, 0);
-
   const ncs = incidentes.filter((i: any) => i.tipo === "nc");
   const ncAbertas = ncs.filter((i: any) => i.status === "aberto").length;
   const inspecoes = incidentes.filter((i: any) => i.tipo === "inspecao");
@@ -44,6 +44,15 @@ export default function DashboardOverview() {
   const diasSemAcidente = lastAcidente
     ? Math.floor((Date.now() - new Date(lastAcidente.data).getTime()) / (1000 * 60 * 60 * 24))
     : incidentes.length > 0 ? 999 : 0;
+
+  const handleExportPDF = () => {
+    exportOperaReport({
+      obraNome: selectedObra?.nome || "Todas as obras",
+      responsavel: profile?.full_name || profile?.email || "—",
+      data: new Date().toLocaleDateString("pt-BR"),
+      registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes,
+    });
+  };
 
   const sections = [
     {
@@ -77,8 +86,8 @@ export default function DashboardOverview() {
           <h1 className="text-2xl font-bold">Dashboard O.P.E.R.A.</h1>
           <p className="text-sm text-muted-foreground">Visão consolidada de todos os indicadores da obra</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => toast.info("Exportação PDF será implementada em breve")}>
-          <FileText className="h-4 w-4" /> Exportar Relatório
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
+          <FileText className="h-4 w-4" /> Exportar PDF
         </Button>
       </div>
 

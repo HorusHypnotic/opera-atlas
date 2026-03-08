@@ -2,20 +2,12 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
-import { AddRecordDialog } from "@/components/dashboard/AddRecordDialog";
+import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { TrendingUp, DollarSign, PiggyBank, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-interface Lancamento {
-  id: string;
-  tipo: string;
-  valor: number;
-  descricao: string | null;
-  data: string;
-  fornecedor: string | null;
-  status_pagamento: string;
-}
+interface Lancamento { id: string; tipo: string; valor: number; descricao: string | null; data: string; fornecedor: string | null; status_pagamento: string; }
 
 const fields = [
   { name: "tipo", label: "Tipo", type: "select" as const, defaultValue: "custo", options: [
@@ -31,7 +23,7 @@ const fields = [
 ];
 
 export default function AnaliseContinuaPage() {
-  const { data: lancamentos = [], isLoading, insert } = useTableData<Lancamento>("lancamentos_financeiros");
+  const { data: lancamentos = [], isLoading, insert, update, remove } = useTableData<Lancamento>("lancamentos_financeiros");
 
   const receitas = lancamentos.filter((l) => l.tipo === "receita");
   const custos = lancamentos.filter((l) => l.tipo === "custo");
@@ -41,7 +33,6 @@ export default function AnaliseContinuaPage() {
   const margem = totalReceitas > 0 ? ((saldo / totalReceitas) * 100) : 0;
   const margemStatus = margem > 15 ? "ok" : margem > 10 ? "warning" : "critical";
 
-  // Group by month for chart
   const byMonth: Record<string, { receita: number; custo: number }> = {};
   lancamentos.forEach((l) => {
     const mes = l.data?.substring(0, 7) || "N/A";
@@ -52,17 +43,6 @@ export default function AnaliseContinuaPage() {
   const chartData = Object.entries(byMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([mes, v]) => ({ mes, ...v, lucro: v.receita - v.custo }));
-
-  // Fornecedores
-  const fornecedorMap: Record<string, { valor: number; status: string }> = {};
-  custos.filter((l) => l.fornecedor).forEach((l) => {
-    const key = l.fornecedor!;
-    if (!fornecedorMap[key]) fornecedorMap[key] = { valor: 0, status: l.status_pagamento };
-    fornecedorMap[key].valor += Number(l.valor);
-    if (l.status_pagamento === "atrasado") fornecedorMap[key].status = "atrasado";
-    else if (l.status_pagamento === "pendente" && fornecedorMap[key].status !== "atrasado") fornecedorMap[key].status = "pendente";
-  });
-  const fornecedores = Object.entries(fornecedorMap).map(([nome, v]) => ({ nome, ...v }));
 
   return (
     <div>
@@ -120,6 +100,7 @@ export default function AnaliseContinuaPage() {
               <th className="text-right py-2 px-3">Valor</th>
               <th className="text-left py-2 px-3">Status</th>
               <th className="text-left py-2 px-3">Data</th>
+              <th className="text-right py-2 px-3">Ações</th>
             </tr></thead>
             <tbody>
               {lancamentos.slice(0, 20).map((l) => (
@@ -130,6 +111,12 @@ export default function AnaliseContinuaPage() {
                   <td className="py-2.5 px-3 text-right font-mono">{Number(l.valor).toLocaleString("pt-BR")}</td>
                   <td className="py-2.5 px-3"><StatusBadge status={l.status_pagamento as any} /></td>
                   <td className="py-2.5 px-3 text-xs">{l.data}</td>
+                  <td className="py-2.5 px-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <EditRecordDialog title="Editar Lançamento" fields={fields} record={l} onSubmit={update} />
+                      <DeleteRecordButton onConfirm={() => remove(l.id)} itemName={l.descricao || "lançamento"} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

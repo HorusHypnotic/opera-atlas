@@ -18,6 +18,7 @@ import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
 import NotFound from "./pages/NotFound";
+import InvitePage from "./pages/InvitePage";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/invite" element={<InvitePage />} />
             <Route path="/setup" element={
               <ProtectedRoute><SetupPage /></ProtectedRoute>
             } />
