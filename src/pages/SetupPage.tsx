@@ -92,6 +92,9 @@ export default function SetupPage() {
           <Button onClick={handleSetup} disabled={loading || !nome.trim()} className="w-full">
             {loading ? "Criando..." : "Criar Empresa e Continuar"}
           </Button>
+          <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={signOut}>
+            <LogOut className="h-3.5 w-3.5" /> Sair e voltar ao login
+          </Button>
         </div>
       </div>
     </div>
