@@ -277,15 +277,26 @@ export default function ObrasPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Orçamento total (R$)</label>
-                    <Input type="number" value={form.orcamento_total} onChange={e => setForm(p => ({ ...p, orcamento_total: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.orcamento_total} onChange={e => {
+                      const orcamento = e.target.value;
+                      const area = parseFloat(form.area_m2) || 0;
+                      const custoM2 = area > 0 ? (parseFloat(orcamento) || 0) / area : 0;
+                      setForm(p => ({ ...p, orcamento_total: orcamento, custo_orcado_m2: custoM2 > 0 ? custoM2.toFixed(2) : p.custo_orcado_m2 }));
+                    }} placeholder="0" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Custo orçado/m² (R$)</label>
-                    <Input type="number" value={form.custo_orcado_m2} onChange={e => setForm(p => ({ ...p, custo_orcado_m2: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.custo_orcado_m2} onChange={e => setForm(p => ({ ...p, custo_orcado_m2: e.target.value }))} placeholder="Auto-calculado" />
+                    <p className="text-[10px] text-muted-foreground">Calculado automaticamente se preencher orçamento e área</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Área total (m²)</label>
-                    <Input type="number" value={form.area_m2} onChange={e => setForm(p => ({ ...p, area_m2: e.target.value }))} placeholder="0" />
+                    <Input type="number" value={form.area_m2} onChange={e => {
+                      const area = e.target.value;
+                      const orcamento = parseFloat(form.orcamento_total) || 0;
+                      const custoM2 = (parseFloat(area) || 0) > 0 ? orcamento / parseFloat(area) : 0;
+                      setForm(p => ({ ...p, area_m2: area, custo_orcado_m2: custoM2 > 0 ? custoM2.toFixed(2) : p.custo_orcado_m2 }));
+                    }} placeholder="0" />
                   </div>
                 </div>
 
