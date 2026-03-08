@@ -73,9 +73,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let initialSessionHandled = false;
 
-    // 1) Restore session first (synchronous-safe)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await fetchProfileAndRoles(session.user.id);
+        } else {
+          setProfile(null);
+          setRoles([]);
+        }
+        setLoading(false);
+      }
+    );
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (initialSessionHandled) return;
+      initialSessionHandled = true;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -83,26 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
-
-    // 2) Listen for subsequent changes (sign-in, sign-out, token refresh)
-    // IMPORTANT: Do NOT await Supabase calls inside this callback to avoid deadlocks
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          // Use setTimeout to avoid deadlock with Supabase client internals
-          setTimeout(() => {
-            fetchProfileAndRoles(session.user.id).then(() => setLoading(false));
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-          setLoading(false);
-        }
-      }
-    );
 
     return () => subscription.unsubscribe();
   }, []);
