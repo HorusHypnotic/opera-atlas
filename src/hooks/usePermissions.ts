@@ -9,13 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
  * - visualizador: select only
  */
 export function usePermissions() {
-  const { roles, isAdmin, isGestor, isGuest, isSuperAdmin } = useAuth();
+  const { roles, isAdmin, isGestor, isGuest, isSuperAdmin, isTrialExpired } = useAuth();
 
-  const canInsert = isGuest || isAdmin || isGestor || roles.includes("operacional");
-  const canUpdate = isGuest || isAdmin || isGestor;
-  const canDelete = isGuest || isAdmin;
-  const canManageRoles = isAdmin || isSuperAdmin;
-  const canManageObras = isAdmin || isGestor;
+  // Trial expired → read-only mode (like visualizador)
+  const canInsert = !isTrialExpired && (isGuest || isAdmin || isGestor || roles.includes("operacional"));
+  const canUpdate = !isTrialExpired && (isGuest || isAdmin || isGestor);
+  const canDelete = !isTrialExpired && (isGuest || isAdmin);
+  const canManageRoles = !isTrialExpired && (isAdmin || isSuperAdmin);
+  const canManageObras = !isTrialExpired && (isAdmin || isGestor);
   const isViewOnly = !canInsert;
 
   return {
@@ -25,5 +26,6 @@ export function usePermissions() {
     canManageRoles,
     canManageObras,
     isViewOnly,
+    isTrialExpired,
   };
 }
