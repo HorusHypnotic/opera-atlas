@@ -3,10 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { LogIn, UserCheck } from "lucide-react";
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, enterGuestMode } = useAuth();
   const navigate = useNavigate();
   const [signingIn, setSigningIn] = useState(false);
 
@@ -25,6 +25,11 @@ export default function LoginPage() {
       console.error("Login error:", error);
       setSigningIn(false);
     }
+  };
+
+  const handleGuest = () => {
+    enterGuestMode();
+    navigate("/", { replace: true });
   };
 
   if (loading) {
@@ -52,18 +57,39 @@ export default function LoginPage() {
           Faça login para acessar o sistema de gestão
         </p>
 
-        <Button
-          onClick={handleGoogleLogin}
-          disabled={signingIn}
-          className="w-full gap-2"
-          size="lg"
-        >
-          <LogIn className="h-4 w-4" />
-          {signingIn ? "Redirecionando..." : "Entrar com Google"}
-        </Button>
+        <div className="space-y-3">
+          <Button
+            onClick={handleGoogleLogin}
+            disabled={signingIn}
+            className="w-full gap-2"
+            size="lg"
+          >
+            <LogIn className="h-4 w-4" />
+            {signingIn ? "Redirecionando..." : "Entrar com Google"}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">ou</span>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleGuest}
+            variant="outline"
+            className="w-full gap-2"
+            size="lg"
+          >
+            <UserCheck className="h-4 w-4" />
+            Entrar como Convidado
+          </Button>
+        </div>
 
         <p className="text-[10px] text-muted-foreground">
-          Acesso restrito. Solicite permissão ao administrador.
+          Modo convidado permite explorar o sistema com dados de demonstração.
         </p>
       </div>
     </div>

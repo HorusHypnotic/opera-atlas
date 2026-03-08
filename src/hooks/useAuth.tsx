@@ -12,6 +12,14 @@ interface Profile {
   tenant_id: string | null;
 }
 
+const GUEST_PROFILE: Profile = {
+  id: "guest",
+  email: "convidado@opera.demo",
+  full_name: "Convidado",
+  avatar_url: null,
+  tenant_id: "guest-tenant",
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -21,7 +29,9 @@ interface AuthContextType {
   hasRole: (role: AppRole) => boolean;
   isAdmin: boolean;
   isGestor: boolean;
+  isGuest: boolean;
   signOut: () => Promise<void>;
+  enterGuestMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   const fetchProfileAndRoles = async (userId: string) => {
     const [profileRes, rolesRes] = await Promise.all([
@@ -48,6 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Restore guest mode from sessionStorage
+    const savedGuest = sessionStorage.getItem("opera_guest");
+    if (savedGuest === "true") {
+      setIsGuest(true);
+      setProfile(GUEST_PROFILE);
+      setRoles(["admin", "gestor", "operacional", "visualizador"]);
+      setLoading(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -75,10 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const enterGuestMode = () => {
+    setIsGuest(true);
+    setProfile(GUEST_PROFILE);
+    setRoles(["admin", "gestor", "operacional", "visualizador"]);
+    setUser({ id: "guest" } as User);
+    sessionStorage.setItem("opera_guest", "true");
+  };
+
   const hasRole = (role: AppRole) => roles.includes(role);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    if (isGuest) {
+      setIsGuest(false);
+      sessionStorage.removeItem("opera_guest");
+    } else {
+      await supabase.auth.signOut();
+    }
     setUser(null);
     setSession(null);
     setProfile(null);
@@ -96,7 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasRole,
         isAdmin: hasRole("admin"),
         isGestor: hasRole("gestor"),
+        isGuest,
         signOut,
+        enterGuestMode,
       }}
     >
       {children}
