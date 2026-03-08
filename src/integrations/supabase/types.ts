@@ -933,6 +933,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operacional" | "visualizador"
