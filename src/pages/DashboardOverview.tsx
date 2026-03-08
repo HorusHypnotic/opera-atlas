@@ -95,6 +95,8 @@ export default function DashboardOverview() {
         </Button>
       </div>
 
+      <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KPICard title="Saldo Financeiro" value={`R$ ${(saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-5 w-5" />} tooltip="Receitas - Custos" status={saldo >= 0 ? "ok" : "critical"} />
         <KPICard title="Obras Cadastradas" value={obras.length} icon={<TrendingUp className="h-5 w-5" />} tooltip="Total de obras no sistema" status="ok" />
