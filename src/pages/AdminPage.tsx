@@ -188,6 +188,9 @@ export default function AdminPage() {
           <TabsTrigger value="usuarios" className="gap-1.5">
             <UserPlus className="h-4 w-4" /> Usuários & Permissões
           </TabsTrigger>
+          <TabsTrigger value="convites" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Convites
+          </TabsTrigger>
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
           </TabsTrigger>
