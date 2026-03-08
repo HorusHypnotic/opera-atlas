@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function DashboardOverview() {
   const { data: retrabalhos = [] } = useTableData("retrabalhos");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
   const { data: incidentes = [] } = useTableData("incidentes_seguranca");
+  const { data: sequenciamento = [] } = useTableData("sequenciamento_equipes");
 
   const totalReceitas = lancamentos.filter((l: any) => l.tipo === "receita").reduce((s: number, l: any) => s + Number(l.valor), 0);
   const totalCustos = lancamentos.filter((l: any) => l.tipo === "custo").reduce((s: number, l: any) => s + Number(l.valor), 0);
@@ -100,6 +102,8 @@ export default function DashboardOverview() {
       </div>
 
       <DashboardCharts registros={registros} consumo={consumo} lancamentos={lancamentos} incidentes={incidentes} />
+
+      <AnalyticsAlerts registros={registros} consumo={consumo} retrabalhos={retrabalhos} sequenciamento={sequenciamento} />
 
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
