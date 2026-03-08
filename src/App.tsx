@@ -15,6 +15,7 @@ import ReducaoPerdasPage from "./pages/ReducaoPerdasPage";
 import AnaliseContinuaPage from "./pages/AnaliseContinuaPage";
 import SegurancaQualidadePage from "./pages/SegurancaQualidadePage";
 import AcoesCorretivasPage from "./pages/AcoesCorretivasPage";
+import ChecklistSemanalPage from "./pages/ChecklistSemanalPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
@@ -51,6 +52,7 @@ const App = () => (
                       <Route path="/analise-continua" element={<AnaliseContinuaPage />} />
                       <Route path="/seguranca-qualidade" element={<SegurancaQualidadePage />} />
                       <Route path="/acoes-corretivas" element={<AcoesCorretivasPage />} />
+                      <Route path="/checklist" element={<ChecklistSemanalPage />} />
                       <Route path="/admin" element={<AdminPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

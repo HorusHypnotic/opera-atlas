@@ -116,4 +116,25 @@ export const DEMO_DATA: Record<string, any[]> = {
     { id: "ad2", ...base, descricao: "Reforço estrutural na laje do 4º pav. — erro de cálculo", valor: 32000, tipo: "desvio", aprovado: false, data: daysAgo(5), created_at: daysAgo(5) },
     { id: "ad3", ...base, descricao: "Troca de revestimento externo por solicitação do cliente", valor: 45000, tipo: "aditivo", aprovado: true, data: daysAgo(20), created_at: daysAgo(20) },
   ],
+
+  checklist_semanal: (() => {
+    // Generate demo checks for current week (Monday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now);
+    monday.setDate(diff);
+    const semana = monday.toISOString().slice(0, 10);
+    return [
+      { id: "ck1", ...base, semana, item_key: "o1", verificado: true, verificado_por: "Eduardo Martins", observacao: null, created_at: daysAgo(1), updated_at: daysAgo(1) },
+      { id: "ck2", ...base, semana, item_key: "o2", verificado: true, verificado_por: "Eduardo Martins", observacao: "Equipe de alvenaria produziu 42m² — dentro da meta", created_at: daysAgo(1), updated_at: daysAgo(1) },
+      { id: "ck3", ...base, semana, item_key: "o3", verificado: true, verificado_por: "Eduardo Martins", observacao: null, created_at: daysAgo(1), updated_at: daysAgo(1) },
+      { id: "ck4", ...base, semana, item_key: "p1", verificado: true, verificado_por: "Eduardo Martins", observacao: "Cimento garantido até sexta. Aço em risco.", created_at: daysAgo(1), updated_at: daysAgo(1) },
+      { id: "ck5", ...base, semana, item_key: "p2", verificado: true, verificado_por: "Eduardo Martins", observacao: null, created_at: daysAgo(1), updated_at: daysAgo(1) },
+      { id: "ck6", ...base, semana, item_key: "e1", verificado: true, verificado_por: "Eduardo Martins", observacao: "Compactador ocioso identificado — devolver", created_at: daysAgo(0), updated_at: daysAgo(0) },
+      { id: "ck7", ...base, semana, item_key: "r1", verificado: true, verificado_por: "Eduardo Martins", observacao: null, created_at: daysAgo(0), updated_at: daysAgo(0) },
+      { id: "ck8", ...base, semana, item_key: "r3", verificado: true, verificado_por: "Eduardo Martins", observacao: "3 riscos mapeados — aço, chuva, mão de obra", created_at: daysAgo(0), updated_at: daysAgo(0) },
+      { id: "ck9", ...base, semana, item_key: "a1", verificado: true, verificado_por: "Eduardo Martins", observacao: null, created_at: daysAgo(0), updated_at: daysAgo(0) },
+    ];
+  })(),
 };

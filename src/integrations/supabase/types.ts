@@ -170,6 +170,60 @@ export type Database = {
           },
         ]
       }
+      checklist_semanal: {
+        Row: {
+          created_at: string
+          id: string
+          item_key: string
+          obra_id: string
+          observacao: string | null
+          semana: string
+          tenant_id: string
+          updated_at: string
+          verificado: boolean
+          verificado_por: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_key: string
+          obra_id: string
+          observacao?: string | null
+          semana?: string
+          tenant_id: string
+          updated_at?: string
+          verificado?: boolean
+          verificado_por?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_key?: string
+          obra_id?: string
+          observacao?: string | null
+          semana?: string
+          tenant_id?: string
+          updated_at?: string
+          verificado?: boolean
+          verificado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_semanal_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_semanal_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ciclos_tarefa: {
         Row: {
           created_at: string
