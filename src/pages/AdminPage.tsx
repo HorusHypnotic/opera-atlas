@@ -9,12 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings } from "lucide-react";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { BetaUsersTab } from "@/components/admin/BetaUsersTab";
 import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
 import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
+import { BetaMetricsTab } from "@/components/admin/BetaMetricsTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
