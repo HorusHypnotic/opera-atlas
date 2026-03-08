@@ -106,6 +106,12 @@ export default function AnaliseContinuaPage() {
         </div>
       )}
 
+      {/* Intelligence Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <FornecedorRankingCard lancamentos={lancamentos} />
+        <CustoPorCategoriaCard lancamentos={lancamentos} />
+      </div>
+
       <Tabs defaultValue="lancamentos" className="space-y-4">
         <TabsList>
           <TabsTrigger value="lancamentos">Lançamentos ({lancamentos.length})</TabsTrigger>
