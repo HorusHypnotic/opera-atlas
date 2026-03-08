@@ -68,11 +68,12 @@ export default function OrganizacaoPage() {
         <AddRecordDialog title="Novo Registro Diário" fields={fields} onSubmit={insert} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <KPICard title="Total Registros" value={totalRegistros} icon={<Users className="h-5 w-5" />} tooltip="Registros diários cadastrados" />
         <KPICard title="Status OK" value={okCount} icon={<BarChart3 className="h-5 w-5" />} tooltip="Colaboradores com status OK" status="ok" />
         <KPICard title="Alertas" value={alertCount} icon={<DollarSign className="h-5 w-5" />} tooltip="Colaboradores com atenção ou crítico" status={alertCount > 0 ? "warning" : "ok"} />
         <KPICard title="Custo por m²" value={custoPorM2 > 0 ? `R$ ${custoPorM2.toFixed(0)}` : "—"} icon={<Ruler className="h-5 w-5" />} tooltip="Custo de folha / m² produzido" subtitle={totalM2 > 0 ? `${totalM2.toFixed(0)} m² total` : "Sem dados de m²"} />
+        <KPICard title="Desvio Orçado" value={custoOrcadoM2 > 0 ? `${desvioPercent > 0 ? "+" : ""}${desvioPercent.toFixed(1)}%` : "—"} icon={<TrendingDown className="h-5 w-5" />} tooltip="Desvio do custo real vs. orçado por m²" status={desvioPercent > 10 ? "critical" : desvioPercent > 0 ? "warning" : "ok"} subtitle={custoOrcadoM2 > 0 ? `Orçado: R$ ${custoOrcadoM2}/m²` : "Defina na obra"} />
       </div>
 
       <div className="glass-card p-4 overflow-x-auto">
