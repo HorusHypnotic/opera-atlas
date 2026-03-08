@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (profileRes.data) {
       const p = profileRes.data as any;
-      setProfile({ ...p, is_super_admin: p.is_super_admin ?? false } as Profile);
+      setProfile({ ...p, is_super_admin: p.is_super_admin === true } as Profile);
     }
     if (rolesRes.data) {
       setRoles((rolesRes.data as { role: AppRole }[]).map((r) => r.role));
