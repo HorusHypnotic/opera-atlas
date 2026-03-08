@@ -14,6 +14,7 @@ import EficienciaPage from "./pages/EficienciaPage";
 import ReducaoPerdasPage from "./pages/ReducaoPerdasPage";
 import AnaliseContinuaPage from "./pages/AnaliseContinuaPage";
 import SegurancaQualidadePage from "./pages/SegurancaQualidadePage";
+import AcoesCorretivasPage from "./pages/AcoesCorretivasPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
