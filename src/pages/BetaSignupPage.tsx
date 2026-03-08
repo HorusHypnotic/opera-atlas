@@ -25,7 +25,33 @@ export default function BetaSignupPage() {
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [vagasRestantes, setVagasRestantes] = useState<number | null>(null);
   const [betaAtivo, setBetaAtivo] = useState(true);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const lastSubmitRef = useRef(0);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+
+  const renderTurnstile = useCallback(() => {
+    if (turnstileRef.current && (window as any).turnstile) {
+      turnstileRef.current.innerHTML = "";
+      (window as any).turnstile.render(turnstileRef.current, {
+        sitekey: "1x00000000000000000000AA", // Test key - replace with real key for production
+        callback: (token: string) => setTurnstileToken(token),
+        "expired-callback": () => setTurnstileToken(null),
+        theme: "dark",
+        size: "flexible",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    // Wait for Turnstile script to load
+    const interval = setInterval(() => {
+      if ((window as any).turnstile && turnstileRef.current) {
+        renderTurnstile();
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [renderTurnstile]);
 
   useEffect(() => {
     const fetchVagas = async () => {
