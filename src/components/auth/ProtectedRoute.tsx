@@ -18,8 +18,20 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/landing" replace />;
   }
 
-  // Guest mode skips setup
-  if (!isGuest && profile && !profile.tenant_id && location.pathname !== "/setup") {
+  // Guest mode skips all checks
+  if (isGuest) {
+    return <>{children}</>;
+  }
+
+  // Beta status check: if user has a beta_status and it's not approved, redirect
+  if (profile && (profile as any).beta_status && (profile as any).beta_status !== "aprovado") {
+    if (location.pathname !== "/beta-status") {
+      return <Navigate to="/beta-status" replace />;
+    }
+  }
+
+  // Tenant setup check
+  if (profile && !profile.tenant_id && location.pathname !== "/setup") {
     return <Navigate to="/setup" replace />;
   }
 
