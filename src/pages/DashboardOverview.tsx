@@ -103,6 +103,8 @@ export default function DashboardOverview() {
 
       <DashboardCharts registros={registros} consumo={consumo} lancamentos={lancamentos} incidentes={incidentes} />
 
+      <AnalyticsAlerts registros={registros} consumo={consumo} retrabalhos={retrabalhos} sequenciamento={sequenciamento} />
+
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {sections.map((s) => (
