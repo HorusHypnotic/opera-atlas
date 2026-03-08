@@ -51,7 +51,7 @@ const roleBadgeColor: Record<AppRole, string> = {
 };
 
 export default function AdminPage() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, profile, isSuperAdmin } = useAuth();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [userRoles, setUserRoles] = useState<RoleRow[]>([]);
   const [obras, setObras] = useState<ObraRow[]>([]);
