@@ -191,6 +191,9 @@ export default function ChecklistSemanalPage() {
         )}
       </div>
 
+      {/* History chart */}
+      <ChecklistHistoryChart checks={checks} />
+
       {/* Checklist by pillar */}
       <div className="space-y-6">
         {CHECKLIST_ITEMS.map((section) => {
