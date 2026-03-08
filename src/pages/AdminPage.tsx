@@ -328,7 +328,7 @@ export default function AdminPage() {
             </Button>
           </div>
 
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
