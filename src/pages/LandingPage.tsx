@@ -8,7 +8,7 @@ import {
   Users, Package, Wrench, ShieldAlert, TrendingUp,
   Check, ArrowRight, Phone, Mail, MapPin,
   BarChart3, Shield, Zap, Brain, ChevronRight,
-  Star, CheckCircle2, Building2, MessageCircle,
+  Star, CheckCircle2, Building2, MessageCircle, Rocket,
 } from "lucide-react";
 
 const whatsapp = "5594992193129";
