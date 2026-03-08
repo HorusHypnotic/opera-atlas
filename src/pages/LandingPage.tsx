@@ -150,10 +150,13 @@ export default function LandingPage() {
             Controle custos, elimine desperdícios e proteja sua margem de lucro.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/login")}>
+            <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/beta")}>
+              <Rocket className="h-4 w-4" /> Participar do Beta
+            </Button>
+            <Button size="lg" variant="outline" className="gap-2 text-base px-8" onClick={() => navigate("/login")}>
               Experimentar grátis <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" className="gap-2 text-base px-8" asChild>
+            <Button size="lg" variant="ghost" className="gap-2 text-base px-8" asChild>
               <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Olá! Quero saber mais sobre o Método O.P.E.R.A.")}`} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
               </a>
