@@ -17,6 +17,7 @@ import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
 import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
 import { BetaMetricsTab } from "@/components/admin/BetaMetricsTab";
 import { SuperAdminTab } from "@/components/admin/SuperAdminTab";
+import { ObraMembrosTab } from "@/components/admin/ObraMembrosTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
