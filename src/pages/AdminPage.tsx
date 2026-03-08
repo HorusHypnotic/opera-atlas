@@ -426,6 +426,18 @@ export default function AdminPage() {
             </Table>
           </div>
         </TabsContent>
+
+        <TabsContent value="beta-users" className="space-y-4">
+          <BetaUsersTab />
+        </TabsContent>
+
+        <TabsContent value="influencers" className="space-y-4">
+          <InfluencerCodesTab />
+        </TabsContent>
+
+        <TabsContent value="beta-config" className="space-y-4">
+          <BetaConfigTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
