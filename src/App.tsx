@@ -16,6 +16,7 @@ import AnaliseContinuaPage from "./pages/AnaliseContinuaPage";
 import SegurancaQualidadePage from "./pages/SegurancaQualidadePage";
 import AcoesCorretivasPage from "./pages/AcoesCorretivasPage";
 import ChecklistSemanalPage from "./pages/ChecklistSemanalPage";
+import LandingPage from "./pages/LandingPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
@@ -34,6 +35,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/setup" element={
