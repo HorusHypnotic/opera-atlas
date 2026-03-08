@@ -127,7 +127,10 @@ export default function AdminPage() {
       tenant_id: tenantId,
     } as any);
     if (error) {
-      toast.error("Erro ao criar obra: " + error.message);
+      const msg = error.message.includes("Limite de obras") 
+        ? "Limite de obras atingido para este cliente. Aumente o limite nas configurações do tenant."
+        : "Erro ao criar obra: " + error.message;
+      toast.error(msg);
     } else {
       toast.success("Obra criada!");
       setNewObraNome("");
