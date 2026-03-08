@@ -452,21 +452,25 @@ export default function AdminPage() {
           <ObraMembrosTab />
         </TabsContent>
 
-        <TabsContent value="beta-users" className="space-y-4">
-          <BetaUsersTab />
-        </TabsContent>
+        {isSuperAdmin && (
+          <>
+            <TabsContent value="beta-users" className="space-y-4">
+              <BetaUsersTab />
+            </TabsContent>
 
-        <TabsContent value="influencers" className="space-y-4">
-          <InfluencerCodesTab />
-        </TabsContent>
+            <TabsContent value="influencers" className="space-y-4">
+              <InfluencerCodesTab />
+            </TabsContent>
 
-        <TabsContent value="beta-config" className="space-y-4">
-          <BetaConfigTab />
-        </TabsContent>
+            <TabsContent value="beta-config" className="space-y-4">
+              <BetaConfigTab />
+            </TabsContent>
 
-        <TabsContent value="beta-metrics" className="space-y-4">
-          <BetaMetricsTab />
-        </TabsContent>
+            <TabsContent value="beta-metrics" className="space-y-4">
+              <BetaMetricsTab />
+            </TabsContent>
+          </>
+        )}
 
         {isSuperAdmin && (
           <TabsContent value="super-admin" className="space-y-4">
