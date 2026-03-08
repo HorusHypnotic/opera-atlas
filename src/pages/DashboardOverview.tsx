@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
