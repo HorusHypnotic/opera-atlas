@@ -56,6 +56,11 @@ export default function AdminPage() {
   const [obraDialogOpen, setObraDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AppRole>("visualizador");
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<AppRole>("visualizador");
+  const [invites, setInvites] = useState<any[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const tenantId = profile?.tenant_id;
 
