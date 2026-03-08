@@ -1,31 +1,19 @@
 import { KPICard } from "@/components/dashboard/KPICard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
-import { AddRecordDialog } from "@/components/dashboard/AddRecordDialog";
+import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { ShieldCheck, Heart, CheckCircle, XCircle } from "lucide-react";
 
-interface Incidente {
-  id: string;
-  tipo: string;
-  descricao: string | null;
-  data: string;
-  status: string;
-  severidade: string;
-}
+interface Incidente { id: string; tipo: string; descricao: string | null; data: string; status: string; severidade: string; }
 
 const fields = [
   { name: "tipo", label: "Tipo", type: "select" as const, defaultValue: "nc", options: [
-    { value: "acidente", label: "Acidente" },
-    { value: "inspecao", label: "Inspeção" },
-    { value: "nc", label: "Não Conformidade" },
+    { value: "acidente", label: "Acidente" }, { value: "inspecao", label: "Inspeção" }, { value: "nc", label: "Não Conformidade" },
   ]},
   { name: "descricao", label: "Descrição", placeholder: "Descreva o incidente", required: true },
   { name: "status", label: "Status", type: "select" as const, defaultValue: "aberto", options: [
-    { value: "aberto", label: "Aberto" },
-    { value: "resolvido", label: "Resolvido" },
-    { value: "aprovado", label: "Aprovado" },
-    { value: "reprovado", label: "Reprovado" },
+    { value: "aberto", label: "Aberto" }, { value: "resolvido", label: "Resolvido" }, { value: "aprovado", label: "Aprovado" }, { value: "reprovado", label: "Reprovado" },
   ]},
   { name: "severidade", label: "Severidade", type: "select" as const, defaultValue: "media", options: [
     { value: "alta", label: "Alta" }, { value: "media", label: "Média" }, { value: "baixa", label: "Baixa" },
@@ -34,7 +22,7 @@ const fields = [
 ];
 
 export default function SegurancaQualidadePage() {
-  const { data: incidentes = [], isLoading, insert } = useTableData<Incidente>("incidentes_seguranca");
+  const { data: incidentes = [], isLoading, insert, update, remove } = useTableData<Incidente>("incidentes_seguranca");
 
   const acidentes = incidentes.filter((i) => i.tipo === "acidente");
   const ncs = incidentes.filter((i) => i.tipo === "nc");
@@ -45,7 +33,6 @@ export default function SegurancaQualidadePage() {
   const inspecoesTotal = inspecoes.length;
   const inspecoesPercent = inspecoesTotal > 0 ? (inspecoesAprovadas / inspecoesTotal) * 100 : 100;
 
-  // Dias sem acidente: days since last accident
   const lastAcidente = acidentes.sort((a, b) => b.data.localeCompare(a.data))[0];
   const diasSemAcidente = lastAcidente
     ? Math.floor((Date.now() - new Date(lastAcidente.data).getTime()) / (1000 * 60 * 60 * 24))
@@ -95,6 +82,7 @@ export default function SegurancaQualidadePage() {
               <th className="text-left py-2 px-3">Severidade</th>
               <th className="text-left py-2 px-3">Status</th>
               <th className="text-left py-2 px-3">Data</th>
+              <th className="text-right py-2 px-3">Ações</th>
             </tr></thead>
             <tbody>
               {incidentes.map((i) => (
@@ -104,6 +92,12 @@ export default function SegurancaQualidadePage() {
                   <td className="py-2.5 px-3 capitalize">{i.severidade}</td>
                   <td className="py-2.5 px-3 capitalize">{i.status}</td>
                   <td className="py-2.5 px-3 text-xs">{i.data}</td>
+                  <td className="py-2.5 px-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <EditRecordDialog title="Editar Registro" fields={fields} record={i} onSubmit={update} />
+                      <DeleteRecordButton onConfirm={() => remove(i.id)} itemName={i.descricao || "registro"} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

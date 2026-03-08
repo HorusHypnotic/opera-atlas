@@ -2,7 +2,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
-import { AddRecordDialog } from "@/components/dashboard/AddRecordDialog";
+import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { Users, DollarSign, BarChart3 } from "lucide-react";
 
@@ -32,7 +32,7 @@ const fields = [
 ];
 
 export default function OrganizacaoPage() {
-  const { data: registros = [], isLoading, insert } = useTableData<RegistroDiario>("registros_diarios");
+  const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
 
   const totalRegistros = registros.length;
   const okCount = registros.filter((r) => r.status === "ok").length;
@@ -41,11 +41,7 @@ export default function OrganizacaoPage() {
   return (
     <div>
       <GlobalFilters />
-      <SectionHeader
-        title="Organização — Mão de Obra"
-        subtitle="Controle de produtividade e custos de equipe"
-        icon={<Users className="h-5 w-5" />}
-      />
+      <SectionHeader title="Organização — Mão de Obra" subtitle="Controle de produtividade e custos de equipe" icon={<Users className="h-5 w-5" />} />
 
       <div className="flex justify-end mb-4">
         <AddRecordDialog title="Novo Registro Diário" fields={fields} onSubmit={insert} />
@@ -74,6 +70,7 @@ export default function OrganizacaoPage() {
                 <th className="text-left py-2 px-3">Produção</th>
                 <th className="text-left py-2 px-3">Data</th>
                 <th className="text-left py-2 px-3">Status</th>
+                <th className="text-right py-2 px-3">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -86,6 +83,12 @@ export default function OrganizacaoPage() {
                   <td className="py-2.5 px-3 font-mono">{c.producao || "—"}</td>
                   <td className="py-2.5 px-3 text-xs">{c.data_registro}</td>
                   <td className="py-2.5 px-3"><StatusBadge status={c.status as any} /></td>
+                  <td className="py-2.5 px-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <EditRecordDialog title="Editar Registro" fields={fields} record={c} onSubmit={update} />
+                      <DeleteRecordButton onConfirm={() => remove(c.id)} itemName={c.nome} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
