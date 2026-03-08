@@ -88,7 +88,7 @@ export default function AdminPage() {
     fetchData();
   }, [tenantId]);
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
