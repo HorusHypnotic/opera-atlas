@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
+import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
