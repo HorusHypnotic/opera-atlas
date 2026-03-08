@@ -53,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
 
     if (profileRes.data) {
-      setProfile(profileRes.data as Profile);
+      const p = profileRes.data as any;
+      setProfile({ ...p, is_super_admin: p.is_super_admin ?? false } as Profile);
     }
     if (rolesRes.data) {
       setRoles((rolesRes.data as { role: AppRole }[]).map((r) => r.role));
