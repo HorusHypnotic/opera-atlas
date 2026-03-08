@@ -4,13 +4,14 @@ import { useObra } from "@/hooks/useObra";
 import { useQuery } from "@tanstack/react-query";
 
 export function useTableData<T = any>(table: string) {
-  const { profile } = useAuth();
+  const { profile, isGuest } = useAuth();
   const { selectedObraId } = useObra();
   const tenantId = profile?.tenant_id || null;
 
   const query = useQuery({
-    queryKey: [table, tenantId, selectedObraId],
+    queryKey: [table, tenantId, selectedObraId, isGuest],
     queryFn: async () => {
+      if (isGuest) return [] as T[];
       let q = (supabase as any).from(table).select("*");
       if (tenantId) q = q.eq("tenant_id", tenantId);
       if (selectedObraId) q = q.eq("obra_id", selectedObraId);
@@ -19,10 +20,13 @@ export function useTableData<T = any>(table: string) {
       if (error) throw error;
       return (data || []) as T[];
     },
-    enabled: !!tenantId,
+    enabled: isGuest || !!tenantId,
   });
 
   const insert = async (record: Record<string, any>) => {
+    if (isGuest) {
+      return { error: { message: "Modo convidado: dados não são salvos" } };
+    }
     if (!tenantId) return { error: { message: "Sem tenant" } };
     const payload = { ...record, tenant_id: tenantId } as any;
     if (selectedObraId) payload.obra_id = selectedObraId;

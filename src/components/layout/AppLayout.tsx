@@ -5,10 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, isGuest } = useAuth();
 
-  // If user has no tenant, redirect to setup
-  if (profile && !profile.tenant_id) {
+  // If user has no tenant and is not guest, redirect to setup
+  if (!isGuest && profile && !profile.tenant_id) {
     return <Navigate to="/setup" replace />;
   }
 
