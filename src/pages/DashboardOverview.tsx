@@ -24,6 +24,9 @@ export default function DashboardOverview() {
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
   const { data: incidentes = [] } = useTableData("incidentes_seguranca");
   const { data: sequenciamento = [] } = useTableData("sequenciamento_equipes");
+  const { data: logistica = [] } = useTableData("logistica_interna");
+  const { data: ciclos = [] } = useTableData("ciclos_tarefa");
+  const { data: aditivos = [] } = useTableData("aditivos_contratuais");
 
   const totalReceitas = lancamentos.filter((l: any) => l.tipo === "receita").reduce((s: number, l: any) => s + Number(l.valor), 0);
   const totalCustos = lancamentos.filter((l: any) => l.tipo === "custo").reduce((s: number, l: any) => s + Number(l.valor), 0);
@@ -55,6 +58,7 @@ export default function DashboardOverview() {
       responsavel: profile?.full_name || profile?.email || "—",
       data: new Date().toLocaleDateString("pt-BR"),
       registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes,
+      logistica, ciclos, aditivos,
     });
   };
 
