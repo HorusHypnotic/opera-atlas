@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useObra } from "@/hooks/useObra";
 import { useQuery } from "@tanstack/react-query";
+import { DEMO_DATA } from "@/data/demoData";
 
 export function useTableData<T = any>(table: string) {
   const { profile, isGuest } = useAuth();
@@ -11,7 +12,14 @@ export function useTableData<T = any>(table: string) {
   const query = useQuery({
     queryKey: [table, tenantId, selectedObraId, isGuest],
     queryFn: async () => {
-      if (isGuest) return [] as T[];
+      if (isGuest) {
+        // Return demo data filtered by selected obra
+        const demoRows = (DEMO_DATA[table] || []) as T[];
+        if (selectedObraId) {
+          return demoRows.filter((r: any) => r.obra_id === selectedObraId);
+        }
+        return demoRows;
+      }
       let q = (supabase as any).from(table).select("*");
       if (tenantId) q = q.eq("tenant_id", tenantId);
       if (selectedObraId) q = q.eq("obra_id", selectedObraId);
