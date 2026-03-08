@@ -369,7 +369,7 @@ export default function ObrasPage() {
                     <Badge variant="secondary" className={`text-[10px] ${statusInfo.color}`}>
                       {statusInfo.label}
                     </Badge>
-                    {canEdit && (
+                    {canManageObras && (
                       <>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); openEdit(obra); }}>
                           <Pencil className="h-3.5 w-3.5" />
