@@ -22,8 +22,8 @@ import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
 import NotFound from "./pages/NotFound";
 import InvitePage from "./pages/InvitePage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BetaSignupPage from "./pages/BetaSignupPage";
+import BetaStatusPage from "./pages/BetaStatusPage";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
