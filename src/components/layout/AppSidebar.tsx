@@ -23,6 +23,7 @@ const sections = [
   { title: "Checklist Semanal", url: "/checklist", icon: ListChecks },
   { title: "Colaboradores", url: "/colaboradores", icon: HardHat },
   { title: "Obras", url: "/obras", icon: Building2 },
+  { title: "Economia", url: "/economia", icon: Banknote },
 ];
 
 export function AppSidebar() {
