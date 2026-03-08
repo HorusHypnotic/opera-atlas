@@ -33,6 +33,7 @@ const fields = [
 ];
 
 export default function OrganizacaoPage() {
+  const { selectedObraId } = useObra();
   const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
 
