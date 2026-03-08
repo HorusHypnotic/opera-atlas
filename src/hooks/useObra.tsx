@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { DEMO_OBRAS } from "@/data/demoData";
 
 interface Obra {
   id: string;
@@ -21,12 +22,18 @@ interface ObraContextType {
 const ObraContext = createContext<ObraContextType | undefined>(undefined);
 
 export function ObraProvider({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, isGuest } = useAuth();
   const [obras, setObras] = useState<Obra[]>([]);
   const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchObras = async () => {
+    if (isGuest) {
+      setObras(DEMO_OBRAS);
+      if (!selectedObraId) setSelectedObraId(DEMO_OBRAS[0].id);
+      setLoading(false);
+      return;
+    }
     if (!profile?.tenant_id) {
       setObras([]);
       setLoading(false);
@@ -48,7 +55,7 @@ export function ObraProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchObras();
-  }, [profile?.tenant_id]);
+  }, [profile?.tenant_id, isGuest]);
 
   const selectedObra = obras.find((o) => o.id === selectedObraId) || null;
 
