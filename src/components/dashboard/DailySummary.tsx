@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Calendar, Users, DollarSign, AlertTriangle, Package, CheckCircle2 } from "lucide-react";
+import { ShareButton } from "@/components/dashboard/ShareButton";
 
 interface DailySummaryProps {
   registros: any[];
@@ -9,9 +10,10 @@ interface DailySummaryProps {
   acoes: any[];
   checklist: any[];
   colaboradores: any[];
+  obraNome?: string;
 }
 
-export function DailySummary({ registros, presencas, lancamentos, consumo, acoes, checklist, colaboradores }: DailySummaryProps) {
+export function DailySummary({ registros, presencas, lancamentos, consumo, acoes, checklist, colaboradores, obraNome }: DailySummaryProps) {
   const today = new Date().toISOString().substring(0, 10);
 
   const stats = useMemo(() => {
