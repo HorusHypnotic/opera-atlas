@@ -51,7 +51,7 @@ export function ObraProvider({ children }: { children: ReactNode }) {
     }
     const { data } = await supabase
       .from("obras")
-      .select("id, nome, endereco, status")
+      .select("id, nome, endereco, status, data_inicio, data_previsao, orcamento_total, custo_orcado_m2, area_m2, fase_atual, abordagem, responsavel, descricao, tipo_obra")
       .eq("tenant_id", profile.tenant_id)
       .order("created_at", { ascending: false });
 
