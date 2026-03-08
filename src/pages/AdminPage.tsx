@@ -207,6 +207,9 @@ export default function AdminPage() {
           <TabsTrigger value="beta-config" className="gap-1.5">
             <Settings className="h-4 w-4" /> Beta Config
           </TabsTrigger>
+          <TabsTrigger value="beta-metrics" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" /> Métricas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
