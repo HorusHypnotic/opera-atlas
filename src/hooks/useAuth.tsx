@@ -11,6 +11,7 @@ interface Profile {
   avatar_url: string | null;
   tenant_id: string | null;
   is_super_admin: boolean;
+  beta_approved_at: string | null;
 }
 
 const GUEST_PROFILE: Profile = {
@@ -20,6 +21,7 @@ const GUEST_PROFILE: Profile = {
   avatar_url: null,
   tenant_id: "guest-tenant",
   is_super_admin: false,
+  beta_approved_at: null,
 };
 
 interface AuthContextType {
@@ -33,6 +35,7 @@ interface AuthContextType {
   isGestor: boolean;
   isGuest: boolean;
   isSuperAdmin: boolean;
+  isTrialExpired: boolean;
   signOut: () => Promise<void>;
   enterGuestMode: () => void;
 }
@@ -123,6 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
+  const computeTrialExpired = (): boolean => {
+    if (!profile?.beta_approved_at) return false;
+    if (profile.is_super_admin) return false;
+    const approvedAt = new Date(profile.beta_approved_at);
+    const now = new Date();
+    const diffDays = (now.getTime() - approvedAt.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 30;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isGestor: hasRole("gestor"),
         isGuest,
         isSuperAdmin: profile?.is_super_admin ?? false,
+        isTrialExpired: computeTrialExpired(),
         signOut,
         enterGuestMode,
       }}
