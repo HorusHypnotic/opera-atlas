@@ -7,6 +7,7 @@ import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSig
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -97,6 +98,8 @@ export default function DashboardOverview() {
         <KPICard title="Dias Sem Acidente" value={diasSemAcidente} icon={<Heart className="h-5 w-5" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
         <KPICard title="Inspeções Aprovadas" value={`${inspecoesPercent.toFixed(0)}%`} icon={<ShieldCheck className="h-5 w-5" />} tooltip="Aprovadas na primeira tentativa" status={inspecoesPercent >= 90 ? "ok" : "warning"} />
       </div>
+
+      <DashboardCharts registros={registros} consumo={consumo} lancamentos={lancamentos} incidentes={incidentes} />
 
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

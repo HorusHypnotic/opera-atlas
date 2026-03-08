@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2 } from "lucide-react";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 
@@ -56,21 +56,28 @@ export default function AdminPage() {
   const [obraDialogOpen, setObraDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AppRole>("visualizador");
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<AppRole>("visualizador");
+  const [invites, setInvites] = useState<any[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const tenantId = profile?.tenant_id;
 
   const fetchData = async () => {
     if (!tenantId) return;
 
-    const [profRes, rolesRes, obrasRes] = await Promise.all([
+    const [profRes, rolesRes, obrasRes, invitesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("tenant_id", tenantId),
       supabase.from("user_roles").select("*").eq("tenant_id", tenantId),
       supabase.from("obras").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+      supabase.from("invites").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
     ]);
 
     if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
     if (rolesRes.data) setUserRoles(rolesRes.data as RoleRow[]);
     if (obrasRes.data) setObras(obrasRes.data as ObraRow[]);
+    if (invitesRes.data) setInvites(invitesRes.data);
   };
 
   useEffect(() => {
@@ -136,6 +143,38 @@ export default function AdminPage() {
     }
   };
 
+  const sendInvite = async () => {
+    if (!inviteEmail.trim() || !tenantId) return;
+    setInviteLoading(true);
+    const { error } = await supabase.from("invites").insert({
+      email: inviteEmail,
+      role: inviteRole,
+      tenant_id: tenantId,
+    } as any);
+    setInviteLoading(false);
+    if (error) {
+      toast.error("Erro ao criar convite: " + error.message);
+    } else {
+      toast.success("Convite criado!");
+      setInviteEmail("");
+      fetchData();
+    }
+  };
+
+  const copyInviteLink = (token: string) => {
+    const url = `${window.location.origin}/invite?token=${token}`;
+    navigator.clipboard.writeText(url);
+    setCopiedToken(token);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopiedToken(null), 2000);
+  };
+
+  const deleteInvite = async (id: string) => {
+    const { error } = await supabase.from("invites").delete().eq("id", id);
+    if (error) toast.error("Erro ao excluir convite");
+    else { toast.success("Convite removido"); fetchData(); }
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -148,6 +187,9 @@ export default function AdminPage() {
         <TabsList>
           <TabsTrigger value="usuarios" className="gap-1.5">
             <UserPlus className="h-4 w-4" /> Usuários & Permissões
+          </TabsTrigger>
+          <TabsTrigger value="convites" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Convites
           </TabsTrigger>
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
@@ -226,6 +268,78 @@ export default function AdminPage() {
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Nenhum usuário encontrado neste tenant
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="convites" className="space-y-4">
+          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
+            <div className="space-y-1 flex-1 min-w-[200px]">
+              <label className="text-xs text-muted-foreground">Email do convidado</label>
+              <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Papel</label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="operacional">Operacional</SelectItem>
+                  <SelectItem value="visualizador">Visualizador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5">
+              <Mail className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Criar Convite"}
+            </Button>
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Papel</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="w-[120px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invites.map((inv) => {
+                  const expired = new Date(inv.expires_at) < new Date();
+                  return (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.email}</TableCell>
+                      <TableCell><Badge variant="secondary" className={`${roleBadgeColor[inv.role as AppRole] || ""} text-xs`}>{inv.role}</Badge></TableCell>
+                      <TableCell>
+                        {inv.used ? <Badge variant="secondary" className="text-xs">Usado</Badge> :
+                         expired ? <Badge variant="destructive" className="text-xs">Expirado</Badge> :
+                         <Badge variant="secondary" className="bg-status-ok/20 text-status-ok text-xs">Ativo</Badge>}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{new Date(inv.expires_at).toLocaleDateString("pt-BR")}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyInviteLink(inv.token)} disabled={inv.used || expired}>
+                            {copiedToken === inv.token ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteInvite(inv.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {invites.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Nenhum convite enviado ainda
                     </TableCell>
                   </TableRow>
                 )}
