@@ -55,6 +55,11 @@ export default function PadronizacaoPage() {
         <KPICard title="% Desperdício" value={`${desperdicioTotal.toFixed(1)}%`} icon={<TrendingDown className="h-5 w-5" />} tooltip="Meta: < 5%" status={desperdicioStatus as any} subtitle="Meta: < 5%" />
       </div>
 
+      {/* Waste Ranking */}
+      <div className="mb-6">
+        <WasteRankingCard consumo={consumo} />
+      </div>
+
       <Tabs defaultValue="consumo" className="space-y-4">
         <TabsList>
           <TabsTrigger value="consumo">Consumo Previsto vs Real</TabsTrigger>
