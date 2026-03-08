@@ -84,6 +84,20 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ nome: "", email: "", telefone: "", empresa: "", mensagem: "" });
   const [sending, setSending] = useState(false);
+  const [vagasRestantes, setVagasRestantes] = useState<number | null>(null);
+
+  useEffect(() => {
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      Promise.all([
+        supabase.from("beta_config").select("limite_vagas, beta_ativo").limit(1).maybeSingle(),
+        supabase.from("beta_waitlist").select("id", { count: "exact", head: true }).in("status", ["aguardando_aprovacao", "aprovado"]),
+      ]).then(([configRes, countRes]) => {
+        if (configRes.data?.beta_ativo) {
+          setVagasRestantes(Math.max(0, (configRes.data.limite_vagas ?? 5) - (countRes.count ?? 0)));
+        }
+      });
+    });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
