@@ -18,6 +18,7 @@ import AcoesCorretivasPage from "./pages/AcoesCorretivasPage";
 import ChecklistSemanalPage from "./pages/ChecklistSemanalPage";
 import ColaboradoresPage from "./pages/ColaboradoresPage";
 import ObrasPage from "./pages/ObrasPage";
+import EconomiaPage from "./pages/EconomiaPage";
 import LandingPage from "./pages/LandingPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
@@ -65,6 +66,7 @@ const App = () => (
                       <Route path="/checklist" element={<ChecklistSemanalPage />} />
                       <Route path="/colaboradores" element={<ColaboradoresPage />} />
                       <Route path="/obras" element={<ObrasPage />} />
+                      <Route path="/economia" element={<EconomiaPage />} />
                       <Route path="/admin" element={<AdminPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

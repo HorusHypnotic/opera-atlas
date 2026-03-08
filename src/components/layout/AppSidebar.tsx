@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, Shield, LogOut, ClipboardCheck, ListChecks, HardHat, Building2,
+  LayoutDashboard, Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, Shield, LogOut, ClipboardCheck, ListChecks, HardHat, Building2, Banknote,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -23,6 +23,7 @@ const sections = [
   { title: "Checklist Semanal", url: "/checklist", icon: ListChecks },
   { title: "Colaboradores", url: "/colaboradores", icon: HardHat },
   { title: "Obras", url: "/obras", icon: Building2 },
+  { title: "Economia", url: "/economia", icon: Banknote },
 ];
 
 export function AppSidebar() {

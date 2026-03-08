@@ -5,8 +5,8 @@ const today = new Date().toISOString().slice(0, 10);
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
 export const DEMO_OBRAS = [
-  { id: DEMO_OBRA_ID, nome: "Residencial Aurora", endereco: "Av. Brasil, 1200 — São Paulo", status: "em_andamento", custo_orcado_m2: 680 },
-  { id: "demo-obra-002", nome: "Edifício Horizonte", endereco: "Rua das Palmeiras, 45 — Campinas", status: "em_andamento", custo_orcado_m2: 720 },
+  { id: DEMO_OBRA_ID, nome: "Residencial Aurora", endereco: "Av. Brasil, 1200 — São Paulo", status: "em_andamento", custo_orcado_m2: 680, data_inicio: daysAgo(120), data_previsao: daysAgo(-180), orcamento_total: 2500000, area_m2: 3200, fase_atual: "execucao", abordagem: "hibrida", responsavel: "Carlos Silva", descricao: "Condomínio residencial de alto padrão com 4 torres", tipo_obra: "residencial" },
+  { id: "demo-obra-002", nome: "Edifício Horizonte", endereco: "Rua das Palmeiras, 45 — Campinas", status: "em_andamento", custo_orcado_m2: 720, data_inicio: daysAgo(60), data_previsao: daysAgo(-300), orcamento_total: 4200000, area_m2: 5800, fase_atual: "planejamento", abordagem: "preditiva", responsavel: "Ana Costa", descricao: "Edifício comercial com 20 andares", tipo_obra: "comercial" },
 ];
 
 const base = { tenant_id: DEMO_TENANT_ID, obra_id: DEMO_OBRA_ID };
