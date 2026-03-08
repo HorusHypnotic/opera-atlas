@@ -112,9 +112,9 @@ export default function DashboardOverview() {
       productivity,
       safety,
       scheduleMetrics: scheduleMetrics ? {
-        spiPercent: scheduleMetrics.spiPercent || 0,
+        spiPercent: (scheduleMetrics.spi || 0) * 100,
         faseAtual: (selectedObra as any)?.fase_atual || "iniciacao",
-        diasDecorridos: scheduleMetrics.diasDecorridos || 0,
+        diasDecorridos: scheduleMetrics.diasCorridos || 0,
         diasRestantes: scheduleMetrics.diasRestantes || 0,
       } : null,
       obraData,
