@@ -10,6 +10,7 @@ import { exportOperaReport } from "@/utils/exportOperaReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
+import { DataRetentionBanner } from "@/components/dashboard/DataRetentionBanner";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
