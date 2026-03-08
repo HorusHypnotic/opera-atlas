@@ -7,6 +7,7 @@ import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSig
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
