@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { useTableData } from "@/hooks/useTableData";
@@ -11,6 +12,28 @@ import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
 import { DataRetentionBanner } from "@/components/dashboard/DataRetentionBanner";
+
+// New components
+import { EconomyHeroCard } from "@/components/dashboard/EconomyHeroCard";
+import { DailySummary } from "@/components/dashboard/DailySummary";
+import { SafetyHeroCard } from "@/components/dashboard/SafetyHeroCard";
+import { ScheduleCard } from "@/components/dashboard/ScheduleCard";
+import { StockSemaphoreCard } from "@/components/dashboard/StockSemaphoreCard";
+import { AnomalyCard } from "@/components/dashboard/AnomalyCard";
+import { SimulatorCard } from "@/components/dashboard/SimulatorCard";
+import { ProductivityCard } from "@/components/dashboard/ProductivityCard";
+import { RiskMatrixCard } from "@/components/dashboard/RiskMatrixCard";
+import { OperaRadarChart } from "@/components/dashboard/OperaRadarChart";
+import { FinancialCharts } from "@/components/dashboard/FinancialCharts";
+import { NotificationBadge } from "@/components/dashboard/NotificationBadge";
+
+// Analytics
+import { calculateOperaScore } from "@/analytics/operaScore";
+import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
+import { calculateProductivity } from "@/analytics/produtividade";
+import { calculateStockSemaphore, detectAnomalies } from "@/analytics/estoque";
+import { calculateScheduleMetrics } from "@/analytics/cronograma";
+import { calculateSafetyMetrics } from "@/analytics/seguranca";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -28,30 +51,54 @@ export default function DashboardOverview() {
   const { data: logistica = [] } = useTableData("logistica_interna");
   const { data: ciclos = [] } = useTableData("ciclos_tarefa");
   const { data: aditivos = [] } = useTableData("aditivos_contratuais");
+  const { data: acoes = [] } = useTableData("acoes_corretivas");
+  const { data: checklist = [] } = useTableData("checklist_semanal");
+  const { data: colaboradores = [] } = useTableData("colaboradores");
+  const { data: presencas = [] } = useTableData("registro_presencas");
 
-  const totalReceitas = lancamentos.filter((l: any) => l.tipo === "receita").reduce((s: number, l: any) => s + Number(l.valor), 0);
-  const totalCustos = lancamentos.filter((l: any) => l.tipo === "custo").reduce((s: number, l: any) => s + Number(l.valor), 0);
-  const saldo = totalReceitas - totalCustos;
-  const margem = totalReceitas > 0 ? ((saldo / totalReceitas) * 100) : 0;
+  // Opera Score
+  const score = useMemo(() => calculateOperaScore({ registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes }), [registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes]);
 
-  const desperdicioTotal = consumo.length > 0
-    ? consumo.reduce((acc: number, m: any) => acc + (m.previsto > 0 ? ((m.real_consumo - m.previsto) / m.previsto) * 100 : 0), 0) / consumo.length
+  // Financial intelligence
+  const obraData = useMemo(() => selectedObra ? {
+    orcamento_total: (selectedObra as any).orcamento_total || 0,
+    area_m2: (selectedObra as any).area_m2 || 0,
+    data_inicio: (selectedObra as any).data_inicio,
+    data_previsao: (selectedObra as any).data_previsao,
+    custo_orcado_m2: (selectedObra as any).custo_orcado_m2 || 0,
+  } : undefined, [selectedObra]);
+
+  const financials = useMemo(() => calculateFinancials(lancamentos, retrabalhos, consumo, colaboradores, presencas, obraData), [lancamentos, retrabalhos, consumo, colaboradores, presencas, obraData]);
+  const burnRate = useMemo(() => calculateBurnRate(lancamentos), [lancamentos]);
+
+  // Productivity
+  const productivity = useMemo(() => calculateProductivity(registros, presencas, logistica, colaboradores), [registros, presencas, logistica, colaboradores]);
+
+  // Stock semaphore
+  const stockItems = useMemo(() => calculateStockSemaphore(consumo), [consumo]);
+  const anomalies = useMemo(() => detectAnomalies(lancamentos), [lancamentos]);
+
+  // Schedule
+  const scheduleMetrics = useMemo(() => {
+    if (!selectedObra) return null;
+    return calculateScheduleMetrics(selectedObra as any, sequenciamento);
+  }, [selectedObra, sequenciamento]);
+
+  // Safety
+  const safety = useMemo(() => calculateSafetyMetrics(incidentes, checklist), [incidentes, checklist]);
+
+  // Notifications
+  const today = new Date().toISOString().substring(0, 10);
+  const acoesVencidas = acoes.filter((a: any) => a.status === "pendente" && a.prazo && a.prazo < today).length;
+  const riscosAbertos = riscos.length;
+  const checklistPendentes = checklist.filter((c: any) => !c.verificado).length;
+  const materiaisCriticos = stockItems.filter(s => s.status === "critical").length;
+
+  // Desperdicio for simulator
+  const desperdicioMedio = consumo.length > 0
+    ? consumo.filter((m: any) => Number(m.previsto) > 0).reduce((acc: number, m: any) => acc + Math.max(0, ((Number(m.real_consumo) - Number(m.previsto)) / Number(m.previsto)) * 100), 0) / Math.max(consumo.filter((m: any) => Number(m.previsto) > 0).length, 1)
     : 0;
-
-  const ociosTotal = ativos.filter((f: any) => f.status === "ocioso").reduce((s: number, f: any) => s + Number(f.valor), 0);
-  const ativosPercent = ativos.length > 0 ? (ativos.filter((f: any) => f.status === "ativo").length / ativos.length * 100) : 0;
-
-  const ncs = incidentes.filter((i: any) => i.tipo === "nc");
-  const ncAbertas = ncs.filter((i: any) => i.status === "aberto").length;
-  const inspecoes = incidentes.filter((i: any) => i.tipo === "inspecao");
-  const inspecoesAprovadas = inspecoes.filter((i: any) => i.status === "aprovado").length;
-  const inspecoesPercent = inspecoes.length > 0 ? (inspecoesAprovadas / inspecoes.length * 100) : 100;
-
-  const acidentes = incidentes.filter((i: any) => i.tipo === "acidente");
-  const lastAcidente = acidentes.sort((a: any, b: any) => b.data.localeCompare(a.data))[0];
-  const diasSemAcidente = lastAcidente
-    ? Math.floor((Date.now() - new Date(lastAcidente.data).getTime()) / (1000 * 60 * 60 * 24))
-    : incidentes.length > 0 ? 999 : 0;
+  const custoMateriais = financials.totalCustos * 0.4;
 
   const handleExportPDF = () => {
     exportOperaReport({
@@ -64,26 +111,11 @@ export default function DashboardOverview() {
   };
 
   const sections = [
-    {
-      letter: "O", title: "Organização", subtitle: "Mão de Obra", icon: <Users className="h-5 w-5" />, url: "/organizacao",
-      kpi: `${registros.length} registros`, status: registros.length === 0 ? "warning" as const : "ok" as const,
-    },
-    {
-      letter: "P", title: "Padronização", subtitle: "Insumos", icon: <Package className="h-5 w-5" />, url: "/padronizacao",
-      kpi: `Desp: ${desperdicioTotal.toFixed(1)}%`, status: desperdicioTotal > 5 ? "warning" as const : "ok" as const,
-    },
-    {
-      letter: "E", title: "Eficiência", subtitle: "Ativos", icon: <Wrench className="h-5 w-5" />, url: "/eficiencia",
-      kpi: `${ativos.length} ativos`, status: ativosPercent >= 80 ? "ok" as const : "warning" as const,
-    },
-    {
-      letter: "R", title: "Redução de Perdas", subtitle: "Improdutividade", icon: <ShieldAlert className="h-5 w-5" />, url: "/reducao-perdas",
-      kpi: `${riscos.length} riscos`, status: riscos.length > 3 ? "critical" as const : "ok" as const,
-    },
-    {
-      letter: "A", title: "Análise Contínua", subtitle: "Financeiro", icon: <TrendingUp className="h-5 w-5" />, url: "/analise-continua",
-      kpi: `Margem: ${margem.toFixed(1)}%`, status: margem > 15 ? "ok" as const : margem > 10 ? "warning" as const : "critical" as const,
-    },
+    { letter: "O", title: "Organização", subtitle: "Mão de Obra", icon: <Users className="h-5 w-5" />, url: "/organizacao", kpi: `${registros.length} registros`, status: registros.length === 0 ? "warning" as const : "ok" as const },
+    { letter: "P", title: "Padronização", subtitle: "Insumos", icon: <Package className="h-5 w-5" />, url: "/padronizacao", kpi: `Desp: ${desperdicioMedio.toFixed(1)}%`, status: desperdicioMedio > 5 ? "warning" as const : "ok" as const },
+    { letter: "E", title: "Eficiência", subtitle: "Ativos", icon: <Wrench className="h-5 w-5" />, url: "/eficiencia", kpi: `${ativos.length} ativos`, status: (ativos.length > 0 ? ativos.filter((f: any) => f.status === "ativo").length / ativos.length * 100 : 100) >= 80 ? "ok" as const : "warning" as const },
+    { letter: "R", title: "Redução de Perdas", subtitle: "Improdutividade", icon: <ShieldAlert className="h-5 w-5" />, url: "/reducao-perdas", kpi: `${riscos.length} riscos`, status: riscos.length > 3 ? "critical" as const : "ok" as const },
+    { letter: "A", title: "Análise Contínua", subtitle: "Financeiro", icon: <TrendingUp className="h-5 w-5" />, url: "/analise-continua", kpi: `Margem: ${financials.margem.toFixed(1)}%`, status: financials.margem > 15 ? "ok" as const : financials.margem > 10 ? "warning" as const : "critical" as const },
   ];
 
   return (
@@ -94,26 +126,97 @@ export default function DashboardOverview() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Dashboard O.P.E.R.A.</h1>
-          <p className="text-sm text-muted-foreground">Visão consolidada de todos os indicadores da obra</p>
+          <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
           <FileText className="h-4 w-4" /> Exportar PDF
         </Button>
       </div>
 
-      <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
+      {/* Notifications */}
+      <NotificationBadge
+        acoesVencidas={acoesVencidas}
+        riscosAbertos={riscosAbertos}
+        checklistPendentes={checklistPendentes}
+        materiaisCriticos={materiaisCriticos}
+        anomalias={anomalies.length}
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KPICard title="Saldo Financeiro" value={`R$ ${(saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-5 w-5" />} tooltip="Receitas - Custos" status={saldo >= 0 ? "ok" : "critical"} />
-        <KPICard title="Obras Cadastradas" value={obras.length} icon={<TrendingUp className="h-5 w-5" />} tooltip="Total de obras no sistema" status="ok" />
-        <KPICard title="Dias Sem Acidente" value={diasSemAcidente} icon={<Heart className="h-5 w-5" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
-        <KPICard title="Inspeções Aprovadas" value={`${inspecoesPercent.toFixed(0)}%`} icon={<ShieldCheck className="h-5 w-5" />} tooltip="Aprovadas na primeira tentativa" status={inspecoesPercent >= 90 ? "ok" : "warning"} />
+      {/* Daily Summary */}
+      <DailySummary
+        registros={registros} presencas={presencas} lancamentos={lancamentos}
+        consumo={consumo} acoes={acoes} checklist={checklist} colaboradores={colaboradores}
+      />
+
+      {/* Economy Hero */}
+      <EconomyHeroCard financials={financials} orcamentoTotal={obraData?.orcamento_total || 0} />
+
+      {/* Score + Radar side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
+        <OperaRadarChart score={score} />
       </div>
 
-      <DashboardCharts registros={registros} consumo={consumo} lancamentos={lancamentos} incidentes={incidentes} />
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <KPICard title="Saldo" value={`R$ ${(financials.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financials.saldo >= 0 ? "ok" : "critical"} />
+        <KPICard title="Obras" value={obras.length} icon={<TrendingUp className="h-4 w-4" />} tooltip="Total de obras cadastradas" status="ok" />
+        <KPICard title="Dias s/ Acidente" value={safety.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
+        <KPICard title="Inspeções" value={`${safety.taxaResolucao.toFixed(0)}%`} icon={<ShieldCheck className="h-4 w-4" />} tooltip="Taxa de resolução de incidentes" status={safety.taxaResolucao >= 90 ? "ok" : "warning"} />
+        <KPICard title="Absenteísmo" value={`${productivity.absenteismo.toFixed(1)}%`} icon={<Users className="h-4 w-4" />} tooltip="Faltas ÷ total de dias" status={productivity.absenteismo > 5 ? "critical" : productivity.absenteismo > 3 ? "warning" : "ok"} />
+        <KPICard title="Colaboradores" value={productivity.colaboradoresAtivos} icon={<Users className="h-4 w-4" />} tooltip="Colaboradores ativos cadastrados" status="ok" />
+      </div>
+
+      {/* Financial Charts */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <DollarSign className="h-5 w-5 text-primary" />
+          Visibilidade Financeira
+        </h2>
+        <FinancialCharts
+          burnRate={burnRate}
+          custoRealM2={financials.custoRealM2}
+          custoOrcadoM2={obraData?.custo_orcado_m2 || 0}
+          projecaoCustoFinal={financials.projecaoCustoFinal}
+          orcamentoTotal={obraData?.orcamento_total || 0}
+        />
+      </div>
+
+      {/* Productivity + Safety + Schedule */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <ProductivityCard metrics={productivity} registros={registros} presencas={presencas} />
+        <SafetyHeroCard
+          diasSemAcidente={safety.diasSemAcidente}
+          indiceSeveridade={safety.indiceSeveridade}
+          taxaResolucao={safety.taxaResolucao}
+          checklistCompliance={safety.checklistCompliance}
+        />
+      </div>
+
+      {/* Schedule + Risk + Stock + Simulator */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <ScheduleCard metrics={scheduleMetrics} faseAtual={(selectedObra as any)?.fase_atual || "iniciacao"} />
+        <RiskMatrixCard riscos={riscos} />
+        <StockSemaphoreCard items={stockItems} />
+        <SimulatorCard
+          desperdicioAtual={desperdicioMedio}
+          custoMateriais={custoMateriais}
+          custoRetrabalhoAtual={financials.custoRetrabalho}
+          burnRateAtual={financials.burnRateMensal}
+        />
+      </div>
+
+      {/* Anomalies */}
+      <AnomalyCard anomalies={anomalies} />
+
+      {/* Original charts */}
+      <div className="mt-6">
+        <DashboardCharts registros={registros} consumo={consumo} lancamentos={lancamentos} incidentes={incidentes} />
+      </div>
 
       <AnalyticsAlerts registros={registros} consumo={consumo} retrabalhos={retrabalhos} sequenciamento={sequenciamento} />
 
+      {/* Module navigation */}
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {sections.map((s) => (
