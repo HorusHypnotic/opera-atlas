@@ -246,7 +246,8 @@ export default function BetaSignupPage() {
                 maxLength={20}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={status === "loading"}>
+            <div ref={turnstileRef} className="flex justify-center" />
+            <Button type="submit" className="w-full" disabled={status === "loading" || !turnstileToken}>
               {status === "loading" ? "Enviando..." : "Quero participar do Beta"}
             </Button>
           </form>
