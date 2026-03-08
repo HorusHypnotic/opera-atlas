@@ -3,6 +3,7 @@ import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { GaugeChart } from "@/components/dashboard/GaugeChart";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
+import { WasteRankingCard } from "@/components/dashboard/WasteRankingCard";
 import { useTableData } from "@/hooks/useTableData";
 import { Package, AlertTriangle, TrendingDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
