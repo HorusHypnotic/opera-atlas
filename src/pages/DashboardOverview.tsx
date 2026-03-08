@@ -22,6 +22,7 @@ export default function DashboardOverview() {
   const { data: retrabalhos = [] } = useTableData("retrabalhos");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
   const { data: incidentes = [] } = useTableData("incidentes_seguranca");
+  const { data: sequenciamento = [] } = useTableData("sequenciamento_equipes");
 
   const totalReceitas = lancamentos.filter((l: any) => l.tipo === "receita").reduce((s: number, l: any) => s + Number(l.valor), 0);
   const totalCustos = lancamentos.filter((l: any) => l.tipo === "custo").reduce((s: number, l: any) => s + Number(l.valor), 0);
