@@ -22,48 +22,18 @@ export default function SetupPage() {
     if (!nome.trim() || !user) return;
     setLoading(true);
 
-    // 1. Create tenant
-    const { data: tenant, error: tenantErr } = await supabase
-      .from("tenants")
-      .insert({ nome, cnpj: cnpj || null } as any)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc("setup_tenant", {
+      _nome: nome.trim(),
+      _cnpj: cnpj.trim() || null,
+    });
 
-    if (tenantErr || !tenant) {
-      toast.error("Erro ao criar empresa: " + (tenantErr?.message || ""));
-      setLoading(false);
-      return;
-    }
-
-    // 2. Link profile to tenant
-    const { error: profileErr } = await supabase
-      .from("profiles")
-      .update({ tenant_id: (tenant as any).id } as any)
-      .eq("id", user.id);
-
-    if (profileErr) {
-      toast.error("Erro ao vincular perfil: " + profileErr.message);
-      setLoading(false);
-      return;
-    }
-
-    // 3. Assign admin role
-    const { error: roleErr } = await supabase
-      .from("user_roles")
-      .insert({
-        user_id: user.id,
-        role: "admin",
-        tenant_id: (tenant as any).id,
-      } as any);
-
-    if (roleErr) {
-      toast.error("Erro ao atribuir papel: " + roleErr.message);
+    if (error) {
+      toast.error("Erro ao criar empresa: " + error.message);
       setLoading(false);
       return;
     }
 
     toast.success("Empresa criada com sucesso!");
-    // Force reload to re-fetch profile/roles
     window.location.href = "/";
   };
 
