@@ -5,8 +5,8 @@ const today = new Date().toISOString().slice(0, 10);
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
 export const DEMO_OBRAS = [
-  { id: DEMO_OBRA_ID, nome: "Residencial Aurora", endereco: "Av. Brasil, 1200 — São Paulo", status: "em_andamento" },
-  { id: "demo-obra-002", nome: "Edifício Horizonte", endereco: "Rua das Palmeiras, 45 — Campinas", status: "em_andamento" },
+  { id: DEMO_OBRA_ID, nome: "Residencial Aurora", endereco: "Av. Brasil, 1200 — São Paulo", status: "em_andamento", custo_orcado_m2: 680 },
+  { id: "demo-obra-002", nome: "Edifício Horizonte", endereco: "Rua das Palmeiras, 45 — Campinas", status: "em_andamento", custo_orcado_m2: 720 },
 ];
 
 const base = { tenant_id: DEMO_TENANT_ID, obra_id: DEMO_OBRA_ID };
