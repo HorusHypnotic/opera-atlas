@@ -9,9 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check } from "lucide-react";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
+import { BetaUsersTab } from "@/components/admin/BetaUsersTab";
+import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
+import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -193,6 +196,15 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
+          </TabsTrigger>
+          <TabsTrigger value="beta-users" className="gap-1.5">
+            <Rocket className="h-4 w-4" /> Beta Users
+          </TabsTrigger>
+          <TabsTrigger value="influencers" className="gap-1.5">
+            <Link2 className="h-4 w-4" /> Influenciadores
+          </TabsTrigger>
+          <TabsTrigger value="beta-config" className="gap-1.5">
+            <Settings className="h-4 w-4" /> Beta Config
           </TabsTrigger>
         </TabsList>
 
@@ -413,6 +425,18 @@ export default function AdminPage() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="beta-users" className="space-y-4">
+          <BetaUsersTab />
+        </TabsContent>
+
+        <TabsContent value="influencers" className="space-y-4">
+          <InfluencerCodesTab />
+        </TabsContent>
+
+        <TabsContent value="beta-config" className="space-y-4">
+          <BetaConfigTab />
         </TabsContent>
       </Tabs>
     </div>

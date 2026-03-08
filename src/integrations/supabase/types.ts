@@ -173,6 +173,69 @@ export type Database = {
           },
         ]
       }
+      beta_config: {
+        Row: {
+          beta_ativo: boolean
+          id: string
+          limite_vagas: number
+          lista_espera_ativa: boolean
+          tempo_teste_dias: number
+          updated_at: string
+        }
+        Insert: {
+          beta_ativo?: boolean
+          id?: string
+          limite_vagas?: number
+          lista_espera_ativa?: boolean
+          tempo_teste_dias?: number
+          updated_at?: string
+        }
+        Update: {
+          beta_ativo?: boolean
+          id?: string
+          limite_vagas?: number
+          lista_espera_ativa?: boolean
+          tempo_teste_dias?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      beta_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          empresa: string | null
+          id: string
+          influencer_code: string | null
+          nome: string
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          empresa?: string | null
+          id?: string
+          influencer_code?: string | null
+          nome: string
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          empresa?: string | null
+          id?: string
+          influencer_code?: string | null
+          nome?: string
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checklist_semanal: {
         Row: {
           created_at: string
@@ -427,6 +490,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      influencer_codes: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          id: string
+          nome: string
+          total_cadastros: number
+          total_convertidos: number
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          id?: string
+          nome: string
+          total_cadastros?: number
+          total_convertidos?: number
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          total_cadastros?: number
+          total_convertidos?: number
+        }
+        Relationships: []
       }
       invites: {
         Row: {
