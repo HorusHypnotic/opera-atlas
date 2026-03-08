@@ -73,7 +73,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let initialSessionHandled = false;
 
     // 1) Restore session first (synchronous-safe)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
