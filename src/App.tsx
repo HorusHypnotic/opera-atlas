@@ -22,6 +22,7 @@ import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
 import NotFound from "./pages/NotFound";
 import InvitePage from "./pages/InvitePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/setup" element={
               <ProtectedRoute><SetupPage /></ProtectedRoute>

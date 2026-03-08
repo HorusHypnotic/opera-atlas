@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -36,6 +37,25 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error("Informe seu email para recuperar a senha");
+      return;
+    }
+
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast.error("Erro ao enviar recuperação: " + error.message);
+    } else {
+      toast.success("Enviamos um link para redefinir sua senha.");
+    }
+    setResetLoading(false);
+  };
+
   const handleEmailAuth = async () => {
     if (!email || !password) {
       toast.error("Preencha email e senha");
@@ -44,13 +64,17 @@ export default function LoginPage() {
     setEmailLoading(true);
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: window.location.origin },
       });
+
       if (error) {
         toast.error("Erro ao cadastrar: " + error.message);
+      } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        toast.error("Este email já está cadastrado. Faça login ou redefina sua senha.");
+        setIsSignUp(false);
       } else {
         toast.success("Conta criada com sucesso! Faça login para continuar.");
         setIsSignUp(false);
@@ -58,7 +82,7 @@ export default function LoginPage() {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        toast.error("Erro ao entrar: " + error.message);
+        toast.error("Credenciais inválidas. Confira a senha ou use 'Esqueci minha senha'.");
       }
     }
     setEmailLoading(false);
@@ -119,6 +143,16 @@ export default function LoginPage() {
           >
             {isSignUp ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
           </button>
+
+          {!isSignUp && (
+            <button
+              onClick={handlePasswordReset}
+              disabled={resetLoading}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-60"
+            >
+              {resetLoading ? "Enviando..." : "Esqueci minha senha"}
+            </button>
+          )}
         </div>
 
         <div className="relative">
