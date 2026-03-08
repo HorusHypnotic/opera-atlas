@@ -263,7 +263,7 @@ export default function AdminPage() {
           </div>
 
           {/* Users table */}
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
