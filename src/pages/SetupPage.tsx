@@ -5,14 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Building2 } from "lucide-react";
+import { Building2, LogOut } from "lucide-react";
 
 /**
  * First-time setup: when a user has no tenant_id,
  * they create their company (tenant) and become admin.
  */
 export default function SetupPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -91,6 +91,9 @@ export default function SetupPage() {
           </div>
           <Button onClick={handleSetup} disabled={loading || !nome.trim()} className="w-full">
             {loading ? "Criando..." : "Criar Empresa e Continuar"}
+          </Button>
+          <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={signOut}>
+            <LogOut className="h-3.5 w-3.5" /> Sair e voltar ao login
           </Button>
         </div>
       </div>
