@@ -276,6 +276,78 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="convites" className="space-y-4">
+          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
+            <div className="space-y-1 flex-1 min-w-[200px]">
+              <label className="text-xs text-muted-foreground">Email do convidado</label>
+              <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Papel</label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="operacional">Operacional</SelectItem>
+                  <SelectItem value="visualizador">Visualizador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5">
+              <Mail className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Criar Convite"}
+            </Button>
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Papel</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="w-[120px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invites.map((inv) => {
+                  const expired = new Date(inv.expires_at) < new Date();
+                  return (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.email}</TableCell>
+                      <TableCell><Badge variant="secondary" className={`${roleBadgeColor[inv.role as AppRole] || ""} text-xs`}>{inv.role}</Badge></TableCell>
+                      <TableCell>
+                        {inv.used ? <Badge variant="secondary" className="text-xs">Usado</Badge> :
+                         expired ? <Badge variant="destructive" className="text-xs">Expirado</Badge> :
+                         <Badge variant="secondary" className="bg-status-ok/20 text-status-ok text-xs">Ativo</Badge>}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{new Date(inv.expires_at).toLocaleDateString("pt-BR")}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyInviteLink(inv.token)} disabled={inv.used || expired}>
+                            {copiedToken === inv.token ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteInvite(inv.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {invites.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Nenhum convite enviado ainda
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
         <TabsContent value="obras" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Obras cadastradas</h3>
