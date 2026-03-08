@@ -10,6 +10,7 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   tenant_id: string | null;
+  is_super_admin: boolean;
 }
 
 const GUEST_PROFILE: Profile = {
