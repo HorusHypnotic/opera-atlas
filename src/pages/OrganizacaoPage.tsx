@@ -49,6 +49,14 @@ export default function OrganizacaoPage() {
     .reduce((s: number, l: any) => s + Number(l.valor), 0);
   const custoPorM2 = totalM2 > 0 ? custoFolha / totalM2 : 0;
 
+  // Desvio % — Custo Real vs. Orçado
+  const { data: obrasData = [] } = useTableData("obras");
+  const obraAtual = (obrasData as any[]).find((o: any) => o.id === selectedObraId) || (obrasData as any[])[0];
+  const custoOrcadoM2 = obraAtual?.custo_orcado_m2 || 0;
+  const desvioPercent = custoOrcadoM2 > 0 && custoPorM2 > 0
+    ? ((custoPorM2 - custoOrcadoM2) / custoOrcadoM2) * 100
+    : 0;
+
   return (
     <div>
       <GlobalFilters />
