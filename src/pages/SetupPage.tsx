@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Building2 } from "lucide-react";
+import { Building2, LogOut } from "lucide-react";
 
 /**
  * First-time setup: when a user has no tenant_id,
