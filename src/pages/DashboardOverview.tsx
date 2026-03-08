@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
+import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -93,6 +94,8 @@ export default function DashboardOverview() {
           <FileText className="h-4 w-4" /> Exportar PDF
         </Button>
       </div>
+
+      <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KPICard title="Saldo Financeiro" value={`R$ ${(saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-5 w-5" />} tooltip="Receitas - Custos" status={saldo >= 0 ? "ok" : "critical"} />
