@@ -33,6 +33,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/invite" element={<InvitePage />} />
             <Route path="/setup" element={
               <ProtectedRoute><SetupPage /></ProtectedRoute>
             } />
