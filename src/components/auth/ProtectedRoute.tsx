@@ -47,6 +47,14 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
           </span>
         </div>
       )}
+      {!isGuest && (
+        <div className="bg-muted/50 border-b border-border px-4 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <Shield className="h-3 w-3 shrink-0" />
+          <span>
+            Durante o período beta, administradores do sistema podem acessar dados operacionais de forma limitada para diagnóstico e melhoria da plataforma.
+          </span>
+        </div>
+      )}
       {children}
     </>
   );
