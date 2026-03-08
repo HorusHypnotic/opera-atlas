@@ -1,9 +1,10 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, profile, loading, isGuest } = useAuth();
+  const { user, profile, loading, isGuest, isTrialExpired } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -35,5 +36,18 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/setup" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {isTrialExpired && (
+        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center gap-2 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Seu período de teste expirou. O sistema está em <strong>modo somente leitura</strong>. 
+            Entre em contato para ativar seu plano.
+          </span>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
