@@ -4,12 +4,13 @@ import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
-import { ListChecks, ChevronLeft, ChevronRight, CheckCircle2, Circle, MessageSquare } from "lucide-react";
+import { ListChecks, ChevronLeft, ChevronRight, CheckCircle2, Circle, MessageSquare, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // ── Checklist items from the O.P.E.R.A. PDF ──
 const CHECKLIST_ITEMS = [
@@ -190,6 +191,9 @@ export default function ChecklistSemanalPage() {
         )}
       </div>
 
+      {/* History chart */}
+      <ChecklistHistoryChart checks={checks} />
+
       {/* Checklist by pillar */}
       <div className="space-y-6">
         {CHECKLIST_ITEMS.map((section) => {
@@ -261,6 +265,47 @@ export default function ChecklistSemanalPage() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function ChecklistHistoryChart({ checks }: { checks: CheckItem[] }) {
+  const historyData = useMemo(() => {
+    const weeks: { week: string; label: string; percent: number }[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i * 7);
+      const ws = getWeekStart(d);
+      const weekChecks = checks.filter((c) => c.semana === ws && c.verificado);
+      const pct = ALL_KEYS.length > 0 ? (weekChecks.length / ALL_KEYS.length) * 100 : 0;
+      const start = new Date(ws + "T12:00:00");
+      const label = start.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+      weeks.push({ week: ws, label, percent: Math.round(pct) });
+    }
+    return weeks;
+  }, [checks]);
+
+  const hasData = historyData.some((w) => w.percent > 0);
+  if (!hasData) return null;
+
+  return (
+    <div className="glass-card p-5 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">Evolução Semanal</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={historyData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${v}%`} />
+          <Tooltip
+            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+            formatter={(v: number) => [`${v}%`, "Completude"]}
+          />
+          <Line type="monotone" dataKey="percent" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
