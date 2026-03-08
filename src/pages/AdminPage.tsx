@@ -206,18 +206,22 @@ export default function AdminPage() {
           <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Equipe
           </TabsTrigger>
-          <TabsTrigger value="beta-users" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Beta
-          </TabsTrigger>
-          <TabsTrigger value="influencers" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
-          </TabsTrigger>
-          <TabsTrigger value="beta-config" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Config
-          </TabsTrigger>
-          <TabsTrigger value="beta-metrics" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Métricas
-          </TabsTrigger>
+          {isSuperAdmin && (
+            <>
+              <TabsTrigger value="beta-users" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+                <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Beta
+              </TabsTrigger>
+              <TabsTrigger value="influencers" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+                <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
+              </TabsTrigger>
+              <TabsTrigger value="beta-config" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Config
+              </TabsTrigger>
+              <TabsTrigger value="beta-metrics" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Métricas
+              </TabsTrigger>
+            </>
+          )}
           {isSuperAdmin && (
             <TabsTrigger value="super-admin" className="gap-1.5 shrink-0 text-xs sm:text-sm">
               <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Super Admin
