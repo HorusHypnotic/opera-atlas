@@ -89,7 +89,7 @@ function formatCurrency(value: number): string {
 export default function ObrasPage() {
   const { profile } = useAuth();
   const { obras, refetch, selectedObraId, setSelectedObraId } = useObra();
-  const { canEdit } = usePermissions();
+  const { canManageObras, canDelete } = usePermissions();
   const tenantId = profile?.tenant_id;
 
   const [obrasFull, setObrasFull] = useState<ObraFull[]>([]);
