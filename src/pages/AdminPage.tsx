@@ -442,6 +442,10 @@ export default function AdminPage() {
         <TabsContent value="beta-config" className="space-y-4">
           <BetaConfigTab />
         </TabsContent>
+
+        <TabsContent value="beta-metrics" className="space-y-4">
+          <BetaMetricsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
