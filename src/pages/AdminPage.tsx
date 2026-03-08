@@ -306,7 +306,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="convites" className="space-y-4">
-          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
+          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="space-y-1 flex-1 min-w-[200px]">
               <label className="text-xs text-muted-foreground">Email do convidado</label>
               <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
