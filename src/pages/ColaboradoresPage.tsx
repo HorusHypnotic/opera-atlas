@@ -317,7 +317,7 @@ function ColaboradorFormDialog({
 }: {
   mode: "add" | "edit";
   record?: Colaborador;
-  onSubmit: (values: Record<string, any>) => Promise<{ error: any }> | ((id: string, values: Record<string, any>) => Promise<{ error: any }>);
+  onSubmit: ((values: Record<string, any>) => Promise<{ error: any }>) | ((id: string, values: Record<string, any>) => Promise<{ error: any }>);
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
