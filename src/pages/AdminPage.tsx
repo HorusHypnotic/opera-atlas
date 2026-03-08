@@ -141,6 +141,7 @@ export default function AdminPage() {
       setNewObraEndereco("");
       setObraDialogOpen(false);
       fetchData();
+      refetchObras();
     }
   };
 
