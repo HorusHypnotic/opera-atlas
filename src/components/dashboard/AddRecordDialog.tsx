@@ -140,6 +140,9 @@ export function EditRecordDialog({ title, fields, record, onSubmit }: EditRecord
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const { canUpdate } = usePermissions();
+
+  if (!canUpdate) return null;
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
