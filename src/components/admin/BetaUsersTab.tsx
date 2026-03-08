@@ -101,8 +101,8 @@ export function BetaUsersTab() {
         <Badge variant="secondary" className="text-xs">{users.length} registros</Badge>
       </div>
 
-      <div className="glass-card overflow-x-auto">
-        <Table className="min-w-[800px]">
+      <div className="glass-card overflow-x-auto -mx-4 sm:mx-0">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>

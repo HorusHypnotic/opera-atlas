@@ -52,7 +52,7 @@ export default function BetaSignupPage() {
     e.preventDefault();
     if (!nome.trim() || !email.trim()) return;
 
-    // Rate limit: 10 seconds between submissions
+    // Client-side rate limit (backup)
     const now = Date.now();
     if (now - lastSubmitRef.current < 10000) {
       toast.error("Aguarde alguns segundos antes de tentar novamente.");
@@ -63,78 +63,37 @@ export default function BetaSignupPage() {
     setStatus("loading");
 
     try {
-      // Check duplicate email
-      const { data: existing } = await supabase
-        .from("beta_waitlist")
-        .select("id, status")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
-
-      if (existing) {
-        if (existing.status === "aprovado") {
-          toast.info("Você já foi aprovado! Faça login para acessar o sistema.");
-        } else {
-          toast.info("Este email já está cadastrado na lista.");
-        }
-        setStatus(existing.status === "lista_de_espera" ? "waitlist" : "approved");
-        return;
-      }
-
-      const { data: config } = await supabase.from("beta_config").select("*").limit(1).maybeSingle();
-
-      if (config && !config.beta_ativo) {
-        toast.error("O programa beta não está ativo no momento.");
-        setStatus("idle");
-        return;
-      }
-
-      const { count } = await supabase
-        .from("beta_waitlist")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["aguardando_aprovacao", "aprovado"]);
-
-      const limite = config?.limite_vagas ?? 5;
-      const hasSlot = (count ?? 0) < limite;
-      const newStatus = hasSlot ? "aguardando_aprovacao" : "lista_de_espera";
-
-      // Validate and track influencer code
-      if (codigo.trim()) {
-        const { data: codeData } = await supabase
-          .from("influencer_codes")
-          .select("id, total_cadastros")
-          .eq("codigo", codigo.trim().toUpperCase())
-          .eq("ativo", true)
-          .maybeSingle();
-
-        if (codeData) {
-          await supabase
-            .from("influencer_codes")
-            .update({ total_cadastros: (codeData.total_cadastros || 0) + 1 })
-            .eq("id", codeData.id);
-        }
-      }
-
-      const { error } = await supabase.from("beta_waitlist").insert({
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-        telefone: telefone.replace(/\D/g, "").trim() || null,
-        empresa: empresa.trim() || null,
-        influencer_code: codigo.trim().toUpperCase() || null,
-        status: newStatus,
+      const res = await supabase.functions.invoke("beta-signup", {
+        body: {
+          nome: nome.trim(),
+          email: email.trim(),
+          telefone: telefone,
+          empresa: empresa.trim(),
+          influencer_code: codigo.trim(),
+        },
       });
 
-      if (error) {
-        toast.error("Erro ao cadastrar: " + error.message);
+      const data = res.data as any;
+
+      if (res.error || data?.error) {
+        toast.error(data?.error || "Erro ao cadastrar. Tente novamente.");
         setStatus("idle");
         return;
       }
 
-      // Update vacancy counter
-      if (vagasRestantes !== null) {
-        setVagasRestantes(Math.max(0, vagasRestantes - 1));
+      toast.success(data.message);
+
+      if (data.vagas_restantes !== undefined) {
+        setVagasRestantes(data.vagas_restantes);
       }
 
-      setStatus(hasSlot ? "approved" : "waitlist");
+      if (data.status === "aguardando_aprovacao" || data.status === "aprovado") {
+        setStatus("approved");
+      } else if (data.status === "lista_de_espera") {
+        setStatus("waitlist");
+      } else {
+        setStatus("idle");
+      }
     } catch {
       toast.error("Erro inesperado. Tente novamente.");
       setStatus("idle");
