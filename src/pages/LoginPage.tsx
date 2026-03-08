@@ -137,22 +137,27 @@ export default function LoginPage() {
             <Mail className="h-4 w-4" />
             {emailLoading ? "Aguarde..." : isSignUp ? "Criar Conta" : "Entrar com Email"}
           </Button>
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isSignUp ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
-          </button>
-
-          {!isSignUp && (
+          <div className="flex items-center justify-center gap-3">
             <button
-              onClick={handlePasswordReset}
-              disabled={resetLoading}
-              className="text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-60"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
             >
-              {resetLoading ? "Enviando..." : "Esqueci minha senha"}
+              {isSignUp ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
             </button>
-          )}
+
+            {!isSignUp && (
+              <>
+                <span className="text-xs text-muted-foreground/40">•</span>
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={resetLoading}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-60"
+                >
+                  {resetLoading ? "Enviando..." : "Esqueci minha senha"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="relative">
