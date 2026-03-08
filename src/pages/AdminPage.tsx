@@ -143,6 +143,38 @@ export default function AdminPage() {
     }
   };
 
+  const sendInvite = async () => {
+    if (!inviteEmail.trim() || !tenantId) return;
+    setInviteLoading(true);
+    const { error } = await supabase.from("invites").insert({
+      email: inviteEmail,
+      role: inviteRole,
+      tenant_id: tenantId,
+    } as any);
+    setInviteLoading(false);
+    if (error) {
+      toast.error("Erro ao criar convite: " + error.message);
+    } else {
+      toast.success("Convite criado!");
+      setInviteEmail("");
+      fetchData();
+    }
+  };
+
+  const copyInviteLink = (token: string) => {
+    const url = `${window.location.origin}/invite?token=${token}`;
+    navigator.clipboard.writeText(url);
+    setCopiedToken(token);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopiedToken(null), 2000);
+  };
+
+  const deleteInvite = async (id: string) => {
+    const { error } = await supabase.from("invites").delete().eq("id", id);
+    if (error) toast.error("Erro ao excluir convite");
+    else { toast.success("Convite removido"); fetchData(); }
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader
