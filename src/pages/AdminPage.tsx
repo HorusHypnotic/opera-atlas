@@ -197,6 +197,15 @@ export default function AdminPage() {
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
           </TabsTrigger>
+          <TabsTrigger value="beta-users" className="gap-1.5">
+            <Rocket className="h-4 w-4" /> Beta Users
+          </TabsTrigger>
+          <TabsTrigger value="influencers" className="gap-1.5">
+            <Link2 className="h-4 w-4" /> Influenciadores
+          </TabsTrigger>
+          <TabsTrigger value="beta-config" className="gap-1.5">
+            <Settings className="h-4 w-4" /> Beta Config
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
