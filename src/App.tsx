@@ -18,6 +18,7 @@ import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SetupPage from "./pages/SetupPage";
 import NotFound from "./pages/NotFound";
+import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAInstallBanner />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
