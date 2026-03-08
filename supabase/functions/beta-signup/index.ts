@@ -52,7 +52,29 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { nome, email, telefone, empresa, influencer_code } = body;
+    const { nome, email, telefone, empresa, influencer_code, turnstile_token } = body;
+
+    // Verify Turnstile CAPTCHA
+    const turnstileSecret = Deno.env.get("TURNSTILE_SECRET_KEY") || "1x0000000000000000000000000000000AA"; // Test secret
+    if (turnstile_token) {
+      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `secret=${turnstileSecret}&response=${turnstile_token}&remoteip=${ip}`,
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        return new Response(
+          JSON.stringify({ error: "Verificação CAPTCHA falhou. Tente novamente." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      return new Response(
+        JSON.stringify({ error: "CAPTCHA obrigatório." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Server-side validation
     if (!nome || typeof nome !== "string" || nome.trim().length < 2 || nome.trim().length > 100) {
