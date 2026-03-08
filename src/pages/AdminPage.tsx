@@ -214,6 +214,11 @@ export default function AdminPage() {
           <TabsTrigger value="beta-metrics" className="gap-1.5">
             <BarChart3 className="h-4 w-4" /> Métricas
           </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="super-admin" className="gap-1.5">
+              <Crown className="h-4 w-4" /> Super Admin
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
