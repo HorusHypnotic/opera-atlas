@@ -323,7 +323,7 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5">
+            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5 w-full sm:w-auto">
               <Mail className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Criar Convite"}
             </Button>
           </div>
