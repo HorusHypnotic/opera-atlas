@@ -214,10 +214,10 @@ export default function ObrasPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPICard title="Total de Obras" value={totalObras} icon={<Building2 className="h-4 w-4" />} />
-        <KPICard title="Em Andamento" value={obrasAtivas} icon={<TrendingUp className="h-4 w-4" />} />
-        <KPICard title="Orçamento Total" value={formatCurrency(orcamentoTotal)} icon={<DollarSign className="h-4 w-4" />} />
-        <KPICard title="Área Total (m²)" value={areaTotal.toLocaleString("pt-BR")} icon={<Ruler className="h-4 w-4" />} />
+        <KPICard title="Total de Obras" value={totalObras} icon={<Building2 className="h-4 w-4" />} tooltip="Quantidade total de obras cadastradas" />
+        <KPICard title="Em Andamento" value={obrasAtivas} icon={<TrendingUp className="h-4 w-4" />} tooltip="Obras com status em andamento" />
+        <KPICard title="Orçamento Total" value={formatCurrency(orcamentoTotal)} icon={<DollarSign className="h-4 w-4" />} tooltip="Soma dos orçamentos de todas as obras" />
+        <KPICard title="Área Total (m²)" value={areaTotal.toLocaleString("pt-BR")} icon={<Ruler className="h-4 w-4" />} tooltip="Soma da área de todas as obras" />
       </div>
 
       {/* Action */}
