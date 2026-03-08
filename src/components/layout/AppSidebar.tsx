@@ -22,6 +22,7 @@ const sections = [
   { title: "Ações Corretivas", url: "/acoes-corretivas", icon: ClipboardCheck },
   { title: "Checklist Semanal", url: "/checklist", icon: ListChecks },
   { title: "Colaboradores", url: "/colaboradores", icon: HardHat },
+  { title: "Obras", url: "/obras", icon: Building2 },
 ];
 
 export function AppSidebar() {
