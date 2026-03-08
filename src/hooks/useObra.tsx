@@ -8,6 +8,16 @@ interface Obra {
   nome: string;
   endereco: string | null;
   status: string;
+  data_inicio: string | null;
+  data_previsao: string | null;
+  orcamento_total: number;
+  custo_orcado_m2: number;
+  area_m2: number;
+  fase_atual: string;
+  abordagem: string;
+  responsavel: string | null;
+  descricao: string | null;
+  tipo_obra: string;
 }
 
 interface ObraContextType {
