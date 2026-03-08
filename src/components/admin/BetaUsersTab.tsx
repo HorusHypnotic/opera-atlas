@@ -5,9 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Clock, MessageCircle, Copy, Check } from "lucide-react";
-
-const whatsapp = "5594992193129";
+import { CheckCircle2, XCircle, Clock, MessageCircle, Copy, Check, KeyRound } from "lucide-react";
 
 interface BetaUser {
   id: string;
@@ -38,6 +36,7 @@ export function BetaUsersTab() {
   const [users, setUsers] = useState<BetaUser[]>([]);
   const [filterStatus, setFilterStatus] = useState("todos");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     let q = supabase.from("beta_waitlist").select("*").order("created_at", { ascending: false });
@@ -54,9 +53,42 @@ export function BetaUsersTab() {
     else { toast.success("Status atualizado!"); fetchUsers(); }
   };
 
+  const generateResetLink = async (user: BetaUser) => {
+    setGeneratingLink(user.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-reset-link", {
+        body: {
+          email: user.email,
+          redirect_to: `${window.location.origin}/reset-password`,
+        },
+      });
+
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao gerar link de redefinição");
+        return;
+      }
+
+      const link = data?.link;
+      if (link) {
+        const phone = user.telefone?.replace(/\D/g, "") || "";
+        const msg = `Olá ${user.nome}! 🔑\n\nAqui está seu link para definir/redefinir a senha do Método O.P.E.R.A.:\n\n${link}\n\nEsse link expira em 24h.`;
+
+        if (phone) {
+          window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+        } else {
+          await navigator.clipboard.writeText(link);
+          toast.success("Link copiado! Usuário sem telefone cadastrado.");
+        }
+      }
+    } catch {
+      toast.error("Erro ao gerar link.");
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
   const approveAndNotify = async (user: BetaUser) => {
     await updateStatus(user.id, "aprovado");
-    // Open WhatsApp with pre-filled approval message
     const signupUrl = `${window.location.origin}/login`;
     const phone = user.telefone?.replace(/\D/g, "") || "";
     const msg = encodeURIComponent(
@@ -69,7 +101,6 @@ export function BetaUsersTab() {
     if (phone) {
       window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
     } else {
-      // Copy message to clipboard if no phone
       navigator.clipboard.writeText(decodeURIComponent(msg));
       toast.info("Mensagem copiada! O usuário não tem telefone cadastrado.");
     }
@@ -85,7 +116,7 @@ export function BetaUsersTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filtrar status" />
@@ -112,7 +143,7 @@ export function BetaUsersTab() {
               <TableHead>Código</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead className="w-[200px]">Ações</TableHead>
+              <TableHead className="w-[220px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,16 +163,28 @@ export function BetaUsersTab() {
                   {new Date(u.created_at).toLocaleDateString("pt-BR")}
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     {u.status !== "aprovado" && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="Aprovar e notificar via WhatsApp" onClick={() => approveAndNotify(u)}>
                         <CheckCircle2 className="h-3.5 w-3.5 text-status-ok" />
                       </Button>
                     )}
                     {u.status === "aprovado" && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link de cadastro" onClick={() => copySignupLink(u)}>
-                        {copiedId === u.id ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
-                      </Button>
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link de cadastro" onClick={() => copySignupLink(u)}>
+                          {copiedId === u.id ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Gerar link de redefinição de senha (WhatsApp)"
+                          onClick={() => generateResetLink(u)}
+                          disabled={generatingLink === u.id}
+                        >
+                          <KeyRound className={`h-3.5 w-3.5 text-chart-4 ${generatingLink === u.id ? "animate-spin" : ""}`} />
+                        </Button>
+                      </>
                     )}
                     {u.status !== "rejeitado" && (
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="Rejeitar" onClick={() => updateStatus(u.id, "rejeitado")}>

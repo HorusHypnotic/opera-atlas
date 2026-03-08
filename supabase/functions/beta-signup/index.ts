@@ -15,7 +15,6 @@ function isRateLimited(ip: string): boolean {
   const now = Date.now();
   if (last && now - last < RATE_LIMIT_MS) return true;
   rateLimitMap.set(ip, now);
-  // Clean old entries periodically
   if (rateLimitMap.size > 1000) {
     const cutoff = now - RATE_LIMIT_MS * 2;
     for (const [k, v] of rateLimitMap) {
@@ -38,7 +37,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Rate limit by IP
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") ||
@@ -52,10 +50,10 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { nome, email, telefone, empresa, influencer_code, turnstile_token } = body;
+    const { nome, email, telefone, empresa, influencer_code, turnstile_token, password } = body;
 
     // Verify Turnstile CAPTCHA
-    const turnstileSecret = Deno.env.get("TURNSTILE_SECRET_KEY") || "1x0000000000000000000000000000000AA"; // Test secret
+    const turnstileSecret = Deno.env.get("TURNSTILE_SECRET_KEY") || "1x0000000000000000000000000000000AA";
     if (turnstile_token) {
       const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
         method: "POST",
@@ -97,7 +95,6 @@ Deno.serve(async (req) => {
     const cleanEmpresa = empresa ? empresa.trim().slice(0, 100) : null;
     const cleanCode = influencer_code ? influencer_code.trim().toUpperCase().slice(0, 20) : null;
 
-    // Use service role for DB operations
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -145,7 +142,13 @@ Deno.serve(async (req) => {
 
     const limite = config?.limite_vagas ?? 5;
     const hasSlot = (count ?? 0) < limite;
-    const newStatus = hasSlot ? "aguardando_aprovacao" : "lista_de_espera";
+
+    // If has influencer code AND has slot AND password provided → auto-approve + create account
+    const hasInfluencer = !!cleanCode;
+    const hasPassword = password && typeof password === "string" && password.length >= 6;
+    const autoApprove = hasInfluencer && hasSlot && hasPassword;
+    
+    const newStatus = autoApprove ? "aprovado" : (hasSlot ? "aguardando_aprovacao" : "lista_de_espera");
 
     // Track influencer code
     if (cleanCode) {
@@ -164,7 +167,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert
+    // Insert waitlist entry
     const { error } = await supabase.from("beta_waitlist").insert({
       nome: nome.trim(),
       email: cleanEmail,
@@ -178,6 +181,38 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Erro ao cadastrar: " + error.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If auto-approve, create auth user so they can login immediately
+    if (autoApprove) {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: cleanEmail,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: nome.trim(),
+        },
+      });
+
+      if (authError) {
+        // If user already exists in auth, that's ok - they can login
+        if (!authError.message.includes("already been registered")) {
+          return new Response(
+            JSON.stringify({ error: "Erro ao criar conta: " + authError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          status: "aprovado",
+          auto_login: true,
+          message: "Conta criada e aprovada! Fazendo login...",
+          vagas_restantes: Math.max(0, limite - (count ?? 0) - 1),
+        }),
+        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
