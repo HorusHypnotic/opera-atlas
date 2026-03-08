@@ -77,7 +77,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
+              {(isAdmin && !isGuest) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink
