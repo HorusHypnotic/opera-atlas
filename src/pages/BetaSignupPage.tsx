@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Rocket, CheckCircle2, Clock, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Rocket, CheckCircle2, Clock, ArrowLeft, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type SubmitStatus = "idle" | "loading" | "approved" | "waitlist";
@@ -19,11 +19,14 @@ function formatPhone(value: string): string {
 
 export default function BetaSignupPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [codigo, setCodigo] = useState(searchParams.get("code") || "");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [vagasRestantes, setVagasRestantes] = useState<number | null>(null);
   const [betaAtivo, setBetaAtivo] = useState(true);
@@ -31,11 +34,13 @@ export default function BetaSignupPage() {
   const lastSubmitRef = useRef(0);
   const turnstileRef = useRef<HTMLDivElement>(null);
 
+  const hasInfluencerCode = codigo.trim().length > 0;
+
   const renderTurnstile = useCallback(() => {
     if (turnstileRef.current && (window as any).turnstile) {
       turnstileRef.current.innerHTML = "";
       (window as any).turnstile.render(turnstileRef.current, {
-        sitekey: "1x00000000000000000000AA", // Test key - replace with real key for production
+        sitekey: "1x00000000000000000000AA",
         callback: (token: string) => setTurnstileToken(token),
         "expired-callback": () => setTurnstileToken(null),
         theme: "dark",
@@ -45,7 +50,6 @@ export default function BetaSignupPage() {
   }, []);
 
   useEffect(() => {
-    // Wait for Turnstile script to load
     const interval = setInterval(() => {
       if ((window as any).turnstile && turnstileRef.current) {
         renderTurnstile();
@@ -80,7 +84,12 @@ export default function BetaSignupPage() {
     e.preventDefault();
     if (!nome.trim() || !email.trim()) return;
 
-    // Client-side rate limit (backup)
+    // Validate password when influencer code is present
+    if (hasInfluencerCode && (!password || password.length < 6)) {
+      toast.error("Senha deve ter no mínimo 6 caracteres para criar sua conta.");
+      return;
+    }
+
     const now = Date.now();
     if (now - lastSubmitRef.current < 10000) {
       toast.error("Aguarde alguns segundos antes de tentar novamente.");
@@ -99,6 +108,7 @@ export default function BetaSignupPage() {
           empresa: empresa.trim(),
           influencer_code: codigo.trim(),
           turnstile_token: turnstileToken,
+          password: hasInfluencerCode ? password : undefined,
         },
       });
 
@@ -110,11 +120,27 @@ export default function BetaSignupPage() {
         return;
       }
 
-      toast.success(data.message);
-
       if (data.vagas_restantes !== undefined) {
         setVagasRestantes(data.vagas_restantes);
       }
+
+      // If auto-approved with account creation, login directly
+      if (data.auto_login) {
+        toast.success("Conta criada! Entrando...");
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password,
+        });
+        if (loginError) {
+          toast.error("Conta criada, mas erro ao entrar. Faça login manualmente.");
+          setStatus("approved");
+          return;
+        }
+        navigate("/", { replace: true });
+        return;
+      }
+
+      toast.success(data.message);
 
       if (data.status === "aguardando_aprovacao" || data.status === "aprovado") {
         setStatus("approved");
@@ -180,9 +206,13 @@ export default function BetaSignupPage() {
           <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center mx-auto">
             <Rocket className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold">BETA TEST – Lista de Espera</h1>
+          <h1 className="text-2xl font-bold">
+            {hasInfluencerCode ? "Acesso Beta — Convite" : "BETA TEST – Lista de Espera"}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            Garanta sua vaga no programa beta do Método O.P.E.R.A.
+            {hasInfluencerCode
+              ? "Você foi convidado! Crie sua conta e acesse imediatamente."
+              : "Garanta sua vaga no programa beta do Método O.P.E.R.A."}
           </p>
         </div>
 
@@ -224,6 +254,35 @@ export default function BetaSignupPage() {
               <label className="text-sm font-medium">Email *</label>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" type="email" required maxLength={255} />
             </div>
+
+            {/* Password field - shown when influencer code is present */}
+            {hasInfluencerCode && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Senha *</label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                    minLength={6}
+                    maxLength={72}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sua conta será criada automaticamente com acesso imediato.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Telefone</label>
               <Input
@@ -250,7 +309,11 @@ export default function BetaSignupPage() {
             </div>
             <div ref={turnstileRef} className="flex justify-center" />
             <Button type="submit" className="w-full" disabled={status === "loading" || !turnstileToken}>
-              {status === "loading" ? "Enviando..." : "Quero participar do Beta"}
+              {status === "loading"
+                ? "Enviando..."
+                : hasInfluencerCode
+                  ? "Criar conta e entrar"
+                  : "Quero participar do Beta"}
             </Button>
           </form>
         )}
