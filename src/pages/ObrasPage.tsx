@@ -221,7 +221,7 @@ export default function ObrasPage() {
       </div>
 
       {/* Action */}
-      {canEdit && (
+      {canManageObras && (
         <div className="flex justify-end">
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
