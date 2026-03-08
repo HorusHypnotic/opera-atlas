@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +18,12 @@ function formatPhone(value: string): string {
 }
 
 export default function BetaSignupPage() {
+  const [searchParams] = useSearchParams();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [empresa, setEmpresa] = useState("");
-  const [codigo, setCodigo] = useState("");
+  const [codigo, setCodigo] = useState(searchParams.get("code") || "");
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [vagasRestantes, setVagasRestantes] = useState<number | null>(null);
   const [betaAtivo, setBetaAtivo] = useState(true);

@@ -193,45 +193,45 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex-wrap h-auto gap-1">
-          <TabsTrigger value="usuarios" className="gap-1.5">
-            <UserPlus className="h-4 w-4" /> Usuários & Permissões
+        <TabsList className="w-full overflow-x-auto flex flex-nowrap h-auto gap-1 p-1 justify-start">
+          <TabsTrigger value="usuarios" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Usuários &</span> Permissões
           </TabsTrigger>
-          <TabsTrigger value="convites" className="gap-1.5">
-            <Mail className="h-4 w-4" /> Convites
+          <TabsTrigger value="convites" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Convites
           </TabsTrigger>
-          <TabsTrigger value="obras" className="gap-1.5">
-            <HardHat className="h-4 w-4" /> Obras
+          <TabsTrigger value="obras" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <HardHat className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Obras
           </TabsTrigger>
-          <TabsTrigger value="equipe-obra" className="gap-1.5">
-            <Users className="h-4 w-4" /> Equipe por Obra
+          <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Equipe
           </TabsTrigger>
-          <TabsTrigger value="beta-users" className="gap-1.5">
-            <Rocket className="h-4 w-4" /> Beta Users
+          <TabsTrigger value="beta-users" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Beta
           </TabsTrigger>
-          <TabsTrigger value="influencers" className="gap-1.5">
-            <Link2 className="h-4 w-4" /> Influenciadores
+          <TabsTrigger value="influencers" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
           </TabsTrigger>
-          <TabsTrigger value="beta-config" className="gap-1.5">
-            <Settings className="h-4 w-4" /> Beta Config
+          <TabsTrigger value="beta-config" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Config
           </TabsTrigger>
-          <TabsTrigger value="beta-metrics" className="gap-1.5">
-            <BarChart3 className="h-4 w-4" /> Métricas
+          <TabsTrigger value="beta-metrics" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Métricas
           </TabsTrigger>
           {isSuperAdmin && (
-            <TabsTrigger value="super-admin" className="gap-1.5">
-              <Crown className="h-4 w-4" /> Super Admin
+            <TabsTrigger value="super-admin" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+              <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Super Admin
             </TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
           {/* Assign role */}
-          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="space-y-1 flex-1 min-w-0">
               <label className="text-xs text-muted-foreground">Usuário</label>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="w-[250px]">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecionar usuário" />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +246,7 @@ export default function AdminPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Papel</label>
               <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,13 +257,13 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={addRole} className="gap-1.5">
+            <Button onClick={addRole} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Atribuir
             </Button>
           </div>
 
           {/* Users table */}
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -306,7 +306,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="convites" className="space-y-4">
-          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
+          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="space-y-1 flex-1 min-w-[200px]">
               <label className="text-xs text-muted-foreground">Email do convidado</label>
               <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
@@ -323,12 +323,12 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5">
+            <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5 w-full sm:w-auto">
               <Mail className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Criar Convite"}
             </Button>
           </div>
 
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -405,7 +405,7 @@ export default function AdminPage() {
             </Dialog>
           </div>
 
-          <div className="glass-card overflow-hidden">
+          <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
