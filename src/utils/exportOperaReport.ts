@@ -12,12 +12,19 @@ interface ReportData {
   retrabalhos: any[];
   lancamentos: any[];
   incidentes: any[];
+  logistica?: any[];
+  ciclos?: any[];
+  aditivos?: any[];
 }
 
 export function exportOperaReport(data: ReportData) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = 20;
+
+  const checkPage = (needed = 40) => {
+    if (y > 280 - needed) { doc.addPage(); y = 20; }
+  };
 
   // Header
   doc.setFontSize(18);
@@ -37,7 +44,7 @@ export function exportOperaReport(data: ReportData) {
   doc.line(14, y, pageWidth - 14, y);
   y += 8;
 
-  // 1. Organização
+  // ── 1. Organização ──
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("1. Organização — Mão de Obra", 14, y);
@@ -65,8 +72,8 @@ export function exportOperaReport(data: ReportData) {
     y += 6;
   }
 
-  // 2. Padronização
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── 2. Padronização ──
+  checkPage();
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("2. Padronização — Insumos", 14, y);
@@ -97,8 +104,8 @@ export function exportOperaReport(data: ReportData) {
     y += 6;
   }
 
-  // 3. Eficiência
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── 3. Eficiência — Ativos ──
+  checkPage();
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("3. Eficiência — Ativos", 14, y);
@@ -125,8 +132,71 @@ export function exportOperaReport(data: ReportData) {
     y += 6;
   }
 
-  // 4. Redução de Perdas
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── 3b. Eficiência — Logística Interna ──
+  const logistica = data.logistica || [];
+  if (logistica.length > 0) {
+    checkPage();
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("3b. Logística Interna", 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    const avgDeslocamento = logistica.reduce((s, l) => s + Number(l.tempo_deslocamento_min || 0), 0) / logistica.length;
+    doc.text(`Registros: ${logistica.length}  |  Tempo médio de deslocamento: ${avgDeslocamento.toFixed(0)} min`, 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Equipe", "Origem", "Destino", "Tempo (min)", "Data"]],
+      body: logistica.slice(0, 10).map((l) => [
+        l.equipe, l.origem || "—", l.destino || "—", l.tempo_deslocamento_min, l.data_registro,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 37, 36] },
+      margin: { left: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  // ── 3c. Eficiência — Ciclos de Tarefa ──
+  const ciclos = data.ciclos || [];
+  if (ciclos.length > 0) {
+    checkPage();
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("3c. Ciclos de Tarefa", 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    const avgDesvio = ciclos.reduce((s, c) => {
+      const alvo = Number(c.tempo_alvo_min || 0);
+      const real = Number(c.tempo_medio_min || 0);
+      return s + (alvo > 0 ? ((real - alvo) / alvo) * 100 : 0);
+    }, 0) / ciclos.length;
+    doc.text(`Tarefas monitoradas: ${ciclos.length}  |  Desvio médio: ${avgDesvio.toFixed(1)}%`, 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Tarefa", "Alvo (min)", "Médio (min)", "Desvio %", "Medições"]],
+      body: ciclos.slice(0, 10).map((c) => {
+        const alvo = Number(c.tempo_alvo_min || 0);
+        const real = Number(c.tempo_medio_min || 0);
+        const desvio = alvo > 0 ? (((real - alvo) / alvo) * 100).toFixed(1) + "%" : "—";
+        return [c.tarefa, alvo, real, desvio, c.qtd_medicoes];
+      }),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 37, 36] },
+      margin: { left: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  // ── 4. Redução de Perdas ──
+  checkPage();
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("4. Redução de Perdas", 14, y);
@@ -152,8 +222,8 @@ export function exportOperaReport(data: ReportData) {
     y += 6;
   }
 
-  // 5. Financeiro
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── 5. Financeiro ──
+  checkPage();
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("5. Análise Contínua — Financeiro", 14, y);
@@ -171,8 +241,38 @@ export function exportOperaReport(data: ReportData) {
   doc.text(`Saldo: R$ ${saldo.toLocaleString("pt-BR")}  |  Margem: ${margem.toFixed(1)}%`, 14, y);
   y += 8;
 
-  // 6. Segurança
-  if (y > 240) { doc.addPage(); y = 20; }
+  // ── 5b. Aditivos Contratuais ──
+  const aditivos = data.aditivos || [];
+  if (aditivos.length > 0) {
+    checkPage();
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("5b. Aditivos Contratuais", 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    const totalAditivos = aditivos.reduce((s, a) => s + Number(a.valor || 0), 0);
+    const aprovados = aditivos.filter((a) => a.aprovado).length;
+    doc.text(`Total aditivos: ${aditivos.length}  |  Aprovados: ${aprovados}  |  Valor total: R$ ${totalAditivos.toLocaleString("pt-BR")}`, 14, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Descrição", "Tipo", "Valor (R$)", "Aprovado", "Data"]],
+      body: aditivos.slice(0, 10).map((a) => [
+        a.descricao, a.tipo, Number(a.valor).toLocaleString("pt-BR"),
+        a.aprovado ? "Sim" : "Não", a.data,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 37, 36] },
+      margin: { left: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  // ── 6. Segurança ──
+  checkPage();
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text("6. Segurança & Qualidade", 14, y);
@@ -193,7 +293,7 @@ export function exportOperaReport(data: ReportData) {
   y += 10;
 
   // Footer
-  if (y > 260) { doc.addPage(); y = 20; }
+  checkPage(20);
   doc.setDrawColor(200);
   doc.line(14, y, pageWidth - 14, y);
   y += 6;
