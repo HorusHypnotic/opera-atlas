@@ -122,6 +122,7 @@ export default function LandingPage() {
             <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
             <a href="#sobre" className="hover:text-foreground transition-colors">Sobre</a>
             <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
+            <button onClick={() => navigate("/beta")} className="text-primary font-semibold hover:text-primary/80 transition-colors">Beta</button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>Entrar</Button>
