@@ -13,7 +13,6 @@ import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
 import { DataRetentionBanner } from "@/components/dashboard/DataRetentionBanner";
 
-// New components
 import { EconomyHeroCard } from "@/components/dashboard/EconomyHeroCard";
 import { DailySummary } from "@/components/dashboard/DailySummary";
 import { SafetyHeroCard } from "@/components/dashboard/SafetyHeroCard";
@@ -26,8 +25,12 @@ import { RiskMatrixCard } from "@/components/dashboard/RiskMatrixCard";
 import { OperaRadarChart } from "@/components/dashboard/OperaRadarChart";
 import { FinancialCharts } from "@/components/dashboard/FinancialCharts";
 import { NotificationBadge } from "@/components/dashboard/NotificationBadge";
+import { EmptyStateGuide } from "@/components/dashboard/EmptyStateGuide";
+import { WasteRankingCard } from "@/components/dashboard/WasteRankingCard";
+import { FornecedorRankingCard } from "@/components/dashboard/FornecedorRankingCard";
+import { CustoPorCategoriaCard } from "@/components/dashboard/CustoPorCategoriaCard";
+import { ObraComparisonCard } from "@/components/dashboard/ObraComparisonCard";
 
-// Analytics
 import { calculateOperaScore } from "@/analytics/operaScore";
 import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
 import { calculateProductivity } from "@/analytics/produtividade";
@@ -100,6 +103,17 @@ export default function DashboardOverview() {
     : 0;
   const custoMateriais = financials.totalCustos * 0.4;
 
+  // Obra comparison data
+  const lancamentosByObra = useMemo(() => {
+    const result: Record<string, { receita: number; custo: number }> = {};
+    lancamentos.forEach((l: any) => {
+      if (!result[l.obra_id]) result[l.obra_id] = { receita: 0, custo: 0 };
+      if (l.tipo === "receita") result[l.obra_id].receita += Number(l.valor);
+      else result[l.obra_id].custo += Number(l.valor);
+    });
+    return result;
+  }, [lancamentos]);
+
   const handleExportPDF = () => {
     exportOperaReport({
       obraNome: selectedObra?.nome || "Todas as obras",
@@ -129,6 +143,8 @@ export default function DashboardOverview() {
     { letter: "A", title: "Análise Contínua", subtitle: "Financeiro", icon: <TrendingUp className="h-5 w-5" />, url: "/analise-continua", kpi: `Margem: ${financials.margem.toFixed(1)}%`, status: financials.margem > 15 ? "ok" as const : financials.margem > 10 ? "warning" as const : "critical" as const },
   ];
 
+  const hasData = registros.length > 0 || consumo.length > 0 || lancamentos.length > 0 || ativos.length > 0;
+
   return (
     <div>
       <GlobalFilters />
@@ -144,6 +160,16 @@ export default function DashboardOverview() {
         </Button>
       </div>
 
+      {/* Onboarding guide */}
+      <EmptyStateGuide
+        hasObras={obras.length > 0}
+        hasRegistros={registros.length > 0}
+        hasConsumo={consumo.length > 0}
+        hasAtivos={ativos.length > 0}
+        hasLancamentos={lancamentos.length > 0}
+        hasColaboradores={colaboradores.length > 0}
+      />
+
       {/* Notifications */}
       <NotificationBadge
         acoesVencidas={acoesVencidas}
@@ -157,6 +183,7 @@ export default function DashboardOverview() {
       <DailySummary
         registros={registros} presencas={presencas} lancamentos={lancamentos}
         consumo={consumo} acoes={acoes} checklist={checklist} colaboradores={colaboradores}
+        obraNome={selectedObra?.nome || "Todas as obras"}
       />
 
       {/* Economy Hero */}
@@ -193,7 +220,7 @@ export default function DashboardOverview() {
         />
       </div>
 
-      {/* Productivity + Safety + Schedule */}
+      {/* Productivity + Safety */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <ProductivityCard metrics={productivity} registros={registros} presencas={presencas} />
         <SafetyHeroCard
@@ -215,6 +242,18 @@ export default function DashboardOverview() {
           custoRetrabalhoAtual={financials.custoRetrabalho}
           burnRateAtual={financials.burnRateMensal}
         />
+      </div>
+
+      {/* Intelligence Row: Waste + Fornecedor + Categoria + Comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <WasteRankingCard consumo={consumo} />
+        <FornecedorRankingCard lancamentos={lancamentos} />
+        <CustoPorCategoriaCard lancamentos={lancamentos} />
+      </div>
+
+      {/* Obra Comparison */}
+      <div className="mb-6">
+        <ObraComparisonCard obras={obras} lancamentosByObra={lancamentosByObra} />
       </div>
 
       {/* Anomalies */}
