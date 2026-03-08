@@ -455,6 +455,12 @@ export default function AdminPage() {
         <TabsContent value="beta-metrics" className="space-y-4">
           <BetaMetricsTab />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="super-admin" className="space-y-4">
+            <SuperAdminTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
