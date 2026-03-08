@@ -96,6 +96,7 @@ export default function BetaSignupPage() {
           telefone: telefone,
           empresa: empresa.trim(),
           influencer_code: codigo.trim(),
+          turnstile_token: turnstileToken,
         },
       });
 
