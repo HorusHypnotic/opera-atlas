@@ -67,15 +67,17 @@ export default function AdminPage() {
   const fetchData = async () => {
     if (!tenantId) return;
 
-    const [profRes, rolesRes, obrasRes] = await Promise.all([
+    const [profRes, rolesRes, obrasRes, invitesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("tenant_id", tenantId),
       supabase.from("user_roles").select("*").eq("tenant_id", tenantId),
       supabase.from("obras").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+      supabase.from("invites").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
     ]);
 
     if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
     if (rolesRes.data) setUserRoles(rolesRes.data as RoleRow[]);
     if (obrasRes.data) setObras(obrasRes.data as ObraRow[]);
+    if (invitesRes.data) setInvites(invitesRes.data);
   };
 
   useEffect(() => {
