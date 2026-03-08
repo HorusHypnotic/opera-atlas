@@ -187,7 +187,7 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full overflow-x-auto flex-wrap h-auto gap-1">
           <TabsTrigger value="usuarios" className="gap-1.5">
             <UserPlus className="h-4 w-4" /> Usuários & Permissões
           </TabsTrigger>
