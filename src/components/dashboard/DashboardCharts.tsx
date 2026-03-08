@@ -44,7 +44,7 @@ export function DashboardCharts({ registros, consumo, lancamentos, incidentes }:
     else byMonth[mes].custo += Number(l.valor);
   });
   const fluxoData = Object.entries(byMonth)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
     .map(([mes, v]) => ({ mes, receita: v.receita, custo: v.custo, saldo: v.receita - v.custo }));
 
   // 4. Incidentes por tipo
