@@ -203,6 +203,9 @@ export default function AdminPage() {
           <TabsTrigger value="obras" className="gap-1.5">
             <HardHat className="h-4 w-4" /> Obras
           </TabsTrigger>
+          <TabsTrigger value="equipe-obra" className="gap-1.5">
+            <Users className="h-4 w-4" /> Equipe por Obra
+          </TabsTrigger>
           <TabsTrigger value="beta-users" className="gap-1.5">
             <Rocket className="h-4 w-4" /> Beta Users
           </TabsTrigger>
