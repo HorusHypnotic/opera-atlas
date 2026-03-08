@@ -5,6 +5,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Poll until profile exists, max 5 attempts */
+async function waitForProfile(supabase: any, userId: string, maxRetries = 5): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    const { data } = await supabase.from("profiles").select("id").eq("id", userId).single();
+    if (data) return true;
+    await new Promise((r) => setTimeout(r, 300 * (i + 1))); // 300, 600, 900...
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -56,7 +66,7 @@ Deno.serve(async (req) => {
     // 2. Check if user already exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
+      (u: any) => u.email?.toLowerCase() === email.toLowerCase()
     );
 
     let userId: string;
@@ -86,12 +96,23 @@ Deno.serve(async (req) => {
 
       userId = newUser.user.id;
 
-      // Wait for trigger to create profile, then update tenant
-      await new Promise((r) => setTimeout(r, 500));
-      await supabase
-        .from("profiles")
-        .update({ tenant_id: invite.tenant_id })
-        .eq("id", userId);
+      // Wait for trigger to create profile with retry
+      const profileReady = await waitForProfile(supabase, userId);
+      if (!profileReady) {
+        // Fallback: create profile directly
+        await supabase.from("profiles").upsert({
+          id: userId,
+          email,
+          full_name: full_name || "",
+          tenant_id: invite.tenant_id,
+          is_super_admin: false,
+        });
+      } else {
+        await supabase
+          .from("profiles")
+          .update({ tenant_id: invite.tenant_id })
+          .eq("id", userId);
+      }
     }
 
     // 4. Assign role (upsert to avoid duplicates)
@@ -100,7 +121,15 @@ Deno.serve(async (req) => {
       { onConflict: "user_id,role" }
     );
 
-    // 5. Mark invite as used
+    // 5. If invite has obra_id, auto-link to obra_membros
+    if (invite.obra_id) {
+      await supabase.from("obra_membros").upsert(
+        { user_id: userId, obra_id: invite.obra_id, tenant_id: invite.tenant_id },
+        { onConflict: "obra_id,user_id" }
+      );
+    }
+
+    // 6. Mark invite as used
     await supabase.from("invites").update({ used: true }).eq("id", invite.id);
 
     return new Response(
