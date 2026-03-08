@@ -33,6 +33,9 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
   const [loading, setLoading] = useState(false);
   const { selectedObraId } = useObra();
   const { isGuest } = useAuth();
+  const { canInsert } = usePermissions();
+
+  if (!canInsert) return null;
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
