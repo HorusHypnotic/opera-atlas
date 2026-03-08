@@ -71,6 +71,57 @@ export type Database = {
           },
         ]
       }
+      aditivos_contratuais: {
+        Row: {
+          aprovado: boolean
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          obra_id: string
+          tenant_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          aprovado?: boolean
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          obra_id: string
+          tenant_id: string
+          tipo?: string
+          valor?: number
+        }
+        Update: {
+          aprovado?: boolean
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          obra_id?: string
+          tenant_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aditivos_contratuais_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aditivos_contratuais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ativos: {
         Row: {
           created_at: string
@@ -112,6 +163,57 @@ export type Database = {
           },
           {
             foreignKeyName: "ativos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ciclos_tarefa: {
+        Row: {
+          created_at: string
+          data_registro: string
+          id: string
+          obra_id: string
+          qtd_medicoes: number
+          tarefa: string
+          tempo_alvo_min: number
+          tempo_medio_min: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_registro?: string
+          id?: string
+          obra_id: string
+          qtd_medicoes?: number
+          tarefa: string
+          tempo_alvo_min?: number
+          tempo_medio_min?: number
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          data_registro?: string
+          id?: string
+          obra_id?: string
+          qtd_medicoes?: number
+          tarefa?: string
+          tempo_alvo_min?: number
+          tempo_medio_min?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ciclos_tarefa_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ciclos_tarefa_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -364,9 +466,64 @@ export type Database = {
           },
         ]
       }
+      logistica_interna: {
+        Row: {
+          created_at: string
+          data_registro: string
+          destino: string | null
+          equipe: string
+          id: string
+          obra_id: string
+          observacao: string | null
+          origem: string | null
+          tempo_deslocamento_min: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_registro?: string
+          destino?: string | null
+          equipe: string
+          id?: string
+          obra_id: string
+          observacao?: string | null
+          origem?: string | null
+          tempo_deslocamento_min?: number
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          data_registro?: string
+          destino?: string | null
+          equipe?: string
+          id?: string
+          obra_id?: string
+          observacao?: string | null
+          origem?: string | null
+          tempo_deslocamento_min?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_interna_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistica_interna_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obras: {
         Row: {
           created_at: string
+          custo_orcado_m2: number
           data_inicio: string | null
           data_previsao: string | null
           endereco: string | null
@@ -378,6 +535,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
           endereco?: string | null
@@ -389,6 +547,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
           endereco?: string | null

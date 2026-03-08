@@ -4,7 +4,8 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
-import { Users, DollarSign, BarChart3, Ruler } from "lucide-react";
+import { useObra } from "@/hooks/useObra";
+import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
 
 interface RegistroDiario {
   id: string;
@@ -32,6 +33,7 @@ const fields = [
 ];
 
 export default function OrganizacaoPage() {
+  const { selectedObraId } = useObra();
   const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
 
@@ -49,6 +51,14 @@ export default function OrganizacaoPage() {
     .reduce((s: number, l: any) => s + Number(l.valor), 0);
   const custoPorM2 = totalM2 > 0 ? custoFolha / totalM2 : 0;
 
+  // Desvio % — Custo Real vs. Orçado
+  const { data: obrasData = [] } = useTableData("obras");
+  const obraAtual = (obrasData as any[]).find((o: any) => o.id === selectedObraId) || (obrasData as any[])[0];
+  const custoOrcadoM2 = obraAtual?.custo_orcado_m2 || 0;
+  const desvioPercent = custoOrcadoM2 > 0 && custoPorM2 > 0
+    ? ((custoPorM2 - custoOrcadoM2) / custoOrcadoM2) * 100
+    : 0;
+
   return (
     <div>
       <GlobalFilters />
@@ -58,11 +68,12 @@ export default function OrganizacaoPage() {
         <AddRecordDialog title="Novo Registro Diário" fields={fields} onSubmit={insert} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <KPICard title="Total Registros" value={totalRegistros} icon={<Users className="h-5 w-5" />} tooltip="Registros diários cadastrados" />
         <KPICard title="Status OK" value={okCount} icon={<BarChart3 className="h-5 w-5" />} tooltip="Colaboradores com status OK" status="ok" />
         <KPICard title="Alertas" value={alertCount} icon={<DollarSign className="h-5 w-5" />} tooltip="Colaboradores com atenção ou crítico" status={alertCount > 0 ? "warning" : "ok"} />
         <KPICard title="Custo por m²" value={custoPorM2 > 0 ? `R$ ${custoPorM2.toFixed(0)}` : "—"} icon={<Ruler className="h-5 w-5" />} tooltip="Custo de folha / m² produzido" subtitle={totalM2 > 0 ? `${totalM2.toFixed(0)} m² total` : "Sem dados de m²"} />
+        <KPICard title="Desvio Orçado" value={custoOrcadoM2 > 0 ? `${desvioPercent > 0 ? "+" : ""}${desvioPercent.toFixed(1)}%` : "—"} icon={<TrendingDown className="h-5 w-5" />} tooltip="Desvio do custo real vs. orçado por m²" status={desvioPercent > 10 ? "critical" : desvioPercent > 0 ? "warning" : "ok"} subtitle={custoOrcadoM2 > 0 ? `Orçado: R$ ${custoOrcadoM2}/m²` : "Defina na obra"} />
       </div>
 
       <div className="glass-card p-4 overflow-x-auto">
