@@ -227,11 +227,11 @@ export default function AdminPage() {
 
         <TabsContent value="usuarios" className="space-y-4">
           {/* Assign role */}
-          <div className="glass-card p-4 flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="space-y-1 flex-1 min-w-0">
               <label className="text-xs text-muted-foreground">Usuário</label>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="w-[250px]">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecionar usuário" />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +246,7 @@ export default function AdminPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Papel</label>
               <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,7 +257,7 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={addRole} className="gap-1.5">
+            <Button onClick={addRole} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Atribuir
             </Button>
           </div>
