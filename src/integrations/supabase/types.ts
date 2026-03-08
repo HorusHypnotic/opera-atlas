@@ -829,39 +829,60 @@ export type Database = {
       }
       obras: {
         Row: {
+          abordagem: string
+          area_m2: number
           created_at: string
           custo_orcado_m2: number
           data_inicio: string | null
           data_previsao: string | null
+          descricao: string | null
           endereco: string | null
+          fase_atual: string
           id: string
           nome: string
+          orcamento_total: number
+          responsavel: string | null
           status: string
           tenant_id: string
+          tipo_obra: string
           updated_at: string
         }
         Insert: {
+          abordagem?: string
+          area_m2?: number
           created_at?: string
           custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
+          descricao?: string | null
           endereco?: string | null
+          fase_atual?: string
           id?: string
           nome: string
+          orcamento_total?: number
+          responsavel?: string | null
           status?: string
           tenant_id: string
+          tipo_obra?: string
           updated_at?: string
         }
         Update: {
+          abordagem?: string
+          area_m2?: number
           created_at?: string
           custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
+          descricao?: string | null
           endereco?: string | null
+          fase_atual?: string
           id?: string
           nome?: string
+          orcamento_total?: number
+          responsavel?: string | null
           status?: string
           tenant_id?: string
+          tipo_obra?: string
           updated_at?: string
         }
         Relationships: [
