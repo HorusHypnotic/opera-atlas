@@ -670,6 +670,45 @@ export type Database = {
           },
         ]
       }
+      obra_membros: {
+        Row: {
+          created_at: string
+          id: string
+          obra_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          obra_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          obra_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_membros_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obra_membros_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obras: {
         Row: {
           created_at: string
@@ -725,6 +764,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_super_admin: boolean
           tenant_id: string | null
           updated_at: string
         }
@@ -735,6 +775,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          is_super_admin?: boolean
           tenant_id?: string | null
           updated_at?: string
         }
@@ -745,6 +786,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_super_admin?: boolean
           tenant_id?: string | null
           updated_at?: string
         }
@@ -964,6 +1006,7 @@ export type Database = {
           cnpj: string | null
           created_at: string
           id: string
+          limite_obras: number
           nome: string
           updated_at: string
         }
@@ -971,6 +1014,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          limite_obras?: number
           nome: string
           updated_at?: string
         }
@@ -978,6 +1022,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          limite_obras?: number
           nome?: string
           updated_at?: string
         }
@@ -1032,6 +1077,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
     }
     Enums: {

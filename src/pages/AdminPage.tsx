@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3 } from "lucide-react";
+import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3, Crown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { BetaUsersTab } from "@/components/admin/BetaUsersTab";
 import { InfluencerCodesTab } from "@/components/admin/InfluencerCodesTab";
 import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
 import { BetaMetricsTab } from "@/components/admin/BetaMetricsTab";
+import { SuperAdminTab } from "@/components/admin/SuperAdminTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -51,7 +52,7 @@ const roleBadgeColor: Record<AppRole, string> = {
 };
 
 export default function AdminPage() {
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, profile, isSuperAdmin } = useAuth();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [userRoles, setUserRoles] = useState<RoleRow[]>([]);
   const [obras, setObras] = useState<ObraRow[]>([]);
@@ -88,7 +89,7 @@ export default function AdminPage() {
     fetchData();
   }, [tenantId]);
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
@@ -127,7 +128,10 @@ export default function AdminPage() {
       tenant_id: tenantId,
     } as any);
     if (error) {
-      toast.error("Erro ao criar obra: " + error.message);
+      const msg = error.message.includes("Limite de obras") 
+        ? "Limite de obras atingido para este cliente. Aumente o limite nas configurações do tenant."
+        : "Erro ao criar obra: " + error.message;
+      toast.error(msg);
     } else {
       toast.success("Obra criada!");
       setNewObraNome("");
@@ -210,6 +214,11 @@ export default function AdminPage() {
           <TabsTrigger value="beta-metrics" className="gap-1.5">
             <BarChart3 className="h-4 w-4" /> Métricas
           </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="super-admin" className="gap-1.5">
+              <Crown className="h-4 w-4" /> Super Admin
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
@@ -446,6 +455,12 @@ export default function AdminPage() {
         <TabsContent value="beta-metrics" className="space-y-4">
           <BetaMetricsTab />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="super-admin" className="space-y-4">
+            <SuperAdminTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

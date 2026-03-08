@@ -10,6 +10,7 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   tenant_id: string | null;
+  is_super_admin: boolean;
 }
 
 const GUEST_PROFILE: Profile = {
@@ -18,6 +19,7 @@ const GUEST_PROFILE: Profile = {
   full_name: "Convidado",
   avatar_url: null,
   tenant_id: "guest-tenant",
+  is_super_admin: false,
 };
 
 interface AuthContextType {
@@ -30,6 +32,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isGestor: boolean;
   isGuest: boolean;
+  isSuperAdmin: boolean;
   signOut: () => Promise<void>;
   enterGuestMode: () => void;
 }
@@ -51,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
 
     if (profileRes.data) {
-      setProfile(profileRes.data as Profile);
+      const p = profileRes.data as any;
+      setProfile({ ...p, is_super_admin: p.is_super_admin ?? false } as Profile);
     }
     if (rolesRes.data) {
       setRoles((rolesRes.data as { role: AppRole }[]).map((r) => r.role));
@@ -131,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: hasRole("admin"),
         isGestor: hasRole("gestor"),
         isGuest,
+        isSuperAdmin: profile?.is_super_admin ?? false,
         signOut,
         enterGuestMode,
       }}
