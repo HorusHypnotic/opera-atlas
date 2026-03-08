@@ -52,7 +52,8 @@ export default function LoginPage() {
       if (error) {
         toast.error("Erro ao cadastrar: " + error.message);
       } else {
-        toast.success("Conta criada! Verifique seu email para confirmar.");
+        toast.success("Conta criada com sucesso! Faça login para continuar.");
+        setIsSignUp(false);
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
