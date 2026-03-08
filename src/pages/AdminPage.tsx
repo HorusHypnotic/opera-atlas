@@ -193,34 +193,34 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex-wrap h-auto gap-1">
-          <TabsTrigger value="usuarios" className="gap-1.5">
-            <UserPlus className="h-4 w-4" /> Usuários & Permissões
+        <TabsList className="w-full overflow-x-auto flex flex-nowrap h-auto gap-1 p-1 justify-start">
+          <TabsTrigger value="usuarios" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Usuários &</span> Permissões
           </TabsTrigger>
-          <TabsTrigger value="convites" className="gap-1.5">
-            <Mail className="h-4 w-4" /> Convites
+          <TabsTrigger value="convites" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Convites
           </TabsTrigger>
-          <TabsTrigger value="obras" className="gap-1.5">
-            <HardHat className="h-4 w-4" /> Obras
+          <TabsTrigger value="obras" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <HardHat className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Obras
           </TabsTrigger>
-          <TabsTrigger value="equipe-obra" className="gap-1.5">
-            <Users className="h-4 w-4" /> Equipe por Obra
+          <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Equipe
           </TabsTrigger>
-          <TabsTrigger value="beta-users" className="gap-1.5">
-            <Rocket className="h-4 w-4" /> Beta Users
+          <TabsTrigger value="beta-users" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Beta
           </TabsTrigger>
-          <TabsTrigger value="influencers" className="gap-1.5">
-            <Link2 className="h-4 w-4" /> Influenciadores
+          <TabsTrigger value="influencers" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
           </TabsTrigger>
-          <TabsTrigger value="beta-config" className="gap-1.5">
-            <Settings className="h-4 w-4" /> Beta Config
+          <TabsTrigger value="beta-config" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Config
           </TabsTrigger>
-          <TabsTrigger value="beta-metrics" className="gap-1.5">
-            <BarChart3 className="h-4 w-4" /> Métricas
+          <TabsTrigger value="beta-metrics" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Métricas
           </TabsTrigger>
           {isSuperAdmin && (
-            <TabsTrigger value="super-admin" className="gap-1.5">
-              <Crown className="h-4 w-4" /> Super Admin
+            <TabsTrigger value="super-admin" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+              <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Super Admin
             </TabsTrigger>
           )}
         </TabsList>
