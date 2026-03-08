@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string
+          foto_url: string | null
           id: string
           obra_id: string
           pilar: string
@@ -31,6 +32,7 @@ export type Database = {
         Insert: {
           created_at?: string
           descricao: string
+          foto_url?: string | null
           id?: string
           obra_id: string
           pilar?: string
@@ -44,6 +46,7 @@ export type Database = {
         Update: {
           created_at?: string
           descricao?: string
+          foto_url?: string | null
           id?: string
           obra_id?: string
           pilar?: string
