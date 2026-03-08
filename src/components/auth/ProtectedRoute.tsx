@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Shield } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, profile, loading, isGuest, isTrialExpired } = useAuth();
