@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, Shield, LogOut, ClipboardCheck, ListChecks, HardHat, Building2,
+  LayoutDashboard, Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, Shield, LogOut, ClipboardCheck, ListChecks, HardHat, Building2, Banknote,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
