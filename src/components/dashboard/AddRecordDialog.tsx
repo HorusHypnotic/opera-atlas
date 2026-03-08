@@ -226,6 +226,10 @@ interface DeleteRecordButtonProps {
 }
 
 export function DeleteRecordButton({ onConfirm, itemName }: DeleteRecordButtonProps) {
+  const { canDelete } = usePermissions();
+
+  if (!canDelete) return null;
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
