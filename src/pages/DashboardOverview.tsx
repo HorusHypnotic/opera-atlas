@@ -89,6 +89,7 @@ export default function DashboardOverview() {
   return (
     <div>
       <GlobalFilters />
+      <DataRetentionBanner />
 
       <div className="flex items-center justify-between mb-6">
         <div>
