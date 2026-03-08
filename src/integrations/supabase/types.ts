@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      acoes_corretivas: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          obra_id: string
+          pilar: string
+          prazo: string | null
+          prioridade: string
+          responsavel: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          obra_id: string
+          pilar?: string
+          prazo?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          obra_id?: string
+          pilar?: string
+          prazo?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_corretivas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_corretivas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ativos: {
         Row: {
           created_at: string

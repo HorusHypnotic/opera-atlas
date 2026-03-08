@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
-import { Users, DollarSign, BarChart3 } from "lucide-react";
+import { Users, DollarSign, BarChart3, Ruler } from "lucide-react";
 
 interface RegistroDiario {
   id: string;
@@ -33,10 +33,21 @@ const fields = [
 
 export default function OrganizacaoPage() {
   const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
+  const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
 
   const totalRegistros = registros.length;
   const okCount = registros.filter((r) => r.status === "ok").length;
   const alertCount = registros.filter((r) => r.status !== "ok").length;
+
+  // Custo por m² — cruza produção total (m²) com custos de folha
+  const totalM2 = registros.reduce((s, r) => {
+    const match = r.producao?.match(/(\d+(?:[.,]\d+)?)\s*m/i);
+    return s + (match ? parseFloat(match[1].replace(",", ".")) : 0);
+  }, 0);
+  const custoFolha = (lancamentos as any[])
+    .filter((l: any) => l.tipo === "custo" && l.descricao?.toLowerCase().includes("folha"))
+    .reduce((s: number, l: any) => s + Number(l.valor), 0);
+  const custoPorM2 = totalM2 > 0 ? custoFolha / totalM2 : 0;
 
   return (
     <div>
@@ -47,10 +58,11 @@ export default function OrganizacaoPage() {
         <AddRecordDialog title="Novo Registro Diário" fields={fields} onSubmit={insert} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KPICard title="Total Registros" value={totalRegistros} icon={<Users className="h-5 w-5" />} tooltip="Registros diários cadastrados" />
         <KPICard title="Status OK" value={okCount} icon={<BarChart3 className="h-5 w-5" />} tooltip="Colaboradores com status OK" status="ok" />
         <KPICard title="Alertas" value={alertCount} icon={<DollarSign className="h-5 w-5" />} tooltip="Colaboradores com atenção ou crítico" status={alertCount > 0 ? "warning" : "ok"} />
+        <KPICard title="Custo por m²" value={custoPorM2 > 0 ? `R$ ${custoPorM2.toFixed(0)}` : "—"} icon={<Ruler className="h-5 w-5" />} tooltip="Custo de folha / m² produzido" subtitle={totalM2 > 0 ? `${totalM2.toFixed(0)} m² total` : "Sem dados de m²"} />
       </div>
 
       <div className="glass-card p-4 overflow-x-auto">
