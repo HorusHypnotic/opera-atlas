@@ -8,7 +8,7 @@ import {
   Users, Package, Wrench, ShieldAlert, TrendingUp,
   Check, ArrowRight, Phone, Mail, MapPin,
   BarChart3, Shield, Zap, Brain, ChevronRight,
-  Star, CheckCircle2, Building2, MessageCircle,
+  Star, CheckCircle2, Building2, MessageCircle, Rocket,
 } from "lucide-react";
 
 const whatsapp = "5594992193129";
@@ -122,10 +122,11 @@ export default function LandingPage() {
             <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
             <a href="#sobre" className="hover:text-foreground transition-colors">Sobre</a>
             <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
+            <button onClick={() => navigate("/beta")} className="text-primary font-semibold hover:text-primary/80 transition-colors">Beta</button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>Entrar</Button>
-            <Button size="sm" className="gap-1" onClick={() => navigate("/login")}>
+            <Button size="sm" className="gap-1" onClick={() => navigate("/beta")}>
               Demo grátis <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -150,10 +151,13 @@ export default function LandingPage() {
             Controle custos, elimine desperdícios e proteja sua margem de lucro.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/login")}>
+            <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/beta")}>
+              <Rocket className="h-4 w-4" /> Participar do Beta
+            </Button>
+            <Button size="lg" variant="outline" className="gap-2 text-base px-8" onClick={() => navigate("/login")}>
               Experimentar grátis <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" className="gap-2 text-base px-8" asChild>
+            <Button size="lg" variant="ghost" className="gap-2 text-base px-8" asChild>
               <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Olá! Quero saber mais sobre o Método O.P.E.R.A.")}`} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
               </a>
