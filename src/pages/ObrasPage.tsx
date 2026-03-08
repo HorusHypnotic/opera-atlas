@@ -410,6 +410,38 @@ export default function ObrasPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Progress bars */}
+                <div className="space-y-2">
+                  {obra.data_inicio && obra.data_previsao && (
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> Progresso Temporal
+                        </span>
+                        <span className={`text-[10px] font-mono font-semibold ${
+                          diasRestantes !== null && diasRestantes < 0 ? "text-status-critical" :
+                          diasRestantes !== null && diasRestantes < 30 ? "text-status-warning" : "text-muted-foreground"
+                        }`}>
+                          {(() => {
+                            const totalDias = differenceInDays(parseISO(obra.data_previsao!), parseISO(obra.data_inicio!));
+                            const pct = totalDias > 0 ? Math.min(100, (dias / totalDias) * 100) : 0;
+                            return `${pct.toFixed(0)}%`;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            diasRestantes !== null && diasRestantes < 0 ? "bg-status-critical" :
+                            diasRestantes !== null && diasRestantes < 30 ? "bg-status-warning" : "bg-primary"
+                          }`}
+                          style={{ width: `${Math.min(100, obra.data_previsao ? (dias / Math.max(1, differenceInDays(parseISO(obra.data_previsao), parseISO(obra.data_inicio!)))) * 100 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* PMI badges */}
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary" className={`text-[10px] ${faseInfo.color}`}>
@@ -458,6 +490,11 @@ export default function ObrasPage() {
                   {obra.data_previsao && (
                     <span className="flex items-center gap-1">
                       <Target className="h-3 w-3" /> {format(parseISO(obra.data_previsao), "dd/MM/yyyy")}
+                    </span>
+                  )}
+                  {obra.custo_orcado_m2 > 0 && (
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" /> R$ {obra.custo_orcado_m2.toFixed(2)}/m²
                     </span>
                   )}
                 </div>
