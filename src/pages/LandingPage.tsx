@@ -188,6 +188,9 @@ export default function LandingPage() {
           )}
         </div>
       </section>
+
+      {/* ── Stats ── */}
+      <section className="py-12 border-y border-border bg-card/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map((s) => (
             <div key={s.label} className="text-center">
