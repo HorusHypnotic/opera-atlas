@@ -1,14 +1,20 @@
-import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { LogIn, UserCheck, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const { user, loading, enterGuestMode } = useAuth();
   const navigate = useNavigate();
   const [signingIn, setSigningIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -18,13 +24,43 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setSigningIn(true);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
     if (error) {
-      console.error("Login error:", error);
+      toast.error("Erro ao conectar com Google: " + error.message);
       setSigningIn(false);
     }
+  };
+
+  const handleEmailAuth = async () => {
+    if (!email || !password) {
+      toast.error("Preencha email e senha");
+      return;
+    }
+    setEmailLoading(true);
+
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        toast.error("Erro ao cadastrar: " + error.message);
+      } else {
+        toast.success("Conta criada! Verifique seu email para confirmar.");
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error("Erro ao entrar: " + error.message);
+      }
+    }
+    setEmailLoading(false);
   };
 
   const handleGuest = () => {
@@ -53,14 +89,51 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          Faça login para acessar o sistema de gestão
-        </p>
+        <div className="space-y-3">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleEmailAuth()}
+          />
+          <Button
+            onClick={handleEmailAuth}
+            disabled={emailLoading}
+            className="w-full gap-2"
+            size="lg"
+          >
+            <Mail className="h-4 w-4" />
+            {emailLoading ? "Aguarde..." : isSignUp ? "Criar Conta" : "Entrar com Email"}
+          </Button>
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            {isSignUp ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
+          </button>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">ou</span>
+          </div>
+        </div>
 
         <div className="space-y-3">
           <Button
             onClick={handleGoogleLogin}
             disabled={signingIn}
+            variant="outline"
             className="w-full gap-2"
             size="lg"
           >
@@ -68,23 +141,14 @@ export default function LoginPage() {
             {signingIn ? "Redirecionando..." : "Entrar com Google"}
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-2 text-muted-foreground">ou</span>
-            </div>
-          </div>
-
           <Button
             onClick={handleGuest}
-            variant="outline"
-            className="w-full gap-2"
+            variant="ghost"
+            className="w-full gap-2 text-muted-foreground"
             size="lg"
           >
             <UserCheck className="h-4 w-4" />
-            Entrar como Convidado
+            Entrar como Convidado (Demo)
           </Button>
         </div>
 
