@@ -341,6 +341,111 @@ export type Database = {
           },
         ]
       }
+      colaborador_obras: {
+        Row: {
+          ativo: boolean
+          colaborador_id: string
+          created_at: string
+          id: string
+          obra_id: string
+          tenant_id: string
+          valor_diaria_especial: number | null
+        }
+        Insert: {
+          ativo?: boolean
+          colaborador_id: string
+          created_at?: string
+          id?: string
+          obra_id: string
+          tenant_id: string
+          valor_diaria_especial?: number | null
+        }
+        Update: {
+          ativo?: boolean
+          colaborador_id?: string
+          created_at?: string
+          id?: string
+          obra_id?: string
+          tenant_id?: string
+          valor_diaria_especial?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "colaborador_obras_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "colaborador_obras_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "colaborador_obras_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      colaboradores: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          observacoes: string | null
+          pix_chave: string | null
+          pix_tipo: string | null
+          telefone: string | null
+          tenant_id: string
+          turno: string
+          updated_at: string
+          valor_diaria: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          pix_chave?: string | null
+          pix_tipo?: string | null
+          telefone?: string | null
+          tenant_id: string
+          turno?: string
+          updated_at?: string
+          valor_diaria?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          pix_chave?: string | null
+          pix_tipo?: string | null
+          telefone?: string | null
+          tenant_id?: string
+          turno?: string
+          updated_at?: string
+          valor_diaria?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "colaboradores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_emergenciais: {
         Row: {
           created_at: string
@@ -809,6 +914,73 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registro_presencas: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          data: string
+          horas_extra: number | null
+          id: string
+          obra_id: string
+          observacao: string | null
+          servico_especial: string | null
+          tenant_id: string
+          tipo: string
+          valor_diaria_especial: number | null
+          valor_diaria_usado: number | null
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          data?: string
+          horas_extra?: number | null
+          id?: string
+          obra_id: string
+          observacao?: string | null
+          servico_especial?: string | null
+          tenant_id: string
+          tipo?: string
+          valor_diaria_especial?: number | null
+          valor_diaria_usado?: number | null
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          data?: string
+          horas_extra?: number | null
+          id?: string
+          obra_id?: string
+          observacao?: string | null
+          servico_especial?: string | null
+          tenant_id?: string
+          tipo?: string
+          valor_diaria_especial?: number | null
+          valor_diaria_usado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registro_presencas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registro_presencas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registro_presencas_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
