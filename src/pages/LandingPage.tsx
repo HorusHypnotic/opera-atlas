@@ -126,7 +126,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>Entrar</Button>
-            <Button size="sm" className="gap-1" onClick={() => navigate("/login")}>
+            <Button size="sm" className="gap-1" onClick={() => navigate("/beta")}>
               Demo grátis <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
