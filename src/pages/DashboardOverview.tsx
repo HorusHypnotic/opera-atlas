@@ -106,7 +106,18 @@ export default function DashboardOverview() {
       responsavel: profile?.full_name || profile?.email || "—",
       data: new Date().toLocaleDateString("pt-BR"),
       registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes,
-      logistica, ciclos, aditivos,
+      logistica, ciclos, aditivos, acoes, checklist, colaboradores, presencas,
+      score,
+      financials,
+      productivity,
+      safety,
+      scheduleMetrics: scheduleMetrics ? {
+        spiPercent: (scheduleMetrics.spi || 0) * 100,
+        faseAtual: (selectedObra as any)?.fase_atual || "iniciacao",
+        diasDecorridos: scheduleMetrics.diasCorridos || 0,
+        diasRestantes: scheduleMetrics.diasRestantes || 0,
+      } : null,
+      obraData,
     });
   };
 
