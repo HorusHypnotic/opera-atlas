@@ -444,6 +444,10 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="equipe-obra" className="space-y-4">
+          <ObraMembrosTab />
+        </TabsContent>
+
         <TabsContent value="beta-users" className="space-y-4">
           <BetaUsersTab />
         </TabsContent>
