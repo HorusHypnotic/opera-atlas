@@ -210,7 +210,7 @@ export default function DashboardOverview() {
       <EconomyHeroCard financials={financials} orcamentoTotal={obraData?.orcamento_total || 0} />
 
       {/* Score + Radar side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
         <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
         <OperaRadarChart score={score} />
       </div>
