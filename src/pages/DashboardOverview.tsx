@@ -45,6 +45,7 @@ export default function DashboardOverview() {
   const navigate = useNavigate();
   const { obras, selectedObra } = useObra();
   const { profile } = useAuth();
+  const tour = useProductTour();
 
   const { data: registros = [] } = useTableData("registros_diarios");
   const { data: consumo = [] } = useTableData("consumo_materiais");
