@@ -139,6 +139,9 @@ export default function ColaboradoresPage() {
                     {colaboradores.map((c) => (
                       <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                         <td className="py-2.5 px-3 font-medium">{c.nome}</td>
+                        <td className="py-2.5 px-3">
+                          <Badge variant="outline" className="text-[10px]">{CATEGORIAS.find(cat => cat.value === c.categoria)?.label || c.categoria || "—"}</Badge>
+                        </td>
                         <td className="py-2.5 px-3 text-xs font-mono">{c.telefone || "—"}</td>
                         <td className="py-2.5 px-3 text-xs">{c.pix_chave ? `${c.pix_tipo}: ${c.pix_chave}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right font-mono">R$ {Number(c.valor_diaria).toFixed(0)}</td>
