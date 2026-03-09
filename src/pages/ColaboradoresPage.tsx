@@ -355,11 +355,12 @@ function ColaboradorFormDialog({
           pix_chave: record.pix_chave || "",
           valor_diaria: String(record.valor_diaria),
           turno: record.turno,
+          categoria: record.categoria || "ajudante",
           observacoes: record.observacoes || "",
           ativo: record.ativo ? "true" : "false",
         });
       } else {
-        setV({ turno: "diurno", ativo: "true", valor_diaria: "0" });
+        setV({ turno: "diurno", ativo: "true", valor_diaria: "0", categoria: "ajudante" });
       }
     }
   };
