@@ -39,8 +39,6 @@ export function useTableData<T = any>(table: string) {
     queryClient.invalidateQueries({ queryKey: [table] });
   };
 
-  // Tables that do NOT have an obra_id column
-  const tablesWithoutObraId = ["colaboradores", "profiles", "tenants", "user_roles", "obra_membros", "invites", "beta_waitlist", "beta_config", "influencer_codes"];
 
   const insert = async (record: Record<string, any>) => {
     if (isGuest) {
