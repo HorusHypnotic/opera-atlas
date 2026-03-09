@@ -30,6 +30,9 @@ import { WasteRankingCard } from "@/components/dashboard/WasteRankingCard";
 import { FornecedorRankingCard } from "@/components/dashboard/FornecedorRankingCard";
 import { CustoPorCategoriaCard } from "@/components/dashboard/CustoPorCategoriaCard";
 import { ObraComparisonCard } from "@/components/dashboard/ObraComparisonCard";
+import { ProductTour } from "@/components/tour/ProductTour";
+import { TourTrigger } from "@/components/tour/TourTrigger";
+import { useProductTour } from "@/hooks/useProductTour";
 
 import { calculateOperaScore } from "@/analytics/operaScore";
 import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
