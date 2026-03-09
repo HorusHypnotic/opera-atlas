@@ -375,6 +375,7 @@ function ColaboradorFormDialog({
       pix_chave: v.pix_chave || null,
       valor_diaria: Number(v.valor_diaria) || 0,
       turno: v.turno || "diurno",
+      categoria: v.categoria || "ajudante",
       observacoes: v.observacoes || null,
       ativo: v.ativo !== "false",
     };
