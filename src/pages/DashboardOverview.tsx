@@ -30,6 +30,9 @@ import { WasteRankingCard } from "@/components/dashboard/WasteRankingCard";
 import { FornecedorRankingCard } from "@/components/dashboard/FornecedorRankingCard";
 import { CustoPorCategoriaCard } from "@/components/dashboard/CustoPorCategoriaCard";
 import { ObraComparisonCard } from "@/components/dashboard/ObraComparisonCard";
+import { ProductTour } from "@/components/tour/ProductTour";
+import { TourTrigger } from "@/components/tour/TourTrigger";
+import { useProductTour } from "@/hooks/useProductTour";
 
 import { calculateOperaScore } from "@/analytics/operaScore";
 import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
@@ -42,6 +45,7 @@ export default function DashboardOverview() {
   const navigate = useNavigate();
   const { obras, selectedObra } = useObra();
   const { profile } = useAuth();
+  const tour = useProductTour();
 
   const { data: registros = [] } = useTableData("registros_diarios");
   const { data: consumo = [] } = useTableData("consumo_materiais");
@@ -146,8 +150,19 @@ export default function DashboardOverview() {
   const hasData = registros.length > 0 || consumo.length > 0 || lancamentos.length > 0 || ativos.length > 0;
 
   return (
-    <div>
-      <GlobalFilters />
+    <div data-tour="welcome">
+      <ProductTour
+        isActive={tour.isActive}
+        currentStep={tour.currentStep}
+        steps={tour.steps}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onSkip={tour.skipTour}
+      />
+
+      <div data-tour="global-filters">
+        <GlobalFilters />
+      </div>
       <DataRetentionBanner />
 
       <div className="flex items-center justify-between mb-6">
@@ -155,20 +170,25 @@ export default function DashboardOverview() {
           <h1 className="text-2xl font-bold">Dashboard O.P.E.R.A.</h1>
           <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
-          <FileText className="h-4 w-4" /> Exportar PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <TourTrigger onClick={tour.startTour} />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF} data-tour="export-pdf">
+            <FileText className="h-4 w-4" /> Exportar PDF
+          </Button>
+        </div>
       </div>
 
       {/* Onboarding guide */}
-      <EmptyStateGuide
-        hasObras={obras.length > 0}
-        hasRegistros={registros.length > 0}
-        hasConsumo={consumo.length > 0}
-        hasAtivos={ativos.length > 0}
-        hasLancamentos={lancamentos.length > 0}
-        hasColaboradores={colaboradores.length > 0}
-      />
+      <div data-tour="onboarding-guide">
+        <EmptyStateGuide
+          hasObras={obras.length > 0}
+          hasRegistros={registros.length > 0}
+          hasConsumo={consumo.length > 0}
+          hasAtivos={ativos.length > 0}
+          hasLancamentos={lancamentos.length > 0}
+          hasColaboradores={colaboradores.length > 0}
+        />
+      </div>
 
       {/* Notifications */}
       <NotificationBadge
@@ -190,13 +210,13 @@ export default function DashboardOverview() {
       <EconomyHeroCard financials={financials} orcamentoTotal={obraData?.orcamento_total || 0} />
 
       {/* Score + Radar side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
         <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
         <OperaRadarChart score={score} />
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" data-tour="kpi-row">
         <KPICard title="Saldo" value={`R$ ${(financials.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financials.saldo >= 0 ? "ok" : "critical"} />
         <KPICard title="Obras" value={obras.length} icon={<TrendingUp className="h-4 w-4" />} tooltip="Total de obras cadastradas" status="ok" />
         <KPICard title="Dias s/ Acidente" value={safety.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
@@ -268,7 +288,7 @@ export default function DashboardOverview() {
 
       {/* Module navigation */}
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4" data-tour="module-nav">
         {sections.map((s) => (
           <button key={s.letter} onClick={() => navigate(s.url)} className="glass-card p-5 text-left hover:border-primary/50 transition-all group cursor-pointer">
             <div className="flex items-center gap-2 mb-3">
