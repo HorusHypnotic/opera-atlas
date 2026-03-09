@@ -29,10 +29,27 @@ interface Colaborador {
   pix_chave: string | null;
   valor_diaria: number;
   turno: string;
+  categoria: string | null;
   observacoes: string | null;
   ativo: boolean;
   created_at: string;
 }
+
+const CATEGORIAS = [
+  { value: "ajudante", label: "Ajudante" },
+  { value: "pedreiro", label: "Pedreiro" },
+  { value: "armador", label: "Armador" },
+  { value: "carpinteiro", label: "Carpinteiro" },
+  { value: "eletricista", label: "Eletricista" },
+  { value: "encanador", label: "Encanador" },
+  { value: "pintor", label: "Pintor" },
+  { value: "gesseiro", label: "Gesseiro" },
+  { value: "mestre_obras", label: "Mestre de Obras" },
+  { value: "engenheiro", label: "Engenheiro" },
+  { value: "operador_maquinas", label: "Operador de Máquinas" },
+  { value: "servente", label: "Servente" },
+  { value: "outro", label: "Outro" },
+];
 
 interface ColaboradorObra {
   id: string;
