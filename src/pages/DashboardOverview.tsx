@@ -288,7 +288,7 @@ export default function DashboardOverview() {
 
       {/* Module navigation */}
       <h2 className="text-lg font-semibold mb-4">Módulos O.P.E.R.A.</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4" data-tour="module-nav">
         {sections.map((s) => (
           <button key={s.letter} onClick={() => navigate(s.url)} className="glass-card p-5 text-left hover:border-primary/50 transition-all group cursor-pointer">
             <div className="flex items-center gap-2 mb-3">
