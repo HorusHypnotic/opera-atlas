@@ -126,6 +126,7 @@ export default function ColaboradoresPage() {
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Nome</th>
+                      <th className="text-left py-2 px-3">Categoria</th>
                       <th className="text-left py-2 px-3">Telefone</th>
                       <th className="text-left py-2 px-3">PIX</th>
                       <th className="text-right py-2 px-3">Diária</th>
