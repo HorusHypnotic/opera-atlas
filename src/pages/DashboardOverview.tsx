@@ -179,14 +179,16 @@ export default function DashboardOverview() {
       </div>
 
       {/* Onboarding guide */}
-      <EmptyStateGuide
-        hasObras={obras.length > 0}
-        hasRegistros={registros.length > 0}
-        hasConsumo={consumo.length > 0}
-        hasAtivos={ativos.length > 0}
-        hasLancamentos={lancamentos.length > 0}
-        hasColaboradores={colaboradores.length > 0}
-      />
+      <div data-tour="onboarding-guide">
+        <EmptyStateGuide
+          hasObras={obras.length > 0}
+          hasRegistros={registros.length > 0}
+          hasConsumo={consumo.length > 0}
+          hasAtivos={ativos.length > 0}
+          hasLancamentos={lancamentos.length > 0}
+          hasColaboradores={colaboradores.length > 0}
+        />
+      </div>
 
       {/* Notifications */}
       <NotificationBadge
