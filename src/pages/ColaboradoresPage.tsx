@@ -29,10 +29,27 @@ interface Colaborador {
   pix_chave: string | null;
   valor_diaria: number;
   turno: string;
+  categoria: string | null;
   observacoes: string | null;
   ativo: boolean;
   created_at: string;
 }
+
+const CATEGORIAS = [
+  { value: "ajudante", label: "Ajudante" },
+  { value: "pedreiro", label: "Pedreiro" },
+  { value: "armador", label: "Armador" },
+  { value: "carpinteiro", label: "Carpinteiro" },
+  { value: "eletricista", label: "Eletricista" },
+  { value: "encanador", label: "Encanador" },
+  { value: "pintor", label: "Pintor" },
+  { value: "gesseiro", label: "Gesseiro" },
+  { value: "mestre_obras", label: "Mestre de Obras" },
+  { value: "engenheiro", label: "Engenheiro" },
+  { value: "operador_maquinas", label: "Operador de Máquinas" },
+  { value: "servente", label: "Servente" },
+  { value: "outro", label: "Outro" },
+];
 
 interface ColaboradorObra {
   id: string;
@@ -109,6 +126,7 @@ export default function ColaboradoresPage() {
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Nome</th>
+                      <th className="text-left py-2 px-3">Categoria</th>
                       <th className="text-left py-2 px-3">Telefone</th>
                       <th className="text-left py-2 px-3">PIX</th>
                       <th className="text-right py-2 px-3">Diária</th>
@@ -121,6 +139,9 @@ export default function ColaboradoresPage() {
                     {colaboradores.map((c) => (
                       <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                         <td className="py-2.5 px-3 font-medium">{c.nome}</td>
+                        <td className="py-2.5 px-3">
+                          <Badge variant="outline" className="text-[10px]">{CATEGORIAS.find(cat => cat.value === c.categoria)?.label || c.categoria || "—"}</Badge>
+                        </td>
                         <td className="py-2.5 px-3 text-xs font-mono">{c.telefone || "—"}</td>
                         <td className="py-2.5 px-3 text-xs">{c.pix_chave ? `${c.pix_tipo}: ${c.pix_chave}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right font-mono">R$ {Number(c.valor_diaria).toFixed(0)}</td>
@@ -334,11 +355,12 @@ function ColaboradorFormDialog({
           pix_chave: record.pix_chave || "",
           valor_diaria: String(record.valor_diaria),
           turno: record.turno,
+          categoria: record.categoria || "ajudante",
           observacoes: record.observacoes || "",
           ativo: record.ativo ? "true" : "false",
         });
       } else {
-        setV({ turno: "diurno", ativo: "true", valor_diaria: "0" });
+        setV({ turno: "diurno", ativo: "true", valor_diaria: "0", categoria: "ajudante" });
       }
     }
   };
@@ -353,6 +375,7 @@ function ColaboradorFormDialog({
       pix_chave: v.pix_chave || null,
       valor_diaria: Number(v.valor_diaria) || 0,
       turno: v.turno || "diurno",
+      categoria: v.categoria || "ajudante",
       observacoes: v.observacoes || null,
       ativo: v.ativo !== "false",
     };
@@ -392,9 +415,22 @@ function ColaboradorFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
+              <label className="text-sm font-medium">Categoria *</label>
+              <Select value={v.categoria || "ajudante"} onValueChange={(val) => setV({ ...v, categoria: val })}>
+                <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <label className="text-sm font-medium">Telefone</label>
               <Input placeholder="(11) 99999-9999" value={v.telefone || ""} onChange={(e) => setV({ ...v, telefone: e.target.value })} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-medium">Valor Diária (R$)</label>
               <Input type="number" step="any" value={v.valor_diaria || ""} onChange={(e) => setV({ ...v, valor_diaria: e.target.value })} />

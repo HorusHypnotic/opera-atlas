@@ -1,0 +1,1 @@
+ALTER TABLE public.colaboradores ADD COLUMN categoria text DEFAULT 'ajudante';
