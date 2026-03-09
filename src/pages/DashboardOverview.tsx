@@ -150,8 +150,19 @@ export default function DashboardOverview() {
   const hasData = registros.length > 0 || consumo.length > 0 || lancamentos.length > 0 || ativos.length > 0;
 
   return (
-    <div>
-      <GlobalFilters />
+    <div data-tour="welcome">
+      <ProductTour
+        isActive={tour.isActive}
+        currentStep={tour.currentStep}
+        steps={tour.steps}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onSkip={tour.skipTour}
+      />
+
+      <div data-tour="global-filters">
+        <GlobalFilters />
+      </div>
       <DataRetentionBanner />
 
       <div className="flex items-center justify-between mb-6">
@@ -159,9 +170,12 @@ export default function DashboardOverview() {
           <h1 className="text-2xl font-bold">Dashboard O.P.E.R.A.</h1>
           <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
-          <FileText className="h-4 w-4" /> Exportar PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <TourTrigger onClick={tour.startTour} />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF} data-tour="export-pdf">
+            <FileText className="h-4 w-4" /> Exportar PDF
+          </Button>
+        </div>
       </div>
 
       {/* Onboarding guide */}
