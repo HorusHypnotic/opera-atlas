@@ -33,7 +33,7 @@ export function AppSidebar() {
   const { profile, isAdmin, isGuest, isSuperAdmin, signOut } = useAuth();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" data-tour="sidebar">
       <SidebarHeader className="p-4 border-b border-border">
         {!collapsed ? (
           <div className="flex items-center gap-2">
