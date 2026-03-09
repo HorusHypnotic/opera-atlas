@@ -415,9 +415,22 @@ function ColaboradorFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
+              <label className="text-sm font-medium">Categoria *</label>
+              <Select value={v.categoria || "ajudante"} onValueChange={(val) => setV({ ...v, categoria: val })}>
+                <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <label className="text-sm font-medium">Telefone</label>
               <Input placeholder="(11) 99999-9999" value={v.telefone || ""} onChange={(e) => setV({ ...v, telefone: e.target.value })} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-medium">Valor Diária (R$)</label>
               <Input type="number" step="any" value={v.valor_diaria || ""} onChange={(e) => setV({ ...v, valor_diaria: e.target.value })} />
