@@ -23,7 +23,7 @@ export function useTableData<T = any>(table: string) {
       }
       let q = (supabase as any).from(table).select("*");
       if (tenantId) q = q.eq("tenant_id", tenantId);
-      if (selectedObraId) q = q.eq("obra_id", selectedObraId);
+      if (selectedObraId && !tablesWithoutObraId.includes(table)) q = q.eq("obra_id", selectedObraId);
       q = q.order("created_at", { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
