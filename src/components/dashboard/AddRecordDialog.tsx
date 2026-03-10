@@ -31,6 +31,7 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
   const { selectedObraId } = useObra();
   const { isGuest } = useAuth();
   const { canInsert } = usePermissions();
@@ -45,10 +46,11 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
         if (f.defaultValue) defaults[f.name] = f.defaultValue;
       });
       setValues(defaults);
+      setAddedCount(0);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (keepOpen = false) => {
     if (!selectedObraId && !isGuest) {
       toast.error("Selecione uma obra antes de adicionar registros");
       return;
@@ -73,8 +75,18 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
     setLoading(false);
     if (error) {
       toast.error("Erro ao salvar: " + (error.message || error));
+    } else if (keepOpen) {
+      setAddedCount((c) => c + 1);
+      toast.success("Registro adicionado! Preencha o próximo.");
+      // Reset form but keep defaults
+      const defaults: Record<string, string> = {};
+      fields.forEach((f) => {
+        if (f.defaultValue) defaults[f.name] = f.defaultValue;
+      });
+      setValues(defaults);
     } else {
-      toast.success("Registro adicionado!");
+      toast.success(`${addedCount + 1} registro(s) adicionado(s)!`);
+      setAddedCount(0);
       setOpen(false);
     }
   };
@@ -119,9 +131,17 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
               )}
             </div>
           ))}
-          <Button onClick={handleSubmit} disabled={loading || (!selectedObraId && !isGuest)} className="w-full mt-2">
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
+          {addedCount > 0 && (
+            <p className="text-xs text-muted-foreground text-center">✅ {addedCount} registro(s) adicionado(s) nesta sessão</p>
+          )}
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => handleSubmit(true)} disabled={loading || (!selectedObraId && !isGuest)} className="flex-1">
+              {loading ? "Salvando..." : "+ Salvar e Adicionar Outro"}
+            </Button>
+            <Button onClick={() => handleSubmit(false)} disabled={loading || (!selectedObraId && !isGuest)} className="flex-1">
+              {loading ? "Salvando..." : "Salvar e Fechar"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
