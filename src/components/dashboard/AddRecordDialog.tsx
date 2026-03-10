@@ -48,7 +48,9 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
     }
   };
 
-  const handleSubmit = async () => {
+  const [addedCount, setAddedCount] = useState(0);
+
+  const handleSubmit = async (keepOpen = false) => {
     if (!selectedObraId && !isGuest) {
       toast.error("Selecione uma obra antes de adicionar registros");
       return;
@@ -73,8 +75,18 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
     setLoading(false);
     if (error) {
       toast.error("Erro ao salvar: " + (error.message || error));
+    } else if (keepOpen) {
+      setAddedCount((c) => c + 1);
+      toast.success("Registro adicionado! Preencha o próximo.");
+      // Reset form but keep defaults
+      const defaults: Record<string, string> = {};
+      fields.forEach((f) => {
+        if (f.defaultValue) defaults[f.name] = f.defaultValue;
+      });
+      setValues(defaults);
     } else {
-      toast.success("Registro adicionado!");
+      toast.success(`${addedCount + 1} registro(s) adicionado(s)!`);
+      setAddedCount(0);
       setOpen(false);
     }
   };
