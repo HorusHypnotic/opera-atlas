@@ -45,6 +45,7 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
         if (f.defaultValue) defaults[f.name] = f.defaultValue;
       });
       setValues(defaults);
+      setAddedCount(0);
     }
   };
 
