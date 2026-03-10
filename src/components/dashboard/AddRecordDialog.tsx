@@ -132,9 +132,17 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
               )}
             </div>
           ))}
-          <Button onClick={handleSubmit} disabled={loading || (!selectedObraId && !isGuest)} className="w-full mt-2">
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
+          {addedCount > 0 && (
+            <p className="text-xs text-muted-foreground text-center">✅ {addedCount} registro(s) adicionado(s) nesta sessão</p>
+          )}
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => handleSubmit(true)} disabled={loading || (!selectedObraId && !isGuest)} className="flex-1">
+              {loading ? "Salvando..." : "+ Salvar e Adicionar Outro"}
+            </Button>
+            <Button onClick={() => handleSubmit(false)} disabled={loading || (!selectedObraId && !isGuest)} className="flex-1">
+              {loading ? "Salvando..." : "Salvar e Fechar"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
