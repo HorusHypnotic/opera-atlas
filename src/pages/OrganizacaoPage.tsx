@@ -19,24 +19,33 @@ interface RegistroDiario {
   data_registro: string;
 }
 
-const fields = [
-  { name: "nome", label: "Nome do Colaborador", placeholder: "Ex: Carlos Silva", required: true },
-  { name: "entrada", label: "Entrada", type: "time" as const },
-  { name: "saida", label: "Saída", type: "time" as const },
-  { name: "atividade", label: "Atividade", placeholder: "Ex: Alvenaria" },
-  { name: "producao", label: "Produção", placeholder: "Ex: 12 m²" },
-  { name: "status", label: "Status", type: "select" as const, defaultValue: "ok", options: [
-    { value: "ok", label: "OK" },
-    { value: "warning", label: "Atenção" },
-    { value: "critical", label: "Crítico" },
-  ]},
-  { name: "data_registro", label: "Data", type: "date" as const, defaultValue: new Date().toISOString().split("T")[0] },
-];
-
 export default function OrganizacaoPage() {
   const { selectedObraId } = useObra();
   const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
+  const { data: colaboradores = [] } = useTableData("colaboradores");
+
+  // Build fields dynamically with collaborator options from DB
+  const fields: FieldDef[] = useMemo(() => [
+    {
+      name: "nome", label: "Colaborador", required: true,
+      type: "select" as const,
+      placeholder: "Selecionar colaborador",
+      options: (colaboradores as any[])
+        .filter((c: any) => c.ativo !== false)
+        .map((c: any) => ({ value: c.nome, label: `${c.nome}${c.categoria ? ` (${c.categoria})` : ""}` })),
+    },
+    { name: "entrada", label: "Entrada", type: "time" as const },
+    { name: "saida", label: "Saída", type: "time" as const },
+    { name: "atividade", label: "Atividade", placeholder: "Ex: Alvenaria" },
+    { name: "producao", label: "Produção", placeholder: "Ex: 12 m²" },
+    { name: "status", label: "Status", type: "select" as const, defaultValue: "ok", options: [
+      { value: "ok", label: "OK" },
+      { value: "warning", label: "Atenção" },
+      { value: "critical", label: "Crítico" },
+    ]},
+    { name: "data_registro", label: "Data", type: "date" as const, defaultValue: new Date().toISOString().split("T")[0] },
+  ], [colaboradores]);
 
   const totalRegistros = registros.length;
   const okCount = registros.filter((r) => r.status === "ok").length;
