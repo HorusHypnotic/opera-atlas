@@ -31,6 +31,7 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
   const { selectedObraId } = useObra();
   const { isGuest } = useAuth();
   const { canInsert } = usePermissions();
@@ -48,8 +49,6 @@ export function AddRecordDialog({ title, fields, onSubmit, trigger }: AddRecordD
       setAddedCount(0);
     }
   };
-
-  const [addedCount, setAddedCount] = useState(0);
 
   const handleSubmit = async (keepOpen = false) => {
     if (!selectedObraId && !isGuest) {
