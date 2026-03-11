@@ -791,6 +791,108 @@ export type Database = {
           },
         ]
       }
+      lote_materiais: {
+        Row: {
+          created_at: string
+          id: string
+          lote_id: string
+          material: string
+          previsto: number
+          real_consumo: number
+          tenant_id: string
+          unidade: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lote_id: string
+          material: string
+          previsto?: number
+          real_consumo?: number
+          tenant_id: string
+          unidade?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lote_id?: string
+          material?: string
+          previsto?: number
+          real_consumo?: number
+          tenant_id?: string
+          unidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lote_materiais_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_consumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_materiais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lotes_consumo: {
+        Row: {
+          area_executada: number
+          atividade: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          obra_id: string
+          observacao: string | null
+          tenant_id: string
+          unidade_area: string
+        }
+        Insert: {
+          area_executada?: number
+          atividade: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          obra_id: string
+          observacao?: string | null
+          tenant_id: string
+          unidade_area?: string
+        }
+        Update: {
+          area_executada?: number
+          atividade?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          obra_id?: string
+          observacao?: string | null
+          tenant_id?: string
+          unidade_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotes_consumo_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotes_consumo_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obra_membros: {
         Row: {
           created_at: string

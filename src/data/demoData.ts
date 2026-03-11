@@ -117,6 +117,25 @@ export const DEMO_DATA: Record<string, any[]> = {
     { id: "ad3", ...base, descricao: "Troca de revestimento externo por solicitação do cliente", valor: 45000, tipo: "aditivo", aprovado: true, data: daysAgo(20), created_at: daysAgo(20) },
   ],
 
+  lotes_consumo: [
+    { id: "lc1", ...base, atividade: "Execução de contrapiso", area_executada: 120, unidade_area: "m²", data_inicio: daysAgo(7), data_fim: daysAgo(2), observacao: "Bloco A — térreo e 1º pav.", created_at: daysAgo(7) },
+    { id: "lc2", ...base, atividade: "Alvenaria 3º pavimento", area_executada: 85, unidade_area: "m²", data_inicio: daysAgo(14), data_fim: daysAgo(8), observacao: null, created_at: daysAgo(14) },
+    { id: "lc3", ...base, atividade: "Reboco interno", area_executada: 200, unidade_area: "m²", data_inicio: daysAgo(5), data_fim: null, observacao: "Em andamento", created_at: daysAgo(5) },
+  ],
+
+  lote_materiais: [
+    { id: "lm1", lote_id: "lc1", ...base, material: "Cimento CP-II", unidade: "saco", previsto: 28, real_consumo: 33, created_at: daysAgo(7) },
+    { id: "lm2", lote_id: "lc1", ...base, material: "Areia média", unidade: "m³", previsto: 6, real_consumo: 5.8, created_at: daysAgo(7) },
+    { id: "lm3", lote_id: "lc1", ...base, material: "Brita nº1", unidade: "m³", previsto: 4, real_consumo: 4.5, created_at: daysAgo(7) },
+    { id: "lm4", lote_id: "lc1", ...base, material: "Aditivo plastificante", unidade: "litro", previsto: 12, real_consumo: 11, created_at: daysAgo(7) },
+    { id: "lm5", lote_id: "lc2", ...base, material: "Cimento CP-II", unidade: "saco", previsto: 18, real_consumo: 21, created_at: daysAgo(14) },
+    { id: "lm6", lote_id: "lc2", ...base, material: "Tijolo cerâmico", unidade: "un", previsto: 2800, real_consumo: 3050, created_at: daysAgo(14) },
+    { id: "lm7", lote_id: "lc2", ...base, material: "Areia média", unidade: "m³", previsto: 3.5, real_consumo: 3.8, created_at: daysAgo(14) },
+    { id: "lm8", lote_id: "lc3", ...base, material: "Cimento CP-II", unidade: "saco", previsto: 45, real_consumo: 48, created_at: daysAgo(5) },
+    { id: "lm9", lote_id: "lc3", ...base, material: "Areia fina", unidade: "m³", previsto: 8, real_consumo: 8.2, created_at: daysAgo(5) },
+    { id: "lm10", lote_id: "lc3", ...base, material: "Cal hidratada", unidade: "saco", previsto: 20, real_consumo: 22, created_at: daysAgo(5) },
+  ],
+
   checklist_semanal: (() => {
     // Generate demo checks for current week (Monday)
     const now = new Date();
