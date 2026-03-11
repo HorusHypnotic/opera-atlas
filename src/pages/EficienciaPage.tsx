@@ -138,10 +138,11 @@ export default function EficienciaPage() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-border text-muted-foreground">
                   <th className="text-left py-2 px-3">Equipe</th>
+                  <th className="text-left py-2 px-3 hidden sm:table-cell">Obra</th>
                   <th className="text-left py-2 px-3">Origem</th>
                   <th className="text-left py-2 px-3">Destino</th>
                   <th className="text-right py-2 px-3">Tempo (min)</th>
-                  <th className="text-left py-2 px-3">Observação</th>
+                  <th className="text-left py-2 px-3 hidden sm:table-cell">Obs.</th>
                   <th className="text-left py-2 px-3">Data</th>
                   <th className="text-right py-2 px-3">Ações</th>
                 </tr></thead>
@@ -149,10 +150,11 @@ export default function EficienciaPage() {
                   {logistica.map((l) => (
                     <tr key={l.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                       <td className="py-2.5 px-3 font-medium">{l.equipe}</td>
+                      <td className="py-2.5 px-3 text-xs text-muted-foreground hidden sm:table-cell">{obraMap[l.obra_id] || "—"}</td>
                       <td className="py-2.5 px-3 text-muted-foreground">{l.origem || "—"}</td>
                       <td className="py-2.5 px-3 text-muted-foreground">{l.destino || "—"}</td>
                       <td className={`py-2.5 px-3 text-right font-mono font-semibold ${l.tempo_deslocamento_min > 30 ? "text-status-critical" : l.tempo_deslocamento_min > 15 ? "text-status-warning" : "text-status-ok"}`}>{l.tempo_deslocamento_min}</td>
-                      <td className="py-2.5 px-3 text-xs text-muted-foreground">{l.observacao || "—"}</td>
+                      <td className="py-2.5 px-3 text-xs text-muted-foreground hidden sm:table-cell">{l.observacao || "—"}</td>
                       <td className="py-2.5 px-3 text-xs">{l.data_registro}</td>
                       <td className="py-2.5 px-3 text-right">
                         <div className="flex justify-end gap-1">
