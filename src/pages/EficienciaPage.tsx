@@ -1,17 +1,18 @@
+import { useMemo } from "react";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
-import { AddRecordDialog, EditRecordDialog, DeleteRecordButton } from "@/components/dashboard/AddRecordDialog";
+import { AddRecordDialog, EditRecordDialog, DeleteRecordButton, FieldDef } from "@/components/dashboard/AddRecordDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { Wrench, DollarSign, Activity, MapPin, Timer } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Ativo { id: string; nome: string; status: string; local_atual: string | null; valor: number; }
-interface Logistica { id: string; equipe: string; tempo_deslocamento_min: number; origem: string | null; destino: string | null; observacao: string | null; data_registro: string; }
+interface Logistica { id: string; equipe: string; tempo_deslocamento_min: number; origem: string | null; destino: string | null; observacao: string | null; data_registro: string; obra_id: string; }
 interface CicloTarefa { id: string; tarefa: string; tempo_medio_min: number; tempo_alvo_min: number; qtd_medicoes: number; data_registro: string; }
 
-const ativoFields = [
+const ativoFields: FieldDef[] = [
   { name: "nome", label: "Nome do Equipamento", placeholder: "Ex: Betoneira 400L", required: true },
   { name: "status", label: "Status", type: "select" as const, defaultValue: "ativo", options: [
     { value: "ativo", label: "Ativo" }, { value: "ocioso", label: "Ocioso" }, { value: "manutencao", label: "Manutenção" }, { value: "realocavel", label: "Realocável" },
@@ -20,16 +21,7 @@ const ativoFields = [
   { name: "valor", label: "Valor (R$)", type: "number" as const, placeholder: "8500" },
 ];
 
-const logisticaFields = [
-  { name: "equipe", label: "Equipe", placeholder: "Ex: Alvenaria", required: true },
-  { name: "tempo_deslocamento_min", label: "Tempo de Deslocamento (min)", type: "number" as const, placeholder: "25" },
-  { name: "origem", label: "Origem", placeholder: "Ex: Almoxarifado" },
-  { name: "destino", label: "Destino", placeholder: "Ex: 4º Pavimento" },
-  { name: "observacao", label: "Observação", placeholder: "Ex: Elevador parado", required: false },
-  { name: "data_registro", label: "Data", type: "date" as const, defaultValue: new Date().toISOString().split("T")[0] },
-];
-
-const cicloFields = [
+const cicloFields: FieldDef[] = [
   { name: "tarefa", label: "Tarefa", placeholder: "Ex: Assentamento cerâmico", required: true },
   { name: "tempo_medio_min", label: "Tempo Médio (min)", type: "number" as const, placeholder: "45" },
   { name: "tempo_alvo_min", label: "Tempo Alvo (min)", type: "number" as const, placeholder: "35" },
@@ -41,6 +33,25 @@ export default function EficienciaPage() {
   const { data: ativos = [], isLoading, insert, update, remove } = useTableData<Ativo>("ativos");
   const { data: logistica = [], insert: insertLog, update: updateLog, remove: removeLog } = useTableData<Logistica>("logistica_interna");
   const { data: ciclos = [], insert: insertCiclo, update: updateCiclo, remove: removeCiclo } = useTableData<CicloTarefa>("ciclos_tarefa");
+  const { data: obras = [] } = useTableData("obras");
+
+  const obraOptions = useMemo(() => obras.map((o: any) => ({
+    value: o.id, label: o.nome,
+  })), [obras]);
+
+  const logisticaFields: FieldDef[] = useMemo(() => [
+    { name: "equipe", label: "Equipe", placeholder: "Ex: Alvenaria", required: true },
+    { name: "tempo_deslocamento_min", label: "Tempo de Deslocamento (min)", type: "number" as const, placeholder: "25" },
+    { name: "origem", label: "Origem", placeholder: "Ex: Almoxarifado" },
+    { name: "destino", label: "Destino", placeholder: "Ex: 4º Pavimento" },
+    ...(obraOptions.length > 0 ? [{
+      name: "obra_id", label: "Obra", type: "select" as const,
+      options: obraOptions,
+      defaultValue: obraOptions[0]?.value || "",
+    }] : []),
+    { name: "observacao", label: "Observação", placeholder: "Ex: Elevador parado", required: false },
+    { name: "data_registro", label: "Data", type: "date" as const, defaultValue: new Date().toISOString().split("T")[0] },
+  ], [obraOptions]);
 
   const ociosTotal = ativos.filter((f) => f.status === "ocioso").reduce((s, f) => s + Number(f.valor), 0);
   const ativosCount = ativos.filter((f) => f.status === "ativo").length;
@@ -51,6 +62,13 @@ export default function EficienciaPage() {
     : 0;
 
   const ciclosComAtraso = ciclos.filter((c) => c.tempo_medio_min > c.tempo_alvo_min);
+
+  // Map obra_id to nome for display
+  const obraMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    obras.forEach((o: any) => { m[o.id] = o.nome; });
+    return m;
+  }, [obras]);
 
   return (
     <div>
