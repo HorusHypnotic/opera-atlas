@@ -28,6 +28,7 @@ import InvitePage from "./pages/InvitePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BetaSignupPage from "./pages/BetaSignupPage";
 import BetaStatusPage from "./pages/BetaStatusPage";
+import RelatorioMaoObraPage from "./pages/RelatorioMaoObraPage";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => (
                       <Route path="/colaboradores" element={<ColaboradoresPage />} />
                       <Route path="/obras" element={<ObrasPage />} />
                       <Route path="/economia" element={<EconomiaPage />} />
+                      <Route path="/relatorio-mao-obra" element={<RelatorioMaoObraPage />} />
                       <Route path="/admin" element={<AdminPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
