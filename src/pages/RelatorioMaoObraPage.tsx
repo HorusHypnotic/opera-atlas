@@ -8,10 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
+import { toast } from "sonner";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
+  Plus, Pencil, Trash2,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -27,6 +32,19 @@ interface Colaborador {
   ativo: boolean;
 }
 
+interface ApontamentoDiaria {
+  id: string;
+  obra_id: string;
+  colaborador_id: string;
+  tenant_id: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  quantidade_diarias: number;
+  valor_diaria: number;
+  observacao: string | null;
+  created_at: string;
+}
+
 interface RegistroPresenca {
   id: string;
   colaborador_id: string;
@@ -40,17 +58,6 @@ interface RegistroPresenca {
   observacao: string | null;
 }
 
-interface RegistroDiario {
-  id: string;
-  nome: string;
-  atividade: string | null;
-  producao: string | null;
-  status: string;
-  data_registro: string;
-  entrada: string | null;
-  saida: string | null;
-}
-
 interface ColaboradorObra {
   id: string;
   colaborador_id: string;
@@ -59,20 +66,22 @@ interface ColaboradorObra {
   ativo: boolean;
 }
 
-// ─── Aggregated row type ───
 interface ReportRow {
   colaboradorId: string;
   nome: string;
   funcao: string;
   valorDiaria: number;
   qtdDiarias: number;
-  horasExtra: number;
   valorTotal: number;
   pixChave: string;
   pixTipo: string;
+  observacao: string;
+  fonte: "manual" | "presenca";
+  // operational (from presence)
   presencas: number;
   faltas: number;
   faltasJustificadas: number;
+  horasExtra: number;
 }
 
 const CATEGORIAS: Record<string, string> = {
@@ -94,97 +103,205 @@ const CATEGORIAS: Record<string, string> = {
 export default function RelatorioMaoObraPage() {
   const { selectedObraId, obras } = useObra();
   const { data: colaboradores = [] } = useTableData<Colaborador>("colaboradores");
+  const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
   const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
-  const { data: registros = [] } = useTableData<RegistroDiario>("registros_diarios");
   const { data: vinculos = [] } = useTableData<ColaboradorObra>("colaborador_obras");
 
-  // Filters
   const [dataInicio, setDataInicio] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
+    const d = new Date(); d.setDate(1);
     return d.toISOString().split("T")[0];
   });
   const [dataFim, setDataFim] = useState(() => new Date().toISOString().split("T")[0]);
   const [filtroFuncao, setFiltroFuncao] = useState("all");
   const [filtroTrabalhador, setFiltroTrabalhador] = useState("all");
 
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formColaboradorId, setFormColaboradorId] = useState("");
+  const [formQtdDiarias, setFormQtdDiarias] = useState("");
+  const [formValorDiaria, setFormValorDiaria] = useState("");
+  const [formObs, setFormObs] = useState("");
+
   const obraAtual = obras.find((o) => o.id === selectedObraId) || obras[0];
 
-  // Aggregate data
+  const colabAtivos = useMemo(() => colaboradores.filter((c) => c.ativo), [colaboradores]);
+
+  // ─── Build report rows ───
+  // Priority: 1) manual apontamento_diarias  2) fallback to presence calc
   const reportRows = useMemo(() => {
-    const filtered = presencas.filter((p) => {
+    const rows: Record<string, ReportRow> = {};
+
+    // 1) Manual entries (apontamento_diarias)
+    const filteredApontamentos = apontamentos.filter((a) => {
+      if (selectedObraId && a.obra_id !== selectedObraId) return false;
+      // overlap check with filter period
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
+      return true;
+    });
+
+    for (const a of filteredApontamentos) {
+      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+
+      if (!rows[colab.id]) {
+        rows[colab.id] = makeEmptyRow(colab);
+      }
+      const row = rows[colab.id];
+      row.fonte = "manual";
+      row.qtdDiarias += Number(a.quantidade_diarias);
+      row.valorDiaria = Number(a.valor_diaria);
+      row.valorTotal += Number(a.quantidade_diarias) * Number(a.valor_diaria);
+      if (a.observacao) row.observacao = a.observacao;
+    }
+
+    // 2) Fallback: presence-based for workers WITHOUT manual entries
+    const filteredPresencas = presencas.filter((p) => {
       if (selectedObraId && p.obra_id !== selectedObraId) return false;
       if (p.data < dataInicio || p.data > dataFim) return false;
       return true;
     });
 
-    const grouped: Record<string, ReportRow> = {};
-
-    for (const p of filtered) {
+    for (const p of filteredPresencas) {
       const colab = colaboradores.find((c) => c.id === p.colaborador_id);
       if (!colab) continue;
-
       if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
       if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
 
-      if (!grouped[colab.id]) {
-        // Check for obra-specific daily rate
-        const vinculo = vinculos.find(
-          (v) => v.colaborador_id === colab.id && v.obra_id === (selectedObraId || p.obra_id) && v.ativo
-        );
-        const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
-
-        grouped[colab.id] = {
-          colaboradorId: colab.id,
-          nome: colab.nome,
-          funcao: CATEGORIAS[colab.categoria || ""] || colab.categoria || "—",
-          valorDiaria: Number(valorDiaria),
-          qtdDiarias: 0,
-          horasExtra: 0,
-          valorTotal: 0,
-          pixChave: colab.pix_chave || "",
-          pixTipo: colab.pix_tipo || "",
-          presencas: 0,
-          faltas: 0,
-          faltasJustificadas: 0,
-        };
+      // Always track operational data
+      if (!rows[colab.id]) {
+        rows[colab.id] = makeEmptyRow(colab);
       }
+      const row = rows[colab.id];
 
-      const row = grouped[colab.id];
-
+      // Operational tracking
       if (p.tipo === "presente") {
-        // Use valor_diaria_especial if set on the presence record, otherwise use the calculated rate
-        const valorDia = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : row.valorDiaria;
-        row.qtdDiarias += 1;
-        row.valorTotal += valorDia;
         row.presencas += 1;
       } else if (p.tipo === "hora_extra") {
         row.horasExtra += Number(p.horas_extra || 0);
-        // Half-day logic: each extra hour = 0.125 of a daily rate (1h/8h)
-        const extraValue = (Number(p.horas_extra || 0) / 8) * row.valorDiaria;
-        row.valorTotal += extraValue;
-        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
       } else if (p.tipo === "falta_injustificada") {
         row.faltas += 1;
       } else if (p.tipo === "falta_justificada") {
         row.faltasJustificadas += 1;
       }
+
+      // Financial fallback only if no manual entry
+      if (row.fonte === "manual") continue;
+
+      const vinculo = vinculos.find(
+        (v) => v.colaborador_id === colab.id && v.obra_id === (selectedObraId || p.obra_id) && v.ativo
+      );
+      const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
+      row.valorDiaria = Number(valorDiaria);
+
+      if (p.tipo === "presente") {
+        const valorDia = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
+        row.qtdDiarias += 1;
+        row.valorTotal += valorDia;
+      } else if (p.tipo === "hora_extra") {
+        const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
+        row.valorTotal += extraValue;
+        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
+      }
     }
 
-    return Object.values(grouped).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [presencas, colaboradores, vinculos, selectedObraId, dataInicio, dataFim, filtroFuncao, filtroTrabalhador]);
+    return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [apontamentos, presencas, colaboradores, vinculos, selectedObraId, dataInicio, dataFim, filtroFuncao, filtroTrabalhador]);
+
+  function makeEmptyRow(colab: Colaborador): ReportRow {
+    return {
+      colaboradorId: colab.id,
+      nome: colab.nome,
+      funcao: CATEGORIAS[colab.categoria || ""] || colab.categoria || "—",
+      valorDiaria: Number(colab.valor_diaria),
+      qtdDiarias: 0,
+      valorTotal: 0,
+      pixChave: colab.pix_chave || "",
+      pixTipo: colab.pix_tipo || "",
+      observacao: "",
+      fonte: "presenca",
+      presencas: 0,
+      faltas: 0,
+      faltasJustificadas: 0,
+      horasExtra: 0,
+    };
+  }
 
   const subtotalGeral = reportRows.reduce((s, r) => s + r.valorTotal, 0);
   const totalDiarias = reportRows.reduce((s, r) => s + r.qtdDiarias, 0);
   const totalTrabalhadores = reportRows.length;
 
-  // Operational data for the operational tab
-  const operationalRows = useMemo(() => {
-    return registros.filter((r) => {
-      if (r.data_registro < dataInicio || r.data_registro > dataFim) return false;
+  // ─── Apontamentos for current period ───
+  const apontamentosPeriodo = useMemo(() => {
+    return apontamentos.filter((a) => {
+      if (selectedObraId && a.obra_id !== selectedObraId) return false;
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
       return true;
     });
-  }, [registros, dataInicio, dataFim]);
+  }, [apontamentos, selectedObraId, dataInicio, dataFim]);
+
+  // ─── CRUD handlers ───
+  const openNewDialog = () => {
+    setEditingId(null);
+    setFormColaboradorId("");
+    setFormQtdDiarias("");
+    setFormValorDiaria("");
+    setFormObs("");
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (a: ApontamentoDiaria) => {
+    setEditingId(a.id);
+    setFormColaboradorId(a.colaborador_id);
+    setFormQtdDiarias(String(a.quantidade_diarias));
+    setFormValorDiaria(String(a.valor_diaria));
+    setFormObs(a.observacao || "");
+    setDialogOpen(true);
+  };
+
+  const handleColabChange = (colabId: string) => {
+    setFormColaboradorId(colabId);
+    if (!formValorDiaria) {
+      const colab = colaboradores.find((c) => c.id === colabId);
+      if (colab) {
+        const vinculo = vinculos.find((v) => v.colaborador_id === colabId && v.obra_id === selectedObraId && v.ativo);
+        setFormValorDiaria(String(vinculo?.valor_diaria_especial ?? colab.valor_diaria));
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formColaboradorId || !formQtdDiarias || !formValorDiaria) {
+      toast.error("Preencha trabalhador, quantidade e valor da diária");
+      return;
+    }
+    const payload = {
+      obra_id: selectedObraId || obraAtual?.id,
+      colaborador_id: formColaboradorId,
+      periodo_inicio: dataInicio,
+      periodo_fim: dataFim,
+      quantidade_diarias: parseFloat(formQtdDiarias),
+      valor_diaria: parseFloat(formValorDiaria),
+      observacao: formObs || null,
+    };
+
+    if (editingId) {
+      const { error } = await updateApontamento(editingId, payload);
+      if (error) { toast.error("Erro: " + error.message); return; }
+      toast.success("Apontamento atualizado");
+    } else {
+      const { error } = await insertApontamento(payload);
+      if (error) { toast.error("Erro: " + error.message); return; }
+      toast.success("Apontamento registrado");
+    }
+    setDialogOpen(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await removeApontamento(id);
+  };
 
   // ─── Export PDF ───
   const exportPDF = () => {
@@ -199,12 +316,9 @@ export default function RelatorioMaoObraPage() {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Obra: ${obraAtual?.nome || "Todas"}`, 14, y);
-    y += 5;
-    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y);
-    y += 5;
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y);
-    y += 8;
+    doc.text(`Obra: ${obraAtual?.nome || "Todas"}`, 14, y); y += 5;
+    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 5;
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 8;
 
     doc.setDrawColor(200);
     doc.line(14, y, pageWidth - 14, y);
@@ -215,8 +329,7 @@ export default function RelatorioMaoObraPage() {
         startY: y,
         head: [["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]],
         body: reportRows.map((r) => [
-          r.nome,
-          r.funcao,
+          r.nome, r.funcao,
           `R$ ${r.valorDiaria.toFixed(2)}`,
           r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
           `R$ ${r.valorTotal.toFixed(2)}`,
@@ -235,7 +348,6 @@ export default function RelatorioMaoObraPage() {
     doc.save(`relatorio-equipe-${dataInicio}-${dataFim}.pdf`);
   };
 
-  // ─── Export Excel ───
   const exportExcel = async () => {
     const XLSX = await import("xlsx");
     const wsData = [
@@ -245,11 +357,7 @@ export default function RelatorioMaoObraPage() {
       [],
       ["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"],
       ...reportRows.map((r) => [
-        r.nome,
-        r.funcao,
-        r.valorDiaria,
-        r.qtdDiarias,
-        r.valorTotal,
+        r.nome, r.funcao, r.valorDiaria, r.qtdDiarias, r.valorTotal,
         r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
       ]),
       [],
@@ -259,11 +367,6 @@ export default function RelatorioMaoObraPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Mão de Obra");
     XLSX.writeFile(wb, `relatorio-equipe-${dataInicio}-${dataFim}.xlsx`);
-  };
-
-  // ─── Print ───
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -293,9 +396,7 @@ export default function RelatorioMaoObraPage() {
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Função</label>
             <Select value={filtroFuncao} onValueChange={setFiltroFuncao}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Todas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as funções</SelectItem>
                 {Object.entries(CATEGORIAS).map(([k, v]) => (
@@ -307,12 +408,10 @@ export default function RelatorioMaoObraPage() {
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Trabalhador</label>
             <Select value={filtroTrabalhador} onValueChange={setFiltroTrabalhador}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {colaboradores.filter((c) => c.ativo).map((c) => (
+                {colabAtivos.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                 ))}
               </SelectContent>
@@ -340,11 +439,12 @@ export default function RelatorioMaoObraPage() {
         />
       </div>
 
-      {/* ─── Tabs: Financeiro / Operacional ─── */}
+      {/* ─── Tabs ─── */}
       <Tabs defaultValue="financeiro" className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
+            <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>
             <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
@@ -354,7 +454,7 @@ export default function RelatorioMaoObraPage() {
             <Button variant="outline" size="sm" onClick={exportExcel}>
               <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
             </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-1" /> Imprimir
             </Button>
           </div>
@@ -362,8 +462,7 @@ export default function RelatorioMaoObraPage() {
 
         {/* ─── Financeiro Tab ─── */}
         <TabsContent value="financeiro">
-          <div className="glass-card p-4 print:shadow-none" id="report-financeiro">
-            {/* Report Header */}
+          <div className="glass-card p-4 print:shadow-none">
             <div className="mb-4 pb-3 border-b border-border">
               <h2 className="text-base font-bold">Relatório Financeiro de Equipe</h2>
               <p className="text-sm text-muted-foreground">
@@ -375,7 +474,7 @@ export default function RelatorioMaoObraPage() {
 
             {reportRows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                Nenhum registro de presença encontrado para os filtros selecionados.
+                Nenhum registro encontrado. Use a aba "Apontamentos" para lançar diárias manualmente.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -388,6 +487,7 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-right py-2 px-3">Qtd Diárias</th>
                       <th className="text-right py-2 px-3">Total</th>
                       <th className="text-left py-2 px-3">PIX</th>
+                      <th className="text-center py-2 px-3">Fonte</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -407,6 +507,11 @@ export default function RelatorioMaoObraPage() {
                         <td className="py-2.5 px-3 text-xs text-muted-foreground">
                           {r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—"}
                         </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <Badge variant={r.fonte === "manual" ? "default" : "secondary"} className="text-[10px]">
+                            {r.fonte === "manual" ? "Manual" : "Presença"}
+                          </Badge>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -419,9 +524,139 @@ export default function RelatorioMaoObraPage() {
                       <td className="py-3 px-3 text-right font-mono font-bold text-primary">
                         R$ {subtotalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td></td>
+                      <td colSpan={2}></td>
                     </tr>
                   </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ─── Apontamentos Tab (CRUD) ─── */}
+        <TabsContent value="apontamentos">
+          <div className="glass-card p-4">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+              <div>
+                <h2 className="text-base font-bold">Apontamento de Diárias</h2>
+                <p className="text-sm text-muted-foreground">
+                  Lançamento manual de diárias por trabalhador — usado como fonte principal do relatório financeiro.
+                </p>
+              </div>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={openNewDialog}>
+                    <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingId ? "Editar Apontamento" : "Novo Apontamento de Diárias"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Trabalhador</Label>
+                      <Select value={formColaboradorId} onValueChange={handleColabChange}>
+                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          {colabAtivos.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.nome} — {CATEGORIAS[c.categoria || ""] || c.categoria || "—"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Qtd Diárias</Label>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          placeholder="Ex: 4.5"
+                          value={formQtdDiarias}
+                          onChange={(e) => setFormQtdDiarias(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Valor da Diária (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Ex: 170.00"
+                          value={formValorDiaria}
+                          onChange={(e) => setFormValorDiaria(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {formQtdDiarias && formValorDiaria && (
+                      <div className="p-3 rounded-md bg-muted/50 text-sm">
+                        <span className="text-muted-foreground">Total calculado: </span>
+                        <span className="font-bold text-primary">
+                          R$ {(parseFloat(formQtdDiarias || "0") * parseFloat(formValorDiaria || "0")).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Observação</Label>
+                      <Textarea
+                        placeholder="Observação opcional..."
+                        value={formObs}
+                        onChange={(e) => setFormObs(e.target.value)}
+                      />
+                    </div>
+                    <Button className="w-full" onClick={handleSave}>
+                      {editingId ? "Salvar Alterações" : "Registrar Apontamento"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {apontamentosPeriodo.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nenhum apontamento de diária para o período selecionado. Clique em "Novo Apontamento" para começar.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-2 px-3">Trabalhador</th>
+                      <th className="text-right py-2 px-3">Diária</th>
+                      <th className="text-right py-2 px-3">Qtd</th>
+                      <th className="text-right py-2 px-3">Total</th>
+                      <th className="text-left py-2 px-3">Obs</th>
+                      <th className="text-center py-2 px-3">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apontamentosPeriodo.map((a) => {
+                      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+                      const total = Number(a.quantidade_diarias) * Number(a.valor_diaria);
+                      return (
+                        <tr key={a.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
+                          <td className="py-2.5 px-3 font-medium">{colab?.nome || "—"}</td>
+                          <td className="py-2.5 px-3 text-right font-mono">R$ {Number(a.valor_diaria).toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-right font-mono">{Number(a.quantidade_diarias) % 1 === 0 ? Number(a.quantidade_diarias) : Number(a.quantidade_diarias).toFixed(1)}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold">R$ {total.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-xs text-muted-foreground max-w-[150px] truncate">{a.observacao || "—"}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(a)}>
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(a.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                 </table>
               </div>
             )}
@@ -434,12 +669,11 @@ export default function RelatorioMaoObraPage() {
             <div className="mb-4 pb-3 border-b border-border">
               <h2 className="text-base font-bold">Relatório Operacional</h2>
               <p className="text-sm text-muted-foreground">
-                Controle de presença, produtividade e ocorrências
+                Controle de presença, produtividade e ocorrências (baseado em registros de presença)
               </p>
             </div>
 
-            {/* Operational summary per worker */}
-            {reportRows.length === 0 ? (
+            {reportRows.filter(r => r.presencas + r.faltas + r.faltasJustificadas > 0).length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 Nenhum dado operacional encontrado para os filtros selecionados.
               </p>
@@ -458,7 +692,7 @@ export default function RelatorioMaoObraPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reportRows.map((r) => {
+                    {reportRows.filter(r => r.presencas + r.faltas + r.faltasJustificadas > 0).map((r) => {
                       const totalDias = r.presencas + r.faltas + r.faltasJustificadas;
                       const assiduidade = totalDias > 0 ? (r.presencas / totalDias) * 100 : 0;
                       return (
