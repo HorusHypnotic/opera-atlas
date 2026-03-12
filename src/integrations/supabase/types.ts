@@ -125,6 +125,67 @@ export type Database = {
           },
         ]
       }
+      apontamento_diarias: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          id: string
+          obra_id: string
+          observacao: string | null
+          periodo_fim: string
+          periodo_inicio: string
+          quantidade_diarias: number
+          tenant_id: string
+          valor_diaria: number
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          id?: string
+          obra_id: string
+          observacao?: string | null
+          periodo_fim?: string
+          periodo_inicio?: string
+          quantidade_diarias?: number
+          tenant_id: string
+          valor_diaria?: number
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          id?: string
+          obra_id?: string
+          observacao?: string | null
+          periodo_fim?: string
+          periodo_inicio?: string
+          quantidade_diarias?: number
+          tenant_id?: string
+          valor_diaria?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apontamento_diarias_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamento_diarias_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamento_diarias_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ativos: {
         Row: {
           created_at: string
