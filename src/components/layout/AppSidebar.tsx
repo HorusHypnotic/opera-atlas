@@ -24,6 +24,7 @@ const sections = [
   { title: "Colaboradores", url: "/colaboradores", icon: HardHat },
   { title: "Obras", url: "/obras", icon: Building2 },
   { title: "Economia", url: "/economia", icon: Banknote },
+  { title: "Relatório Equipe", url: "/relatorio-mao-obra", icon: FileText },
 ];
 
 export function AppSidebar() {
