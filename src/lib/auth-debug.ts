@@ -1,43 +1,73 @@
 /**
- * Auth debug logger — temporary diagnostic tool.
- * Logs every auth event, visibility change, and signOut call
- * so we can see exactly WHY the mobile session drops.
+ * Remote auth debug logger — saves logs to mobile_debug_logs table
+ * so we can diagnose mobile session drops without needing console access.
+ * TEMPORARY — remove after diagnosis.
  */
-export const installAuthDebug = (supabase: any) => {
-  const log = (...args: any[]) =>
-    console.log("[AUTHDBG]", new Date().toISOString(), ...args);
+import { supabase } from "@/lib/supabase";
 
-  // Intercept signOut to trace WHO is calling it
+const mlog = async (event: string, data: any = {}) => {
+  try {
+    await supabase.from("mobile_debug_logs").insert([{
+      event,
+      data,
+      url: location.href,
+      ua: navigator.userAgent,
+      ts: new Date().toISOString(),
+    }]);
+  } catch {}
+};
+
+export const installAuthDebug = (_supabase: any) => {
+  // Log auth state changes
+  supabase.auth.onAuthStateChange((event, session) => {
+    mlog("auth_change", {
+      event,
+      uid: session?.user?.id ?? null,
+      email: session?.user?.email ?? null,
+      expires_at: session?.expires_at ?? null,
+      provider: session?.user?.app_metadata?.provider ?? null,
+    });
+  });
+
+  // Intercept signOut
   const origSignOut = supabase.auth.signOut.bind(supabase.auth);
   supabase.auth.signOut = async (...args: any[]) => {
-    console.trace("[AUTHDBG] signOut() CHAMADO — stack trace:");
+    await mlog("signout_called", { stack: new Error().stack });
     return origSignOut(...args);
   };
 
-  // Log visibility changes with session status
+  // Visibility changes
   document.addEventListener("visibilitychange", async () => {
     const { data } = await supabase.auth.getSession();
-    log(
-      "visibility:", document.visibilityState,
-      "session:", !!data.session,
-      "userId:", data.session?.user?.id ?? "null",
-      "expires_at:", data.session?.expires_at ?? "null"
-    );
+    mlog("visibility", {
+      state: document.visibilityState,
+      has_session: !!data.session,
+      uid: data.session?.user?.id ?? null,
+      expires_at: data.session?.expires_at ?? null,
+    });
   });
 
-  // Online/offline
-  window.addEventListener("online", () => log("ONLINE"));
-  window.addEventListener("offline", () => log("OFFLINE"));
+  // Network changes
+  window.addEventListener("online", () => mlog("network", { status: "online" }));
+  window.addEventListener("offline", () => mlog("network", { status: "offline" }));
 
-  // Every auth state change
-  supabase.auth.onAuthStateChange((event: string, session: any) => {
-    log(
-      "AUTH EVENT:", event,
-      "userId:", session?.user?.id ?? "null",
-      "expires_at:", session?.expires_at ?? "null",
-      "provider:", session?.user?.app_metadata?.provider ?? "null"
-    );
+  // JS errors
+  window.addEventListener("error", (e) =>
+    mlog("js_error", { msg: e.message, filename: e.filename, lineno: e.lineno })
+  );
+  window.addEventListener("unhandledrejection", (e) =>
+    mlog("promise_error", { reason: String(e.reason) })
+  );
+
+  // Initial state
+  supabase.auth.getSession().then(({ data }) => {
+    mlog("init", {
+      has_session: !!data.session,
+      uid: data.session?.user?.id ?? null,
+      expires_at: data.session?.expires_at ?? null,
+      storage_type: "indexeddb_localforage",
+    });
   });
 
-  log("Auth debug logger instalado");
+  console.log("[AUTHDBG] Logger remoto instalado");
 };
