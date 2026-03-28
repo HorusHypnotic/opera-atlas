@@ -8,38 +8,51 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceKey);
-
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
     if (req.method === "POST") {
-      // Generate a transfer code — requires auth
       const authHeader = req.headers.get("authorization");
-      if (!authHeader) {
+      if (!authHeader?.startsWith("Bearer ")) {
         return new Response(JSON.stringify({ error: "Não autenticado" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const token = authHeader.replace("Bearer ", "");
       const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { authorization: authHeader } },
+        global: { headers: { Authorization: `Bearer ${token}` } },
       });
 
-      const { data: { user }, error: userErr } = await userClient.auth.getUser();
-      if (userErr || !user) {
+      // Use getClaims instead of getUser
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        console.error("getClaims error:", claimsErr);
         return new Response(JSON.stringify({ error: "Token inválido" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const body = await req.json();
+      const userId = claimsData.claims.sub;
+
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Body inválido" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const refreshToken = body.refresh_token;
       if (!refreshToken || typeof refreshToken !== "string") {
         return new Response(JSON.stringify({ error: "refresh_token obrigatório" }), {
@@ -48,25 +61,25 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Generate random 6-char code
       const code = crypto.randomUUID().slice(0, 8).toUpperCase();
 
-      // Clean up old expired/used transfers for this user
+      // Clean old transfers
       await supabase
         .from("session_transfers")
         .delete()
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
-      // Insert new transfer
+      // Insert new
       const { error: insertErr } = await supabase
         .from("session_transfers")
         .insert({
           code,
-          user_id: user.id,
+          user_id: userId,
           refresh_token: refreshToken,
         });
 
       if (insertErr) {
+        console.error("Insert error:", insertErr);
         return new Response(JSON.stringify({ error: insertErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,7 +92,6 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === "GET") {
-      // Consume a transfer code — no auth needed
       const url = new URL(req.url);
       const code = url.searchParams.get("code");
 
@@ -90,7 +102,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Find valid transfer
       const { data: transfer, error: fetchErr } = await supabase
         .from("session_transfers")
         .select("*")
@@ -109,7 +120,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Mark as used
       await supabase
         .from("session_transfers")
         .update({ used: true })
@@ -117,9 +127,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ refresh_token: transfer.refresh_token }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -128,7 +136,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Unexpected error:", err);
+    return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
