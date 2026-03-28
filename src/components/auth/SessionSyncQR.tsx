@@ -2,16 +2,18 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { QrCode, Loader2, CheckCircle, RefreshCw } from "lucide-react";
+import { QrCode, Loader2, RefreshCw, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function SessionSyncQR() {
-  const [code, setCode] = useState<string | null>(null);
+  const [link, setLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [expiresIn, setExpiresIn] = useState(180);
+  const [copied, setCopied] = useState(false);
+  const [expiresIn, setExpiresIn] = useState(300);
 
-  const generateCode = async () => {
+  const generateLink = async () => {
     setLoading(true);
+    setCopied(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -28,24 +30,29 @@ export function SessionSyncQR() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ refresh_token: session.refresh_token }),
+          body: JSON.stringify({
+            redirect_to: window.location.origin,
+          }),
         }
       );
 
       const result = await resp.json();
       if (!resp.ok) {
-        throw new Error(result.error || "Erro ao gerar código");
+        throw new Error(result.error || "Erro ao gerar link");
       }
 
-      setCode(result.code);
-      setExpiresIn(180);
+      if (!result.link) {
+        throw new Error("Link não retornado");
+      }
 
-      // Countdown
+      setLink(result.link);
+      setExpiresIn(300);
+
       const interval = setInterval(() => {
         setExpiresIn((prev) => {
           if (prev <= 1) {
             clearInterval(interval);
-            setCode(null);
+            setLink(null);
             return 0;
           }
           return prev - 1;
@@ -58,62 +65,83 @@ export function SessionSyncQR() {
     }
   };
 
-  const syncUrl = code
-    ? `${window.location.origin}/login?sync=${code}`
-    : "";
+  const copyLink = async () => {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      toast.error("Erro ao copiar");
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-4 p-4 rounded-xl border border-border bg-card">
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <QrCode className="h-4 w-4 text-primary" />
-        Sincronizar sessão no celular
+        Login no celular via QR
       </div>
 
-      {!code ? (
-        <Button
-          onClick={generateCode}
-          disabled={loading}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <QrCode className="h-4 w-4" />
-          )}
-          {loading ? "Gerando..." : "Gerar QR Code"}
-        </Button>
+      {!link ? (
+        <div className="text-center space-y-3">
+          <p className="text-xs text-muted-foreground max-w-[240px]">
+            Gera um link de login único para o celular. Sua sessão no PC não será afetada.
+          </p>
+          <Button
+            onClick={generateLink}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <QrCode className="h-4 w-4" />
+            )}
+            {loading ? "Gerando..." : "Gerar QR Code"}
+          </Button>
+        </div>
       ) : (
         <>
           <div className="bg-white p-3 rounded-lg">
-            <QRCodeSVG value={syncUrl} size={180} level="M" />
+            <QRCodeSVG value={link} size={200} level="M" />
           </div>
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-2">
             <p className="text-xs text-muted-foreground">
-              Escaneie com seu celular para transferir a sessão
-            </p>
-            <p className="text-xs font-mono text-primary font-medium">
-              Código: {code}
+              Escaneie com a câmera do celular para fazer login
             </p>
             <p className="text-[10px] text-muted-foreground">
               Expira em {Math.floor(expiresIn / 60)}:{String(expiresIn % 60).padStart(2, "0")}
             </p>
           </div>
-          <Button
-            onClick={generateCode}
-            variant="ghost"
-            size="sm"
-            className="gap-1 text-xs"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Gerar novo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={copyLink}
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs"
+            >
+              {copied ? <CheckCircle className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copiado" : "Copiar link"}
+            </Button>
+            <Button
+              onClick={generateLink}
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Novo
+            </Button>
+          </div>
         </>
       )}
 
-      <p className="text-[10px] text-muted-foreground text-center max-w-[220px]">
-        O QR transfere sua sessão para outro dispositivo. Válido por 3 minutos, uso único.
+      <p className="text-[10px] text-muted-foreground text-center max-w-[240px]">
+        O link cria uma sessão independente no celular. O PC continua logado normalmente.
       </p>
     </div>
   );
