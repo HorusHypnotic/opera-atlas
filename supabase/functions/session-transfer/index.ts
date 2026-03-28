@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     if (req.method === "POST") {
+      // Desktop: generate a transfer code with user info
       const authHeader = req.headers.get("authorization");
       if (!authHeader?.startsWith("Bearer ")) {
         return new Response(JSON.stringify({ error: "Não autenticado" }), {
@@ -39,37 +40,91 @@ Deno.serve(async (req) => {
         });
       }
 
+      const userId = claimsData.claims.sub as string;
       const userEmail = claimsData.claims.email as string;
+      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
 
-      // Read the origin from the request body so the redirect goes to the right place
-      let body: any = {};
-      try { body = await req.json(); } catch {}
-      const redirectTo = body.redirect_to || "https://opera-atlas.lovable.app";
+      // Clean old transfers
+      await admin.from("session_transfers").delete().eq("user_id", userId);
 
-      // Generate a magic link — this creates an independent session for the mobile
-      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: userEmail,
-        options: { redirectTo },
-      });
+      // Store email for later retrieval
+      const { error: insertErr } = await admin
+        .from("session_transfers")
+        .insert({ code, user_id: userId, refresh_token: userEmail });
 
-      if (linkErr || !linkData) {
-        console.error("generateLink error:", linkErr);
-        return new Response(JSON.stringify({ error: "Erro ao gerar link" }), {
+      if (insertErr) {
+        return new Response(JSON.stringify({ error: insertErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // action_link is the full URL the mobile can open directly to authenticate
-      const actionLink = linkData.properties?.action_link;
-
-      return new Response(JSON.stringify({ link: actionLink }), {
+      return new Response(JSON.stringify({ code }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ error: "Use POST" }), {
+    if (req.method === "GET") {
+      // Mobile: consume code and get a magic link token for verifyOtp
+      const url = new URL(req.url);
+      const code = url.searchParams.get("code");
+
+      if (!code || code.length < 6) {
+        return new Response(JSON.stringify({ error: "Código inválido" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: transfer, error: fetchErr } = await admin
+        .from("session_transfers")
+        .select("*")
+        .eq("code", code.toUpperCase())
+        .eq("used", false)
+        .gt("expires_at", new Date().toISOString())
+        .single();
+
+      if (fetchErr || !transfer) {
+        return new Response(
+          JSON.stringify({ error: "Código expirado ou inválido" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Mark as used immediately
+      await admin.from("session_transfers").update({ used: true }).eq("id", transfer.id);
+
+      const email = transfer.refresh_token; // email stored here
+
+      // Generate magic link and extract the OTP token_hash
+      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+
+      if (linkErr || !linkData) {
+        console.error("generateLink error:", linkErr);
+        return new Response(
+          JSON.stringify({ error: "Erro ao gerar sessão" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Extract token_hash from the action_link URL
+      const actionLink = new URL(linkData.properties.action_link);
+      const tokenHash = actionLink.searchParams.get("token_hash") || actionLink.searchParams.get("token");
+
+      return new Response(
+        JSON.stringify({ 
+          email, 
+          token_hash: tokenHash,
+          user_id: transfer.user_id,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(JSON.stringify({ error: "Método não suportado" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
 
-  // Handle sync code from QR — creates independent session via magic link
+  // Handle sync code from QR — verifies OTP to create independent mobile session
   useEffect(() => {
     const syncCode = searchParams.get("sync");
     if (!syncCode || user) return;
@@ -31,17 +31,18 @@ export default function LoginPage() {
     )
       .then((r) => r.json())
       .then(async (data) => {
-        if (data.email && data.token) {
-          // Use verifyOtp with the magic link token to create an independent session
+        if (data.email && data.token_hash) {
+          // Verify the OTP token_hash to create a fully independent session
           const { error } = await supabase.auth.verifyOtp({
             email: data.email,
-            token: data.token,
-            type: "magiclink",
+            token: data.token_hash,
+            type: "email",
           });
           if (error) {
+            console.error("[Sync] verifyOtp error:", error);
             toast.error("Erro ao restaurar sessão: " + error.message);
           } else {
-            toast.success("Sessão restaurada com sucesso!");
+            toast.success("Login restaurado com sucesso!");
             navigate("/", { replace: true });
           }
         } else {

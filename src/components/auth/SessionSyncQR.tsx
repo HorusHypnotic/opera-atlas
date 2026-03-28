@@ -6,12 +6,12 @@ import { QrCode, Loader2, RefreshCw, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function SessionSyncQR() {
-  const [link, setLink] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [expiresIn, setExpiresIn] = useState(300);
+  const [expiresIn, setExpiresIn] = useState(180);
 
-  const generateLink = async () => {
+  const generateCode = async () => {
     setLoading(true);
     setCopied(false);
     try {
@@ -30,29 +30,21 @@ export function SessionSyncQR() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({
-            redirect_to: window.location.origin,
-          }),
+          body: JSON.stringify({}),
         }
       );
 
       const result = await resp.json();
-      if (!resp.ok) {
-        throw new Error(result.error || "Erro ao gerar link");
-      }
+      if (!resp.ok) throw new Error(result.error || "Erro ao gerar código");
 
-      if (!result.link) {
-        throw new Error("Link não retornado");
-      }
-
-      setLink(result.link);
-      setExpiresIn(300);
+      setCode(result.code);
+      setExpiresIn(180);
 
       const interval = setInterval(() => {
         setExpiresIn((prev) => {
           if (prev <= 1) {
             clearInterval(interval);
-            setLink(null);
+            setCode(null);
             return 0;
           }
           return prev - 1;
@@ -65,10 +57,14 @@ export function SessionSyncQR() {
     }
   };
 
-  const copyLink = async () => {
-    if (!link) return;
+  const syncUrl = code
+    ? `${window.location.origin}/login?sync=${code}`
+    : "";
+
+  const copyUrl = async () => {
+    if (!syncUrl) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(syncUrl);
       setCopied(true);
       toast.success("Link copiado!");
       setTimeout(() => setCopied(false), 3000);
@@ -84,55 +80,38 @@ export function SessionSyncQR() {
         Login no celular via QR
       </div>
 
-      {!link ? (
+      {!code ? (
         <div className="text-center space-y-3">
           <p className="text-xs text-muted-foreground max-w-[240px]">
-            Gera um link de login único para o celular. Sua sessão no PC não será afetada.
+            Gera um código único para fazer login no celular. Sua sessão no PC não será afetada.
           </p>
-          <Button
-            onClick={generateLink}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <QrCode className="h-4 w-4" />
-            )}
+          <Button onClick={generateCode} disabled={loading} variant="outline" size="sm" className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
             {loading ? "Gerando..." : "Gerar QR Code"}
           </Button>
         </div>
       ) : (
         <>
           <div className="bg-white p-3 rounded-lg">
-            <QRCodeSVG value={link} size={200} level="M" />
+            <QRCodeSVG value={syncUrl} size={200} level="M" />
           </div>
           <div className="text-center space-y-2">
             <p className="text-xs text-muted-foreground">
-              Escaneie com a câmera do celular para fazer login
+              Escaneie com a câmera do celular
+            </p>
+            <p className="text-xs font-mono text-primary font-medium">
+              Código: {code}
             </p>
             <p className="text-[10px] text-muted-foreground">
               Expira em {Math.floor(expiresIn / 60)}:{String(expiresIn % 60).padStart(2, "0")}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={copyLink}
-              variant="outline"
-              size="sm"
-              className="gap-1 text-xs"
-            >
+            <Button onClick={copyUrl} variant="outline" size="sm" className="gap-1 text-xs">
               {copied ? <CheckCircle className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
               {copied ? "Copiado" : "Copiar link"}
             </Button>
-            <Button
-              onClick={generateLink}
-              variant="ghost"
-              size="sm"
-              className="gap-1 text-xs"
-            >
+            <Button onClick={generateCode} variant="ghost" size="sm" className="gap-1 text-xs">
               <RefreshCw className="h-3 w-3" />
               Novo
             </Button>
@@ -141,7 +120,7 @@ export function SessionSyncQR() {
       )}
 
       <p className="text-[10px] text-muted-foreground text-center max-w-[240px]">
-        O link cria uma sessão independente no celular. O PC continua logado normalmente.
+        Cria sessão independente no celular. O PC continua logado.
       </p>
     </div>
   );
