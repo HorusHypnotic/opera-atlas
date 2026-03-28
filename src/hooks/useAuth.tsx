@@ -78,26 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let mounted = true;
+    // CRITICAL: prevent the app from ejecting the user while Supabase is still
+    // restoring / refreshing the session on startup (mobile PWA fix).
+    let booted = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, sess) => {
-        if (!mounted) return;
-        setSession(sess);
-        setUser(sess?.user ?? null);
-
-        if (sess?.user) {
-          setTimeout(() => fetchProfileAndRoles(sess.user.id), 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-        }
-        setLoading(false);
-      }
-    );
-
-    // Resilient init: ensureSession handles URL detection + refresh fallback
+    // 1. First, kick off the initial session check
     ensureSession().then((sess) => {
       if (!mounted) return;
+      booted = true;
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
@@ -105,6 +93,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
+
+    // 2. Listen for auth changes, but IGNORE the initial null event
+    //    that fires before getSession/ensureSession resolves.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, sess) => {
+        if (!mounted) return;
+
+        // While still booting, ignore null sessions — they are just the
+        // "I haven't checked storage yet" initial state.
+        if (!booted && !sess) {
+          console.log("[Auth] Ignorando evento null durante boot (mobile fix)");
+          return;
+        }
+
+        booted = true;
+        setSession(sess);
+        setUser(sess?.user ?? null);
+
+        if (sess?.user) {
+          setTimeout(() => fetchProfileAndRoles(sess.user.id), 0);
+        } else if (event === "SIGNED_OUT") {
+          setProfile(null);
+          setRoles([]);
+        }
+        setLoading(false);
+      }
+    );
 
     return () => {
       mounted = false;
