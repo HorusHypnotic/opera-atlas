@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { QrCode, Loader2, RefreshCw, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";

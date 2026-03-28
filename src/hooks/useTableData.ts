@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useObra } from "@/hooks/useObra";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Resilient auth wrapper for mobile/PWA session persistence.
