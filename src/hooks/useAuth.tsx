@@ -77,53 +77,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let mounted = true;
-    // CRITICAL: prevent the app from ejecting the user while Supabase is still
-    // restoring / refreshing the session on startup (mobile PWA fix).
-    let booted = false;
+    let alive = true;
 
-    // 1. First, kick off the initial session check
-    ensureSession().then((sess) => {
-      if (!mounted) return;
-      booted = true;
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        fetchProfileAndRoles(sess.user.id);
-      }
-      setLoading(false);
-    });
+    // Rehydrate: tries getSession first, then refreshSession as fallback.
+    // This prevents ejecting the user when the access token expired while
+    // the PWA was in the background or after an OS kill.
+    const rehydrate = async () => {
+      try {
+        const { data: { session: current } } = await supabase.auth.getSession();
+        let sess = current;
 
-    // 2. Listen for auth changes, but IGNORE the initial null event
-    //    that fires before getSession/ensureSession resolves.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, sess) => {
-        if (!mounted) return;
-
-        // While still booting, ignore null sessions — they are just the
-        // "I haven't checked storage yet" initial state.
-        if (!booted && !sess) {
-          console.log("[Auth] Ignorando evento null durante boot (mobile fix)");
-          return;
+        if (!sess) {
+          console.log("[Auth] Sessão expirada, tentando refresh...");
+          const { data } = await supabase.auth.refreshSession();
+          sess = data.session;
         }
 
-        booted = true;
+        if (!alive) return;
+
         setSession(sess);
         setUser(sess?.user ?? null);
 
         if (sess?.user) {
+          await fetchProfileAndRoles(sess.user.id);
+        }
+      } catch (err) {
+        console.warn("[Auth] Erro no rehydrate:", err);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    // Listen for auth changes. If session becomes null (but it's NOT a
+    // SIGNED_OUT event), try to rehydrate instead of ejecting.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, sess) => {
+        if (!alive) return;
+
+        if (sess?.user) {
+          setSession(sess);
+          setUser(sess.user);
           setTimeout(() => fetchProfileAndRoles(sess.user.id), 0);
-        } else if (event === "SIGNED_OUT") {
+          setLoading(false);
+          return;
+        }
+
+        if (event === "SIGNED_OUT") {
+          setSession(null);
+          setUser(null);
           setProfile(null);
           setRoles([]);
+          setLoading(false);
+          return;
         }
-        setLoading(false);
+
+        // null session but NOT a sign-out → try to recover
+        console.log("[Auth] Sessão null recebida (event:", event, ") — tentando rehydrate");
+        await rehydrate();
       }
     );
 
+    // When the PWA comes back from background, rehydrate the session
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("[Auth] App voltou ao foco — rehydrate");
+        rehydrate();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", rehydrate);
+
+    // Initial load
+    rehydrate();
+
     return () => {
-      mounted = false;
+      alive = false;
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", rehydrate);
     };
   }, []);
 
