@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { analyzeLotes, forecastConsumo, detectWastePatterns } from "@/analytics/loteConsumo";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";

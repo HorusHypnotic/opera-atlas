@@ -6,7 +6,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { useTableData } from "@/hooks/useTableData";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { ClipboardCheck, AlertTriangle, CheckCircle, Clock, Camera, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

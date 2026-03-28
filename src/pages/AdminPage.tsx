@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { Button } from "@/components/ui/button";

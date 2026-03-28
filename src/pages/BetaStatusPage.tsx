@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Clock, CheckCircle2, XCircle, HelpCircle, ArrowLeft, MessageCircle, LogIn } from "lucide-react";
