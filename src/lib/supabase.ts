@@ -25,9 +25,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: true,
     storageKey: "sb-opera-auth",
     storage: {
-      getItem: (key: string) => authStore.getItem(key),
-      setItem: (key: string, value: string) => { authStore.setItem(key, value); },
-      removeItem: (key: string) => { authStore.removeItem(key); },
+      getItem: async (key: string) => {
+        const val = await authStore.getItem<string>(key);
+        return val ?? null;
+      },
+      setItem: (key: string, value: string) => authStore.setItem(key, value).then(() => {}),
+      removeItem: (key: string) => authStore.removeItem(key).then(() => {}),
     },
   },
 });
