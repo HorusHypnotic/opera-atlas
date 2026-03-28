@@ -77,13 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
 
-        if (session?.user) {
-          setTimeout(() => fetchProfileAndRoles(session.user.id), 0);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, sess) => {
+        if (!mounted) return;
+        setSession(sess);
+        setUser(sess?.user ?? null);
+
+        if (sess?.user) {
+          setTimeout(() => fetchProfileAndRoles(sess.user.id), 0);
         } else {
           setProfile(null);
           setRoles([]);
@@ -92,16 +95,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    ensureSession().then((session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfileAndRoles(session.user.id);
+    // Resilient init: ensureSession handles URL detection + refresh fallback
+    ensureSession().then((sess) => {
+      if (!mounted) return;
+      setSession(sess);
+      setUser(sess?.user ?? null);
+      if (sess?.user) {
+        fetchProfileAndRoles(sess.user.id);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const enterGuestMode = () => {
