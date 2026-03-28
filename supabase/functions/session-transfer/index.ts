@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     if (req.method === "POST") {
+      // Generate a transfer code — requires auth
       const authHeader = req.headers.get("authorization");
       if (!authHeader?.startsWith("Bearer ")) {
         return new Response(JSON.stringify({ error: "Não autenticado" }), {
@@ -31,55 +32,32 @@ Deno.serve(async (req) => {
         global: { headers: { Authorization: `Bearer ${token}` } },
       });
 
-      // Use getClaims instead of getUser
       const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
       if (claimsErr || !claimsData?.claims?.sub) {
-        console.error("getClaims error:", claimsErr);
         return new Response(JSON.stringify({ error: "Token inválido" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const userId = claimsData.claims.sub;
-
-      let body: any;
-      try {
-        body = await req.json();
-      } catch {
-        return new Response(JSON.stringify({ error: "Body inválido" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const refreshToken = body.refresh_token;
-      if (!refreshToken || typeof refreshToken !== "string") {
-        return new Response(JSON.stringify({ error: "refresh_token obrigatório" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      const userId = claimsData.claims.sub as string;
+      const userEmail = claimsData.claims.email as string;
 
       const code = crypto.randomUUID().slice(0, 8).toUpperCase();
 
       // Clean old transfers
-      await supabase
-        .from("session_transfers")
-        .delete()
-        .eq("user_id", userId);
+      await supabase.from("session_transfers").delete().eq("user_id", userId);
 
-      // Insert new
+      // Store user email instead of refresh_token — mobile will get its own session
       const { error: insertErr } = await supabase
         .from("session_transfers")
         .insert({
           code,
           user_id: userId,
-          refresh_token: refreshToken,
+          refresh_token: userEmail, // reusing column to store email
         });
 
       if (insertErr) {
-        console.error("Insert error:", insertErr);
         return new Response(JSON.stringify({ error: insertErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -113,20 +91,33 @@ Deno.serve(async (req) => {
       if (fetchErr || !transfer) {
         return new Response(
           JSON.stringify({ error: "Código expirado ou inválido" }),
-          {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      await supabase
-        .from("session_transfers")
-        .update({ used: true })
-        .eq("id", transfer.id);
+      // Mark as used
+      await supabase.from("session_transfers").update({ used: true }).eq("id", transfer.id);
+
+      // Generate a magic link for the user's email — gives mobile its OWN independent session
+      const email = transfer.refresh_token; // we stored email here
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+
+      if (linkErr || !linkData) {
+        console.error("generateLink error:", linkErr);
+        return new Response(
+          JSON.stringify({ error: "Erro ao gerar link de sessão" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Return the hashed token so the client can verify it via verifyOtp
+      const hashToken = linkData.properties?.hashed_token;
 
       return new Response(
-        JSON.stringify({ refresh_token: transfer.refresh_token }),
+        JSON.stringify({ email, token: hashToken }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
