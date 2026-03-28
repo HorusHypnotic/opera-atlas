@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
 
-  // Handle sync code from QR
+  // Handle sync code from QR — creates independent session via magic link
   useEffect(() => {
     const syncCode = searchParams.get("sync");
     if (!syncCode || user) return;
@@ -31,9 +31,12 @@ export default function LoginPage() {
     )
       .then((r) => r.json())
       .then(async (data) => {
-        if (data.refresh_token) {
-          const { error } = await supabase.auth.refreshSession({
-            refresh_token: data.refresh_token,
+        if (data.email && data.token) {
+          // Use verifyOtp with the magic link token to create an independent session
+          const { error } = await supabase.auth.verifyOtp({
+            email: data.email,
+            token: data.token,
+            type: "magiclink",
           });
           if (error) {
             toast.error("Erro ao restaurar sessão: " + error.message);
