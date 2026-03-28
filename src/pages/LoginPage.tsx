@@ -1,27 +1,59 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogIn, UserCheck, Mail } from "lucide-react";
+import { LogIn, UserCheck, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   const { user, loading, enterGuestMode } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [signingIn, setSigningIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  // Handle sync code from QR
+  useEffect(() => {
+    const syncCode = searchParams.get("sync");
+    if (!syncCode || user) return;
+
+    setSyncLoading(true);
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    fetch(
+      `https://${projectId}.supabase.co/functions/v1/session-transfer?code=${syncCode}`
+    )
+      .then((r) => r.json())
+      .then(async (data) => {
+        if (data.refresh_token) {
+          const { error } = await supabase.auth.refreshSession({
+            refresh_token: data.refresh_token,
+          });
+          if (error) {
+            toast.error("Erro ao restaurar sessão: " + error.message);
+          } else {
+            toast.success("Sessão restaurada com sucesso!");
+            navigate("/", { replace: true });
+          }
+        } else {
+          toast.error(data.error || "Código expirado ou inválido");
+        }
+      })
+      .catch(() => toast.error("Erro de conexão ao sincronizar"))
+      .finally(() => setSyncLoading(false));
+  }, [searchParams, user, navigate]);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !searchParams.get("sync")) {
       navigate("/", { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, searchParams]);
 
   const handleGoogleLogin = async () => {
     setSigningIn(true);
