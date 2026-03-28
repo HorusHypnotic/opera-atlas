@@ -15,10 +15,9 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(supabaseUrl, serviceKey);
 
     if (req.method === "POST") {
-      // Generate a transfer code — requires auth
       const authHeader = req.headers.get("authorization");
       if (!authHeader?.startsWith("Bearer ")) {
         return new Response(JSON.stringify({ error: "Não autenticado" }), {
@@ -40,94 +39,42 @@ Deno.serve(async (req) => {
         });
       }
 
-      const userId = claimsData.claims.sub as string;
       const userEmail = claimsData.claims.email as string;
 
-      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+      // Read the origin from the request body so the redirect goes to the right place
+      let body: any = {};
+      try { body = await req.json(); } catch {}
+      const redirectTo = body.redirect_to || "https://opera-atlas.lovable.app";
 
-      // Clean old transfers
-      await supabase.from("session_transfers").delete().eq("user_id", userId);
+      // Generate a magic link — this creates an independent session for the mobile
+      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: userEmail,
+        options: { redirectTo },
+      });
 
-      // Store user email instead of refresh_token — mobile will get its own session
-      const { error: insertErr } = await supabase
-        .from("session_transfers")
-        .insert({
-          code,
-          user_id: userId,
-          refresh_token: userEmail, // reusing column to store email
-        });
-
-      if (insertErr) {
-        return new Response(JSON.stringify({ error: insertErr.message }), {
+      if (linkErr || !linkData) {
+        console.error("generateLink error:", linkErr);
+        return new Response(JSON.stringify({ error: "Erro ao gerar link" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ code }), {
+      // action_link is the full URL the mobile can open directly to authenticate
+      const actionLink = linkData.properties?.action_link;
+
+      return new Response(JSON.stringify({ link: actionLink }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (req.method === "GET") {
-      const url = new URL(req.url);
-      const code = url.searchParams.get("code");
-
-      if (!code || code.length < 6) {
-        return new Response(JSON.stringify({ error: "Código inválido" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: transfer, error: fetchErr } = await supabase
-        .from("session_transfers")
-        .select("*")
-        .eq("code", code.toUpperCase())
-        .eq("used", false)
-        .gt("expires_at", new Date().toISOString())
-        .single();
-
-      if (fetchErr || !transfer) {
-        return new Response(
-          JSON.stringify({ error: "Código expirado ou inválido" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Mark as used
-      await supabase.from("session_transfers").update({ used: true }).eq("id", transfer.id);
-
-      // Generate a magic link for the user's email — gives mobile its OWN independent session
-      const email = transfer.refresh_token; // we stored email here
-      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-      });
-
-      if (linkErr || !linkData) {
-        console.error("generateLink error:", linkErr);
-        return new Response(
-          JSON.stringify({ error: "Erro ao gerar link de sessão" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Return the hashed token so the client can verify it via verifyOtp
-      const hashToken = linkData.properties?.hashed_token;
-
-      return new Response(
-        JSON.stringify({ email, token: hashToken }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(JSON.stringify({ error: "Método não suportado" }), {
+    return new Response(JSON.stringify({ error: "Use POST" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Unexpected error:", err);
+    console.error("Error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
