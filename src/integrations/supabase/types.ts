@@ -1376,6 +1376,36 @@ export type Database = {
           },
         ]
       }
+      session_transfers: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           cnpj: string | null
