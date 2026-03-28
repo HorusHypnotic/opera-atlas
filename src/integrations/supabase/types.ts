@@ -954,6 +954,36 @@ export type Database = {
           },
         ]
       }
+      mobile_debug_logs: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          event: string
+          id: string
+          ts: string | null
+          ua: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          event: string
+          id?: string
+          ts?: string | null
+          ua?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          event?: string
+          id?: string
+          ts?: string | null
+          ua?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       obra_membros: {
         Row: {
           created_at: string
