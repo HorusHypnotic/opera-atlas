@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import { ensureSession } from "@/integrations/supabase/authWrapper";
 import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
@@ -51,7 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
 
+  // Guards to prevent loops
+  const isRehydrating = useRef(false);
+  const lastFetchedUserId = useRef<string | null>(null);
+
   const fetchProfileAndRoles = async (userId: string) => {
+    // Don't refetch if we already loaded this user's data
+    if (lastFetchedUserId.current === userId) return;
+    lastFetchedUserId.current = userId;
+
     const [profileRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
@@ -79,10 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let alive = true;
 
-    // Rehydrate: tries getSession first, then refreshSession as fallback.
-    // This prevents ejecting the user when the access token expired while
-    // the PWA was in the background or after an OS kill.
     const rehydrate = async () => {
+      // Prevent concurrent rehydrate calls (visibility + focus + auth listener)
+      if (isRehydrating.current) return;
+      isRehydrating.current = true;
+
       try {
         const { data: { session: current } } = await supabase.auth.getSession();
         let sess = current;
@@ -104,20 +112,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.warn("[Auth] Erro no rehydrate:", err);
       } finally {
+        isRehydrating.current = false;
         if (alive) setLoading(false);
       }
     };
 
-    // Listen for auth changes. If session becomes null (but it's NOT a
-    // SIGNED_OUT event), try to rehydrate instead of ejecting.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sess) => {
         if (!alive) return;
 
+        // Ignore TOKEN_REFRESHED — the SDK handles token storage internally.
+        // Reacting to it was causing a refresh loop on mobile.
+        if (event === "TOKEN_REFRESHED") return;
+
         if (sess?.user) {
           setSession(sess);
           setUser(sess.user);
-          setTimeout(() => fetchProfileAndRoles(sess.user.id), 0);
+          // Fetch profile only once per user
+          fetchProfileAndRoles(sess.user.id);
           setLoading(false);
           return;
         }
@@ -127,25 +139,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setProfile(null);
           setRoles([]);
+          lastFetchedUserId.current = null;
           setLoading(false);
           return;
         }
 
-        // null session but NOT a sign-out → try to recover
+        // null session but NOT a sign-out → try to recover once
         console.log("[Auth] Sessão null recebida (event:", event, ") — tentando rehydrate");
         await rehydrate();
       }
     );
 
-    // When the PWA comes back from background, rehydrate the session
+    // Throttled rehydrate on visibility change (max once per 30s)
+    let lastRehydrateTs = 0;
+    const throttledRehydrate = () => {
+      const now = Date.now();
+      if (now - lastRehydrateTs < 30_000) return;
+      lastRehydrateTs = now;
+      rehydrate();
+    };
+
     const onVisibilityChange = () => {
       if (!document.hidden) {
         console.log("[Auth] App voltou ao foco — rehydrate");
-        rehydrate();
+        throttledRehydrate();
       }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", rehydrate);
+    window.addEventListener("focus", throttledRehydrate);
 
     // Initial load
     rehydrate();
@@ -154,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       alive = false;
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", rehydrate);
+      window.removeEventListener("focus", throttledRehydrate);
     };
   }, []);
 
@@ -179,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRoles([]);
+    lastFetchedUserId.current = null;
   };
 
   const computeTrialExpired = (): boolean => {

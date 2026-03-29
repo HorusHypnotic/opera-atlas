@@ -12,6 +12,29 @@ import type { Database } from "@/integrations/supabase/types";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// ── Nuke stale Service Workers AND their caches on every load ──
+// This ensures the mobile PWA always gets the latest bundle, not a
+// cached version with the old broken storage adapter.
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((regs) => {
+      if (regs.length > 0) {
+        console.log("[SW] Removing", regs.length, "service worker(s)");
+        return Promise.all(regs.map((r) => r.unregister()));
+      }
+    })
+    .then(() =>
+      caches.keys().then((keys) => {
+        if (keys.length > 0) {
+          console.log("[SW] Clearing", keys.length, "cache(s)");
+          return Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      })
+    )
+    .catch(() => {});
+}
+
 // Configure localforage to use IndexedDB (falls back to WebSQL/localStorage)
 const authStore = localforage.createInstance({
   name: "opera-auth",
@@ -29,8 +52,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
         const val = await authStore.getItem<string>(key);
         return val ?? null;
       },
-      setItem: (key: string, value: string) => authStore.setItem(key, value).then(() => {}),
-      removeItem: (key: string) => authStore.removeItem(key).then(() => {}),
+      setItem: (key: string, value: string) =>
+        authStore.setItem(key, value).then(() => {}),
+      removeItem: (key: string) =>
+        authStore.removeItem(key).then(() => {}),
     },
   },
 });
