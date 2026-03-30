@@ -150,23 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Throttled rehydrate on visibility change (max once per 30s)
-    let lastRehydrateTs = 0;
-    const throttledRehydrate = () => {
-      const now = Date.now();
-      if (now - lastRehydrateTs < 30_000) return;
-      lastRehydrateTs = now;
-      rehydrate();
-    };
-
-    const onVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log("[Auth] App voltou ao foco — rehydrate");
-        throttledRehydrate();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", throttledRehydrate);
+    // Removed visibility/focus rehydrate — was contributing to
+    // TOKEN_REFRESHED loops on mobile. The SDK handles token
+    // refresh automatically via autoRefreshToken: true.
 
     // Initial load
     rehydrate();
