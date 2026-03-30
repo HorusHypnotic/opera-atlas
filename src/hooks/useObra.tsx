@@ -32,7 +32,7 @@ interface ObraContextType {
 const ObraContext = createContext<ObraContextType | undefined>(undefined);
 
 export function ObraProvider({ children }: { children: ReactNode }) {
-  const { profile, isGuest } = useAuth();
+  const { profile, isGuest, sessionStable } = useAuth();
   const [obras, setObras] = useState<Obra[]>([]);
   const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,8 +64,11 @@ export function ObraProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    fetchObras();
-  }, [profile?.tenant_id, isGuest]);
+    // Only fetch after session is stable to avoid competing with token refresh
+    if (sessionStable) {
+      fetchObras();
+    }
+  }, [profile?.tenant_id, isGuest, sessionStable]);
 
   const selectedObra = obras.find((o) => o.id === selectedObraId) || null;
 
