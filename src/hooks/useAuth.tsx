@@ -160,8 +160,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       subscription.unsubscribe();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", throttledRehydrate);
     };
   }, []);
 
