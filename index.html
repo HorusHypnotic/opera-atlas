@@ -31,61 +31,12 @@
   <body>
     <div id="root"></div>
     <script>
-      // Early diagnostic: runs BEFORE React loads
-      // Logs to mobile_debug_logs so we can diagnose mobile crashes
-      (function(){
-        var SUPABASE_URL = 'https://aiyluolhojdszqitusum.supabase.co';
-        var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpeWx1b2xob2pkc3pxaXR1c3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NjUyNTMsImV4cCI6MjA4ODI0MTI1M30.-hICJIWmz1Ryf3E-1T_mCj9OlFwSSlqnsp_oSNtj434';
-        function earlyLog(event, data) {
-          try {
-            fetch(SUPABASE_URL + '/rest/v1/mobile_debug_logs', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': ANON_KEY,
-                'Authorization': 'Bearer ' + ANON_KEY,
-                'Prefer': 'return=minimal'
-              },
-              body: JSON.stringify({
-                event: event,
-                data: data || {},
-                url: location.href,
-                ua: navigator.userAgent,
-                ts: new Date().toISOString()
-              })
-            });
-          } catch(e){}
-        }
-
-        // Log that the page started loading
-        earlyLog('page_load', {
-          has_sw: 'serviceWorker' in navigator,
-          online: navigator.onLine,
-          storage_available: (function(){ try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return true; } catch(e){ return false; } })()
+      // Clean up any stale service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
         });
-
-        // Force unregister ALL service workers if cache was cleared
-        // This prevents stale SW from serving old/broken assets
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            if (regs.length > 0) {
-              earlyLog('sw_found', { count: regs.length, scopes: regs.map(function(r){ return r.scope; }) });
-              regs.forEach(function(r) { r.unregister(); });
-              // After unregistering, reload once to get fresh assets
-              if (!sessionStorage.getItem('_sw_cleared')) {
-                sessionStorage.setItem('_sw_cleared', '1');
-                earlyLog('sw_cleared_reload', {});
-                location.reload();
-              }
-            }
-          });
-        }
-
-        // Catch any JS errors before React loads
-        window.addEventListener('error', function(e) {
-          earlyLog('early_js_error', { msg: e.message, file: e.filename, line: e.lineno });
-        });
-      })();
+      }
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
