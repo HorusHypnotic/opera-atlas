@@ -30,6 +30,7 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   loading: boolean;
+  sessionStable: boolean;
   hasRole: (role: AppRole) => boolean;
   isAdmin: boolean;
   isGestor: boolean;
@@ -49,10 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [sessionStable, setSessionStable] = useState(false);
 
   // Guards to prevent loops
   const isRehydrating = useRef(false);
   const lastFetchedUserId = useRef<string | null>(null);
+  const stabilityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchProfileAndRoles = async (userId: string) => {
     // Don't refetch if we already loaded this user's data
@@ -81,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(GUEST_PROFILE);
       setRoles(["admin", "gestor", "operacional", "visualizador"]);
       setLoading(false);
+      setSessionStable(true);
       return;
     }
 
@@ -113,7 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn("[Auth] Erro no rehydrate:", err);
       } finally {
         isRehydrating.current = false;
-        if (alive) setLoading(false);
+        if (alive) {
+          setLoading(false);
+          // Mark session as stable after a delay to let token settle
+          if (stabilityTimer.current) clearTimeout(stabilityTimer.current);
+          stabilityTimer.current = setTimeout(() => {
+            if (alive) setSessionStable(true);
+          }, 1500);
+        }
       }
     };
 
@@ -131,6 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fetch profile only once per user
           fetchProfileAndRoles(sess.user.id);
           setLoading(false);
+          // Delay stability to let token fully settle before queries fire
+          if (stabilityTimer.current) clearTimeout(stabilityTimer.current);
+          stabilityTimer.current = setTimeout(() => {
+            setSessionStable(true);
+          }, 1500);
           return;
         }
 
@@ -140,6 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setRoles([]);
           lastFetchedUserId.current = null;
+          setSessionStable(false);
+          if (stabilityTimer.current) clearTimeout(stabilityTimer.current);
           setLoading(false);
           return;
         }
@@ -160,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       subscription.unsubscribe();
+      if (stabilityTimer.current) clearTimeout(stabilityTimer.current);
     };
   }, []);
 
@@ -168,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(GUEST_PROFILE);
     setRoles(["admin", "gestor", "operacional", "visualizador"]);
     setUser({ id: "guest" } as User);
+    setSessionStable(true);
     sessionStorage.setItem("opera_guest", "true");
   };
 
@@ -185,6 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setRoles([]);
     lastFetchedUserId.current = null;
+    setSessionStable(false);
+    if (stabilityTimer.current) clearTimeout(stabilityTimer.current);
   };
 
   const computeTrialExpired = (): boolean => {
@@ -204,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         roles,
         loading,
+        sessionStable,
         hasRole,
         isAdmin: hasRole("admin"),
         isGestor: hasRole("gestor"),
