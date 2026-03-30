@@ -6,7 +6,7 @@ import { DEMO_DATA } from "@/data/demoData";
 import { toast } from "sonner";
 
 export function useTableData<T = any>(table: string) {
-  const { profile, isGuest } = useAuth();
+  const { profile, isGuest, sessionStable } = useAuth();
   const { selectedObraId } = useObra();
   const tenantId = profile?.tenant_id || null;
   const queryClient = useQueryClient();
@@ -32,7 +32,8 @@ export function useTableData<T = any>(table: string) {
       if (error) throw error;
       return (data || []) as T[];
     },
-    enabled: isGuest || !!tenantId,
+    // Only fire queries after session is stable to avoid competing with token refresh
+    enabled: (isGuest && sessionStable) || (!!tenantId && sessionStable),
   });
 
   const refetchAll = () => {

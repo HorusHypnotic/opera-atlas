@@ -1,19 +1,35 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { QrCode } from "lucide-react";
+import { QrCode, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SessionSyncQR } from "@/components/auth/SessionSyncQR";
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { profile, isGuest } = useAuth();
+  const { profile, isGuest, sessionStable } = useAuth();
 
   // If user has no tenant and is not guest, redirect to setup
   if (!isGuest && profile && !profile.tenant_id) {
     return <Navigate to="/setup" replace />;
+  }
+
+  // Show loading screen until session is fully stable
+  // This prevents 15+ parallel queries from firing during token stabilization
+  if (!sessionStable) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center font-bold text-primary-foreground text-2xl">
+            OP
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Preparando sistema...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
