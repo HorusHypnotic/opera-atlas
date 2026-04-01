@@ -69,6 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (profileRes.data) {
       const p = profileRes.data as any;
+      // Block login for blocked users
+      if (p.account_status === "blocked") {
+        console.warn("[Auth] Conta bloqueada, fazendo logout");
+        await supabase.auth.signOut();
+        return;
+      }
       setProfile({ ...p, is_super_admin: p.is_super_admin === true } as Profile);
     }
     if (rolesRes.data) {

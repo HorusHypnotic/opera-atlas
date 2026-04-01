@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, UserPlus, Building2, HardHat, Shield, Trash2, Mail, Copy, Check, Rocket, Link2, Settings, BarChart3, Crown, Users } from "lucide-react";
+import { Plus, HardHat, Shield, Trash2, Rocket, Link2, Settings, BarChart3, Crown, Users, Building2, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { useObra } from "@/hooks/useObra";
@@ -19,6 +18,10 @@ import { BetaConfigTab } from "@/components/admin/BetaConfigTab";
 import { BetaMetricsTab } from "@/components/admin/BetaMetricsTab";
 import { SuperAdminTab } from "@/components/admin/SuperAdminTab";
 import { ObraMembrosTab } from "@/components/admin/ObraMembrosTab";
+import { AdminKPIs } from "@/components/admin/AdminKPIs";
+import { UsersTab } from "@/components/admin/UsersTab";
+import { InvitesTab } from "@/components/admin/InvitesTab";
+import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -28,6 +31,7 @@ interface ProfileRow {
   full_name: string | null;
   avatar_url: string | null;
   tenant_id: string | null;
+  account_status?: string;
 }
 
 interface RoleRow {
@@ -46,350 +50,132 @@ interface ObraRow {
   data_previsao: string | null;
 }
 
-const roleBadgeColor: Record<AppRole, string> = {
-  admin: "bg-destructive/20 text-destructive",
-  gestor: "bg-primary/20 text-primary",
-  operacional: "bg-chart-4/20 text-chart-4",
-  visualizador: "bg-muted text-muted-foreground",
-};
-
 export default function AdminPage() {
-  const { isAdmin, profile, isSuperAdmin } = useAuth();
+  const { isAdmin, profile, isSuperAdmin, user } = useAuth();
   const { refetch: refetchObras } = useObra();
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [userRoles, setUserRoles] = useState<RoleRow[]>([]);
   const [obras, setObras] = useState<ObraRow[]>([]);
+  const [invites, setInvites] = useState<any[]>([]);
   const [newObraNome, setNewObraNome] = useState("");
   const [newObraEndereco, setNewObraEndereco] = useState("");
   const [obraDialogOpen, setObraDialogOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<AppRole>("visualizador");
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<AppRole>("visualizador");
-  const [invites, setInvites] = useState<any[]>([]);
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const tenantId = profile?.tenant_id;
 
   const fetchData = async () => {
     if (!tenantId) return;
-
     const [profRes, rolesRes, obrasRes, invitesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("tenant_id", tenantId),
       supabase.from("user_roles").select("*").eq("tenant_id", tenantId),
       supabase.from("obras").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
       supabase.from("invites").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
     ]);
-
     if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
     if (rolesRes.data) setUserRoles(rolesRes.data as RoleRow[]);
     if (obrasRes.data) setObras(obrasRes.data as ObraRow[]);
     if (invitesRes.data) setInvites(invitesRes.data);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [tenantId]);
+  useEffect(() => { fetchData(); }, [tenantId]);
 
   if (!isAdmin && !isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
-  const getUserRoles = (userId: string) => userRoles.filter((r) => r.user_id === userId);
-
-  const addRole = async () => {
-    if (!selectedUserId || !tenantId) return;
-    const { error } = await supabase.from("user_roles").insert({
-      user_id: selectedUserId,
-      role: selectedRole,
-      tenant_id: tenantId,
-    } as any);
-    if (error) {
-      toast.error("Erro ao adicionar papel: " + error.message);
-    } else {
-      toast.success("Papel adicionado!");
-      fetchData();
-    }
-  };
-
-  const removeRole = async (roleId: string) => {
-    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
-    if (error) {
-      toast.error("Erro ao remover papel");
-    } else {
-      toast.success("Papel removido");
-      fetchData();
-    }
-  };
+  const activeInvites = invites.filter(i => !i.used && new Date(i.expires_at) > new Date()).length;
+  const blockedUsers = profiles.filter(p => (p as any).account_status === "blocked").length;
 
   const addObra = async () => {
     if (!newObraNome.trim() || !tenantId) return;
     const { error } = await supabase.from("obras").insert({
-      nome: newObraNome,
-      endereco: newObraEndereco || null,
-      tenant_id: tenantId,
+      nome: newObraNome, endereco: newObraEndereco || null, tenant_id: tenantId,
     } as any);
     if (error) {
-      const msg = error.message.includes("Limite de obras") 
-        ? "Limite de obras atingido para este cliente. Aumente o limite nas configurações do tenant."
-        : "Erro ao criar obra: " + error.message;
-      toast.error(msg);
+      toast.error(error.message.includes("Limite") ? "Limite de obras atingido!" : "Erro: " + error.message);
     } else {
       toast.success("Obra criada!");
-      setNewObraNome("");
-      setNewObraEndereco("");
-      setObraDialogOpen(false);
-      fetchData();
-      refetchObras();
+      setNewObraNome(""); setNewObraEndereco(""); setObraDialogOpen(false);
+      fetchData(); refetchObras();
     }
   };
 
   const deleteObra = async (id: string) => {
     const { error } = await supabase.from("obras").delete().eq("id", id);
-    if (error) {
-      toast.error("Erro ao excluir obra");
-    } else {
-      toast.success("Obra excluída");
-      fetchData();
-      refetchObras();
-    }
-  };
-
-  const sendInvite = async () => {
-    if (!inviteEmail.trim() || !tenantId) return;
-    setInviteLoading(true);
-    const { error } = await supabase.from("invites").insert({
-      email: inviteEmail,
-      role: inviteRole,
-      tenant_id: tenantId,
-    } as any);
-    setInviteLoading(false);
-    if (error) {
-      toast.error("Erro ao criar convite: " + error.message);
-    } else {
-      toast.success("Convite criado!");
-      setInviteEmail("");
-      fetchData();
-    }
-  };
-
-  const copyInviteLink = (token: string) => {
-    const url = `${window.location.origin}/invite?token=${token}`;
-    navigator.clipboard.writeText(url);
-    setCopiedToken(token);
-    toast.success("Link copiado!");
-    setTimeout(() => setCopiedToken(null), 2000);
-  };
-
-  const deleteInvite = async (id: string) => {
-    const { error } = await supabase.from("invites").delete().eq("id", id);
-    if (error) toast.error("Erro ao excluir convite");
-    else { toast.success("Convite removido"); fetchData(); }
+    if (error) toast.error("Erro ao excluir obra");
+    else { toast.success("Obra excluída"); fetchData(); refetchObras(); }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SectionHeader
         title="Painel Administrativo"
         subtitle="Gerencie usuários, permissões e obras"
         icon={<Shield className="h-6 w-6" />}
       />
 
+      <AdminKPIs
+        totalUsers={profiles.length}
+        totalObras={obras.length}
+        activeInvites={activeInvites}
+        blockedUsers={blockedUsers}
+      />
+
       <Tabs defaultValue="usuarios" className="space-y-4">
         <TabsList className="w-full overflow-x-auto flex flex-nowrap h-auto gap-1 p-1 justify-start">
           <TabsTrigger value="usuarios" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Usuários &</span> Permissões
+            <Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
           </TabsTrigger>
           <TabsTrigger value="convites" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Convites
+            <Mail className="h-3.5 w-3.5" /> Convites
           </TabsTrigger>
           <TabsTrigger value="obras" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <HardHat className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Obras
+            <HardHat className="h-3.5 w-3.5" /> Obras
           </TabsTrigger>
           <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Equipe
+            <Users className="h-3.5 w-3.5" /> Equipe
+          </TabsTrigger>
+          <TabsTrigger value="tenant" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Building2 className="h-3.5 w-3.5" /> Organização
           </TabsTrigger>
           {isSuperAdmin && (
             <>
               <TabsTrigger value="beta-users" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-                <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Beta
+                <Rocket className="h-3.5 w-3.5" /> Beta
               </TabsTrigger>
               <TabsTrigger value="influencers" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-                <Link2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
+                <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Influenciadores</span><span className="sm:hidden">Inflr.</span>
               </TabsTrigger>
               <TabsTrigger value="beta-config" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Config
+                <Settings className="h-3.5 w-3.5" /> Config
               </TabsTrigger>
               <TabsTrigger value="beta-metrics" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Métricas
+                <BarChart3 className="h-3.5 w-3.5" /> Métricas
+              </TabsTrigger>
+              <TabsTrigger value="super-admin" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+                <Crown className="h-3.5 w-3.5" /> Super Admin
               </TabsTrigger>
             </>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="super-admin" className="gap-1.5 shrink-0 text-xs sm:text-sm">
-              <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Super Admin
-            </TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-4">
-          {/* Assign role */}
-          <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
-            <div className="space-y-1 flex-1 min-w-0">
-              <label className="text-xs text-muted-foreground">Usuário</label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecionar usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.full_name || p.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Papel</label>
-              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="operacional">Operacional</SelectItem>
-                  <SelectItem value="visualizador">Visualizador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={addRole} className="gap-1.5 w-full sm:w-auto">
-              <Plus className="h-4 w-4" /> Atribuir
-            </Button>
-          </div>
-
-          {/* Users table */}
-          <div className="glass-card overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Papéis</TableHead>
-                  <TableHead className="w-[80px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {profiles.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.full_name || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {getUserRoles(p.id).map((r) => (
-                          <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-xs cursor-pointer`} onClick={() => removeRole(r.id)}>
-                            {r.role} ✕
-                          </Badge>
-                        ))}
-                        {getUserRoles(p.id).length === 0 && (
-                          <span className="text-xs text-muted-foreground">Sem papel</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                ))}
-                {profiles.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      Nenhum usuário encontrado neste tenant
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <UsersTab
+            profiles={profiles}
+            userRoles={userRoles}
+            tenantId={tenantId || ""}
+            onRefresh={fetchData}
+            currentUserId={user?.id}
+          />
         </TabsContent>
 
         <TabsContent value="convites" className="space-y-4">
-          <div className="glass-card p-5 space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">Convide sua equipe</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Convide colaboradores para visualizar e alimentar os indicadores das suas obras. Cada pessoa recebe acesso direto ao papel atribuído — sem precisar de aprovação extra.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div className="space-y-1 flex-1 min-w-[200px]">
-                <label className="text-xs text-muted-foreground">Email do colaborador</label>
-                <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colaborador@empresa.com" type="email" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Papel de acesso</label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
-                  <SelectTrigger className="w-full sm:w-[200px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gestor">Gestor — gerencia obras e equipes</SelectItem>
-                    <SelectItem value="operacional">Operacional — alimenta dados</SelectItem>
-                    <SelectItem value="visualizador">Visualizador — acesso somente leitura</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()} className="gap-1.5 w-full sm:w-auto">
-                <UserPlus className="h-4 w-4" /> {inviteLoading ? "Enviando..." : "Enviar Convite"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="glass-card overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expira em</TableHead>
-                  <TableHead className="w-[120px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invites.map((inv) => {
-                  const expired = new Date(inv.expires_at) < new Date();
-                  return (
-                    <TableRow key={inv.id}>
-                      <TableCell className="font-medium">{inv.email}</TableCell>
-                      <TableCell><Badge variant="secondary" className={`${roleBadgeColor[inv.role as AppRole] || ""} text-xs`}>{inv.role}</Badge></TableCell>
-                      <TableCell>
-                        {inv.used ? <Badge variant="secondary" className="text-xs">Usado</Badge> :
-                         expired ? <Badge variant="destructive" className="text-xs">Expirado</Badge> :
-                         <Badge variant="secondary" className="bg-status-ok/20 text-status-ok text-xs">Ativo</Badge>}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{new Date(inv.expires_at).toLocaleDateString("pt-BR")}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyInviteLink(inv.token)} disabled={inv.used || expired}>
-                            {copiedToken === inv.token ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteInvite(inv.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {invites.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Nenhum convite enviado ainda
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <InvitesTab
+            invites={invites}
+            obras={obras}
+            tenantId={tenantId || ""}
+            onRefresh={fetchData}
+          />
         </TabsContent>
 
         <TabsContent value="obras" className="space-y-4">
@@ -397,14 +183,10 @@ export default function AdminPage() {
             <h3 className="text-sm font-semibold">Obras cadastradas</h3>
             <Dialog open={obraDialogOpen} onOpenChange={setObraDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-1.5">
-                  <Plus className="h-4 w-4" /> Nova Obra
-                </Button>
+                <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Nova Obra</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Nova Obra</DialogTitle>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>Cadastrar Nova Obra</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Nome da obra</label>
@@ -419,7 +201,6 @@ export default function AdminPage() {
               </DialogContent>
             </Dialog>
           </div>
-
           <div className="glass-card overflow-x-auto">
             <Table>
               <TableHeader>
@@ -449,9 +230,7 @@ export default function AdminPage() {
                 ))}
                 {obras.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      Nenhuma obra cadastrada
-                    </TableCell>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma obra cadastrada</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -463,30 +242,22 @@ export default function AdminPage() {
           <ObraMembrosTab />
         </TabsContent>
 
+        <TabsContent value="tenant" className="space-y-4">
+          <TenantProfileTab
+            tenantId={tenantId || ""}
+            totalUsers={profiles.length}
+            totalObras={obras.length}
+          />
+        </TabsContent>
+
         {isSuperAdmin && (
           <>
-            <TabsContent value="beta-users" className="space-y-4">
-              <BetaUsersTab />
-            </TabsContent>
-
-            <TabsContent value="influencers" className="space-y-4">
-              <InfluencerCodesTab />
-            </TabsContent>
-
-            <TabsContent value="beta-config" className="space-y-4">
-              <BetaConfigTab />
-            </TabsContent>
-
-            <TabsContent value="beta-metrics" className="space-y-4">
-              <BetaMetricsTab />
-            </TabsContent>
+            <TabsContent value="beta-users"><BetaUsersTab /></TabsContent>
+            <TabsContent value="influencers"><InfluencerCodesTab /></TabsContent>
+            <TabsContent value="beta-config"><BetaConfigTab /></TabsContent>
+            <TabsContent value="beta-metrics"><BetaMetricsTab /></TabsContent>
+            <TabsContent value="super-admin"><SuperAdminTab /></TabsContent>
           </>
-        )}
-
-        {isSuperAdmin && (
-          <TabsContent value="super-admin" className="space-y-4">
-            <SuperAdminTab />
-          </TabsContent>
         )}
       </Tabs>
     </div>
