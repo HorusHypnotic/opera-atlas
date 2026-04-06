@@ -104,9 +104,15 @@ export default function AdminPage() {
   };
 
   const deleteObra = async (id: string) => {
+    const obra = obras.find(o => o.id === id);
     const { error } = await supabase.from("obras").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir obra");
-    else { toast.success("Obra excluída"); fetchData(); refetchObras(); }
+    else {
+      await logAudit({ action: "DELETE_OBRA", target_type: "obra", target_id: id, metadata: { nome: obra?.nome } });
+      toast.success("Obra excluída");
+      fetchData();
+      refetchObras();
+    }
   };
 
   return (
