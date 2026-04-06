@@ -14,9 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
-  Plus, Pencil, Trash2,
+  Plus, Pencil, Trash2, RotateCcw,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
