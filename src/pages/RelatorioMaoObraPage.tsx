@@ -124,6 +124,8 @@ export default function RelatorioMaoObraPage() {
   const [formQtdDiarias, setFormQtdDiarias] = useState("");
   const [formValorDiaria, setFormValorDiaria] = useState("");
   const [formObs, setFormObs] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; nome: string }>({ open: false, id: "", nome: "" });
+  const [zerarConfirm, setZerarConfirm] = useState(false);
 
   const obraAtual = obras.find((o) => o.id === selectedObraId) || obras[0];
 
