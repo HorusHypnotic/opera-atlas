@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, HardHat, Shield, Trash2, Rocket, Link2, Settings, BarChart3, Crown, Users, Building2, Mail } from "lucide-react";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { useObra } from "@/hooks/useObra";
