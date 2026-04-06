@@ -506,6 +506,15 @@ export default function ObrasPage() {
           <p className="text-xs mt-1">Clique em "Nova Obra" para começar</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(v) => setDeleteConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Obra"
+        description={`Tem certeza que deseja excluir a obra "${deleteConfirm.nome}"? Todos os dados vinculados serão perdidos permanentemente.`}
+        confirmText="EXCLUIR"
+        onConfirm={() => handleDelete(deleteConfirm.id)}
+      />
     </div>
   );
 }
