@@ -37,6 +37,7 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
   const [loading, setLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; email: string }>({ open: false, id: "", email: "" });
 
   const sendInvite = async () => {
     if (!email.trim() || !tenantId) return;
