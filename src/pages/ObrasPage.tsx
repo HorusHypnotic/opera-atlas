@@ -191,8 +191,10 @@ export default function ObrasPage() {
   };
 
   const handleDelete = async (id: string) => {
+    const obra = obrasFull.find(o => o.id === id);
     const { error } = await supabase.from("obras").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir"); return; }
+    await logAudit({ action: "DELETE_OBRA", target_type: "obra", target_id: id, metadata: { nome: obra?.nome } });
     toast.success("Obra excluída");
     fetchObras();
     refetch();
