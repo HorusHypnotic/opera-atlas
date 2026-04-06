@@ -753,6 +753,23 @@ export default function RelatorioMaoObraPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(v) => setDeleteConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Apontamento"
+        description={`Deseja excluir o apontamento de diária de "${deleteConfirm.nome}"?`}
+        onConfirm={() => handleDelete(deleteConfirm.id)}
+      />
+
+      <ConfirmDialog
+        open={zerarConfirm}
+        onOpenChange={setZerarConfirm}
+        title="Zerar Diárias da Quinzena"
+        description={`Esta ação irá remover TODOS os ${apontamentosPeriodo.length} apontamentos do período ${formatDate(dataInicio)} - ${formatDate(dataFim)}. Essa ação é irreversível.`}
+        confirmText="ZERAR"
+        onConfirm={handleZerarQuinzena}
+      />
     </div>
   );
 }
