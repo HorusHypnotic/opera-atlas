@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [newObraNome, setNewObraNome] = useState("");
   const [newObraEndereco, setNewObraEndereco] = useState("");
   const [obraDialogOpen, setObraDialogOpen] = useState(false);
+  const [deleteObraConfirm, setDeleteObraConfirm] = useState<{ open: boolean; id: string; nome: string }>({ open: false, id: "", nome: "" });
 
   const tenantId = profile?.tenant_id;
 
