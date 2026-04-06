@@ -202,6 +202,14 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(v) => setDeleteConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Convite"
+        description={`Deseja remover o convite para "${deleteConfirm.email}"?`}
+        onConfirm={() => deleteInvite(deleteConfirm.id, deleteConfirm.email)}
+      />
     </div>
   );
 }
