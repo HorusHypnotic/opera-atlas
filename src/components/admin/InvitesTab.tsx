@@ -62,10 +62,14 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
-  const deleteInvite = async (id: string) => {
+  const deleteInvite = async (id: string, email: string) => {
     const { error } = await supabase.from("invites").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir convite");
-    else { toast.success("Convite removido"); onRefresh(); }
+    else {
+      await logAudit({ action: "DELETE_INVITE", target_type: "invite", target_id: id, metadata: { email } });
+      toast.success("Convite removido");
+      onRefresh();
+    }
   };
 
   const getStatus = (inv: any) => {
