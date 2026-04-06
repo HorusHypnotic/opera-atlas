@@ -47,7 +47,12 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
     const { error } = await supabase.from("invites").insert(payload);
     setLoading(false);
     if (error) toast.error("Erro ao criar convite: " + error.message);
-    else { toast.success("Convite criado!"); setEmail(""); onRefresh(); }
+    else {
+      await logAudit({ action: "CREATE_INVITE", target_type: "invite", metadata: { email, role, obraId: obraId !== "none" ? obraId : null } });
+      toast.success("Convite criado!");
+      setEmail("");
+      onRefresh();
+    }
   };
 
   const copyLink = (token: string) => {
