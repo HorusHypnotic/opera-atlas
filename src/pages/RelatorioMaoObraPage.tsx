@@ -641,6 +641,7 @@ export default function RelatorioMaoObraPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             {apontamentosPeriodo.length === 0 ? (
