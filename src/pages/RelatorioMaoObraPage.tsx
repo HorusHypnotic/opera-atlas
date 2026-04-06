@@ -676,7 +676,10 @@ export default function RelatorioMaoObraPage() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(a)}>
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(a.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                                const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+                                setDeleteConfirm({ open: true, id: a.id, nome: colab?.nome || "—" });
+                              }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
