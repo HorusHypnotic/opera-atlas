@@ -14,9 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
-  Plus, Pencil, Trash2,
+  Plus, Pencil, Trash2, RotateCcw,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -122,6 +124,8 @@ export default function RelatorioMaoObraPage() {
   const [formQtdDiarias, setFormQtdDiarias] = useState("");
   const [formValorDiaria, setFormValorDiaria] = useState("");
   const [formObs, setFormObs] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; nome: string }>({ open: false, id: "", nome: "" });
+  const [zerarConfirm, setZerarConfirm] = useState(false);
 
   const obraAtual = obras.find((o) => o.id === selectedObraId) || obras[0];
 
@@ -301,6 +305,24 @@ export default function RelatorioMaoObraPage() {
 
   const handleDelete = async (id: string) => {
     await removeApontamento(id);
+    await logAudit({ action: "DELETE_DIARIA", target_type: "apontamento_diarias", target_id: id });
+  };
+
+  const handleZerarQuinzena = async () => {
+    if (apontamentosPeriodo.length === 0) {
+      toast.info("Não há apontamentos para zerar neste período");
+      return;
+    }
+    let errors = 0;
+    for (const a of apontamentosPeriodo) {
+      await removeApontamento(a.id);
+    }
+    await logAudit({
+      action: "ZERAR_DIARIAS",
+      target_type: "apontamento_diarias",
+      metadata: { periodo_inicio: dataInicio, periodo_fim: dataFim, qtd_removidos: apontamentosPeriodo.length },
+    });
+    toast.success(`${apontamentosPeriodo.length} apontamentos zerados para nova quinzena`);
   };
 
   // ─── Export PDF ───
@@ -536,19 +558,25 @@ export default function RelatorioMaoObraPage() {
         {/* ─── Apontamentos Tab (CRUD) ─── */}
         <TabsContent value="apontamentos">
           <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border">
               <div>
                 <h2 className="text-base font-bold">Apontamento de Diárias</h2>
                 <p className="text-sm text-muted-foreground">
                   Lançamento manual de diárias por trabalhador — usado como fonte principal do relatório financeiro.
                 </p>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" onClick={openNewDialog}>
-                    <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
+              <div className="flex gap-2 shrink-0">
+                {apontamentosPeriodo.length > 0 && (
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setZerarConfirm(true)}>
+                    <RotateCcw className="h-3.5 w-3.5" /> Zerar Quinzena
                   </Button>
-                </DialogTrigger>
+                )}
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={openNewDialog}>
+                      <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{editingId ? "Editar Apontamento" : "Novo Apontamento de Diárias"}</DialogTitle>
@@ -613,6 +641,7 @@ export default function RelatorioMaoObraPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             {apontamentosPeriodo.length === 0 ? (
@@ -648,7 +677,10 @@ export default function RelatorioMaoObraPage() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(a)}>
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(a.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                                const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+                                setDeleteConfirm({ open: true, id: a.id, nome: colab?.nome || "—" });
+                              }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -721,6 +753,23 @@ export default function RelatorioMaoObraPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(v) => setDeleteConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Apontamento"
+        description={`Deseja excluir o apontamento de diária de "${deleteConfirm.nome}"?`}
+        onConfirm={() => handleDelete(deleteConfirm.id)}
+      />
+
+      <ConfirmDialog
+        open={zerarConfirm}
+        onOpenChange={setZerarConfirm}
+        title="Zerar Diárias da Quinzena"
+        description={`Esta ação irá remover TODOS os ${apontamentosPeriodo.length} apontamentos do período ${formatDate(dataInicio)} - ${formatDate(dataFim)}. Essa ação é irreversível.`}
+        confirmText="ZERAR"
+        onConfirm={handleZerarQuinzena}
+      />
     </div>
   );
 }
