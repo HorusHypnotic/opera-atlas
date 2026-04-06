@@ -305,6 +305,24 @@ export default function RelatorioMaoObraPage() {
 
   const handleDelete = async (id: string) => {
     await removeApontamento(id);
+    await logAudit({ action: "DELETE_DIARIA", target_type: "apontamento_diarias", target_id: id });
+  };
+
+  const handleZerarQuinzena = async () => {
+    if (apontamentosPeriodo.length === 0) {
+      toast.info("Não há apontamentos para zerar neste período");
+      return;
+    }
+    let errors = 0;
+    for (const a of apontamentosPeriodo) {
+      await removeApontamento(a.id);
+    }
+    await logAudit({
+      action: "ZERAR_DIARIAS",
+      target_type: "apontamento_diarias",
+      metadata: { periodo_inicio: dataInicio, periodo_fim: dataFim, qtd_removidos: apontamentosPeriodo.length },
+    });
+    toast.success(`${apontamentosPeriodo.length} apontamentos zerados para nova quinzena`);
   };
 
   // ─── Export PDF ───
