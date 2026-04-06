@@ -231,7 +231,7 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => deleteObra(o.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteObraConfirm({ open: true, id: o.id, nome: o.nome })}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
