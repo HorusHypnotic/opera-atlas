@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { UserPlus, Copy, Check, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
