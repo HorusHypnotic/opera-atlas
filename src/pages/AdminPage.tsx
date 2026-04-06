@@ -269,6 +269,15 @@ export default function AdminPage() {
           </>
         )}
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteObraConfirm.open}
+        onOpenChange={(v) => setDeleteObraConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Obra"
+        description={`Tem certeza que deseja excluir a obra "${deleteObraConfirm.nome}"? Todos os dados vinculados serão perdidos.`}
+        confirmText="EXCLUIR"
+        onConfirm={() => deleteObra(deleteObraConfirm.id)}
+      />
     </div>
   );
 }
