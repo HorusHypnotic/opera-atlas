@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, HardHat, Shield, Trash2, Rocket, Link2, Settings, BarChart3, Crown, Users, Building2, Mail } from "lucide-react";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigate } from "react-router-dom";
 import { useObra } from "@/hooks/useObra";
@@ -60,6 +62,7 @@ export default function AdminPage() {
   const [newObraNome, setNewObraNome] = useState("");
   const [newObraEndereco, setNewObraEndereco] = useState("");
   const [obraDialogOpen, setObraDialogOpen] = useState(false);
+  const [deleteObraConfirm, setDeleteObraConfirm] = useState<{ open: boolean; id: string; nome: string }>({ open: false, id: "", nome: "" });
 
   const tenantId = profile?.tenant_id;
 
@@ -101,9 +104,15 @@ export default function AdminPage() {
   };
 
   const deleteObra = async (id: string) => {
+    const obra = obras.find(o => o.id === id);
     const { error } = await supabase.from("obras").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir obra");
-    else { toast.success("Obra excluída"); fetchData(); refetchObras(); }
+    else {
+      await logAudit({ action: "DELETE_OBRA", target_type: "obra", target_id: id, metadata: { nome: obra?.nome } });
+      toast.success("Obra excluída");
+      fetchData();
+      refetchObras();
+    }
   };
 
   return (
@@ -222,7 +231,7 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => deleteObra(o.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteObraConfirm({ open: true, id: o.id, nome: o.nome })}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -260,6 +269,15 @@ export default function AdminPage() {
           </>
         )}
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteObraConfirm.open}
+        onOpenChange={(v) => setDeleteObraConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Obra"
+        description={`Tem certeza que deseja excluir a obra "${deleteObraConfirm.nome}"? Todos os dados vinculados serão perdidos.`}
+        confirmText="EXCLUIR"
+        onConfirm={() => deleteObra(deleteObraConfirm.id)}
+      />
     </div>
   );
 }

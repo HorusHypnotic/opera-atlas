@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { UserPlus, Copy, Check, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -35,6 +37,7 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
   const [loading, setLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; email: string }>({ open: false, id: "", email: "" });
 
   const sendInvite = async () => {
     if (!email.trim() || !tenantId) return;
@@ -44,7 +47,12 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
     const { error } = await supabase.from("invites").insert(payload);
     setLoading(false);
     if (error) toast.error("Erro ao criar convite: " + error.message);
-    else { toast.success("Convite criado!"); setEmail(""); onRefresh(); }
+    else {
+      await logAudit({ action: "CREATE_INVITE", target_type: "invite", metadata: { email, role, obraId: obraId !== "none" ? obraId : null } });
+      toast.success("Convite criado!");
+      setEmail("");
+      onRefresh();
+    }
   };
 
   const copyLink = (token: string) => {
@@ -54,10 +62,14 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
-  const deleteInvite = async (id: string) => {
+  const deleteInvite = async (id: string, email: string) => {
     const { error } = await supabase.from("invites").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir convite");
-    else { toast.success("Convite removido"); onRefresh(); }
+    else {
+      await logAudit({ action: "DELETE_INVITE", target_type: "invite", target_id: id, metadata: { email } });
+      toast.success("Convite removido");
+      onRefresh();
+    }
   };
 
   const getStatus = (inv: any) => {
@@ -133,7 +145,7 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyLink(inv.token)} disabled={inv.used || status.label === "Expirado"}>
                         {copiedToken === inv.token ? <Check className="h-3 w-3 text-status-ok" /> : <Copy className="h-3 w-3" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteInvite(inv.id)}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteConfirm({ open: true, id: inv.id, email: inv.email })}>
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
                     </div>
@@ -173,7 +185,7 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyLink(inv.token)} disabled={inv.used || status.label === "Expirado"}>
                           {copiedToken === inv.token ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteInvite(inv.id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteConfirm({ open: true, id: inv.id, email: inv.email })}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
@@ -190,6 +202,14 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(v) => setDeleteConfirm(prev => ({ ...prev, open: v }))}
+        title="Excluir Convite"
+        description={`Deseja remover o convite para "${deleteConfirm.email}"?`}
+        onConfirm={() => deleteInvite(deleteConfirm.id, deleteConfirm.email)}
+      />
     </div>
   );
 }

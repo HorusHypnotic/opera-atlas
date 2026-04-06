@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Plus, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { logAudit } from "@/lib/auditLog";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -44,7 +46,23 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
   const [selectedRole, setSelectedRole] = useState<AppRole>("visualizador");
   const isMobile = useIsMobile();
 
+  // Confirmation state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [confirmTitle, setConfirmTitle] = useState("");
+  const [confirmDesc, setConfirmDesc] = useState("");
+  const [confirmText, setConfirmText] = useState<string | undefined>();
+
   const getUserRoles = (userId: string) => userRoles.filter((r) => r.user_id === userId);
+  const isUserAdmin = (userId: string) => getUserRoles(userId).some(r => r.role === "admin");
+
+  const showConfirm = (title: string, desc: string, action: () => void, typedConfirm?: string) => {
+    setConfirmTitle(title);
+    setConfirmDesc(desc);
+    setConfirmAction(() => action);
+    setConfirmText(typedConfirm);
+    setConfirmOpen(true);
+  };
 
   const addRole = async () => {
     if (!selectedUserId || !tenantId) return;
@@ -54,20 +72,78 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
       tenant_id: tenantId,
     } as any);
     if (error) toast.error("Erro ao adicionar papel: " + error.message);
-    else { toast.success("Papel adicionado!"); onRefresh(); }
+    else {
+      const user = profiles.find(p => p.id === selectedUserId);
+      await logAudit({ action: "ADD_ROLE", target_type: "user", target_id: selectedUserId, metadata: { role: selectedRole, email: user?.email } });
+      toast.success("Papel adicionado!");
+      onRefresh();
+    }
   };
 
-  const removeRole = async (roleId: string) => {
-    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
-    if (error) toast.error("Erro ao remover papel");
-    else { toast.success("Papel removido"); onRefresh(); }
+  const removeRole = async (roleId: string, role: AppRole, userId: string) => {
+    // Prevent self-removal of admin role
+    if (userId === currentUserId && role === "admin") {
+      toast.error("Você não pode remover seu próprio papel de admin");
+      return;
+    }
+
+    const doRemove = async () => {
+      const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
+      if (error) toast.error("Erro ao remover papel");
+      else {
+        const user = profiles.find(p => p.id === userId);
+        await logAudit({ action: "REMOVE_ROLE", target_type: "user", target_id: userId, metadata: { role, email: user?.email } });
+        toast.success("Papel removido");
+        onRefresh();
+      }
+    };
+
+    // Strong confirmation for removing admin role from another admin
+    if (role === "admin") {
+      showConfirm(
+        "Remover papel de Admin",
+        "Essa ação removerá o acesso administrativo deste usuário. Tem certeza?",
+        doRemove,
+        "REMOVER"
+      );
+    } else {
+      showConfirm("Remover papel", `Deseja remover o papel "${role}" deste usuário?`, doRemove);
+    }
   };
 
   const toggleBlock = async (userId: string, currentStatus: string) => {
+    // Prevent self-block
+    if (userId === currentUserId) {
+      toast.error("Você não pode bloquear a si mesmo");
+      return;
+    }
+
+    // Prevent blocking another admin
+    if (isUserAdmin(userId) && currentStatus !== "blocked") {
+      showConfirm(
+        "Bloquear Admin",
+        "Este usuário é um administrador. Bloquear um admin é uma ação sensível. Tem certeza?",
+        () => doToggleBlock(userId, currentStatus),
+        "BLOQUEAR"
+      );
+      return;
+    }
+
+    const action = currentStatus === "blocked" ? "desbloquear" : "bloquear";
+    showConfirm(
+      currentStatus === "blocked" ? "Desbloquear Usuário" : "Bloquear Usuário",
+      `Deseja ${action} este usuário?`,
+      () => doToggleBlock(userId, currentStatus)
+    );
+  };
+
+  const doToggleBlock = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === "blocked" ? "active" : "blocked";
     const { error } = await supabase.from("profiles").update({ account_status: newStatus } as any).eq("id", userId);
     if (error) toast.error("Erro ao alterar status: " + error.message);
     else {
+      const user = profiles.find(p => p.id === userId);
+      await logAudit({ action: newStatus === "blocked" ? "BLOCK_USER" : "UNBLOCK_USER", target_type: "user", target_id: userId, metadata: { email: user?.email } });
       toast.success(newStatus === "blocked" ? "Usuário bloqueado" : "Usuário desbloqueado");
       onRefresh();
     }
@@ -78,10 +154,15 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
     return <Badge variant="secondary" className="bg-status-ok/20 text-status-ok text-[10px]">Ativo</Badge>;
   };
 
+  const roleClickHandler = (r: RoleRow) => {
+    removeRole(r.id, r.role, r.user_id);
+  };
+
   if (isMobile) {
     return (
       <div className="space-y-3">
-        {/* Add role */}
+        <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title={confirmTitle} description={confirmDesc} onConfirm={confirmAction || (() => {})} confirmText={confirmText} />
+
         <Card className="glass-card">
           <CardContent className="p-3 space-y-2">
             <p className="text-xs font-semibold">Atribuir papel</p>
@@ -110,7 +191,6 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
           </CardContent>
         </Card>
 
-        {/* User cards */}
         {profiles.map((p) => {
           const status = (p as any).account_status || "active";
           const isCurrentUser = p.id === currentUserId;
@@ -125,13 +205,7 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
                   <div className="flex items-center gap-1 shrink-0">
                     {statusBadge(status)}
                     {!isCurrentUser && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => toggleBlock(p.id, status)}
-                        title={status === "blocked" ? "Desbloquear" : "Bloquear"}
-                      >
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleBlock(p.id, status)} title={status === "blocked" ? "Desbloquear" : "Bloquear"}>
                         {status === "blocked" ? <ShieldCheck className="h-3.5 w-3.5 text-status-ok" /> : <ShieldOff className="h-3.5 w-3.5 text-destructive" />}
                       </Button>
                     )}
@@ -139,7 +213,7 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {getUserRoles(p.id).map((r) => (
-                    <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-[10px] cursor-pointer`} onClick={() => removeRole(r.id)}>
+                    <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-[10px] cursor-pointer`} onClick={() => roleClickHandler(r)}>
                       {r.role} ✕
                     </Badge>
                   ))}
@@ -149,16 +223,15 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
             </Card>
           );
         })}
-        {profiles.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">Nenhum usuário encontrado</p>
-        )}
+        {profiles.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Nenhum usuário encontrado</p>}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Add role */}
+      <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title={confirmTitle} description={confirmDesc} onConfirm={confirmAction || (() => {})} confirmText={confirmText} />
+
       <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="space-y-1 flex-1 min-w-0">
           <label className="text-xs text-muted-foreground">Usuário</label>
@@ -188,7 +261,6 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
         </Button>
       </div>
 
-      {/* Users table */}
       <div className="glass-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -212,7 +284,7 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {getUserRoles(p.id).map((r) => (
-                        <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-xs cursor-pointer`} onClick={() => removeRole(r.id)}>
+                        <Badge key={r.id} variant="secondary" className={`${roleBadgeColor[r.role]} text-xs cursor-pointer`} onClick={() => roleClickHandler(r)}>
                           {r.role} ✕
                         </Badge>
                       ))}
@@ -221,13 +293,7 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
                   </TableCell>
                   <TableCell>
                     {!isCurrentUser && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => toggleBlock(p.id, status)}
-                        title={status === "blocked" ? "Desbloquear" : "Bloquear"}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleBlock(p.id, status)} title={status === "blocked" ? "Desbloquear" : "Bloquear"}>
                         {status === "blocked" ? <ShieldCheck className="h-4 w-4 text-status-ok" /> : <ShieldOff className="h-4 w-4 text-destructive" />}
                       </Button>
                     )}
@@ -237,9 +303,7 @@ export function UsersTab({ profiles, userRoles, tenantId, onRefresh, currentUser
             })}
             {profiles.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Nenhum usuário encontrado neste tenant
-                </TableCell>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário encontrado neste tenant</TableCell>
               </TableRow>
             )}
           </TableBody>
