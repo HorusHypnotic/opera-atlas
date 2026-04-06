@@ -558,19 +558,25 @@ export default function RelatorioMaoObraPage() {
         {/* ─── Apontamentos Tab (CRUD) ─── */}
         <TabsContent value="apontamentos">
           <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border">
               <div>
                 <h2 className="text-base font-bold">Apontamento de Diárias</h2>
                 <p className="text-sm text-muted-foreground">
                   Lançamento manual de diárias por trabalhador — usado como fonte principal do relatório financeiro.
                 </p>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" onClick={openNewDialog}>
-                    <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
+              <div className="flex gap-2 shrink-0">
+                {apontamentosPeriodo.length > 0 && (
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setZerarConfirm(true)}>
+                    <RotateCcw className="h-3.5 w-3.5" /> Zerar Quinzena
                   </Button>
-                </DialogTrigger>
+                )}
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={openNewDialog}>
+                      <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{editingId ? "Editar Apontamento" : "Novo Apontamento de Diárias"}</DialogTitle>
