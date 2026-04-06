@@ -185,7 +185,7 @@ export function InvitesTab({ invites, obras, tenantId, onRefresh }: InvitesTabPr
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyLink(inv.token)} disabled={inv.used || status.label === "Expirado"}>
                           {copiedToken === inv.token ? <Check className="h-3.5 w-3.5 text-status-ok" /> : <Copy className="h-3.5 w-3.5" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteInvite(inv.id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteConfirm({ open: true, id: inv.id, email: inv.email })}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
