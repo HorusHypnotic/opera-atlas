@@ -24,6 +24,7 @@ import { AdminKPIs } from "@/components/admin/AdminKPIs";
 import { UsersTab } from "@/components/admin/UsersTab";
 import { InvitesTab } from "@/components/admin/InvitesTab";
 import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
+import { AuditLogTab } from "@/components/admin/AuditLogTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
