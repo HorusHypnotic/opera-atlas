@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DEMO_DATA } from "@/data/demoData";
 import { toast } from "sonner";
 
+const SOFT_DELETE_TABLES = ["obras", "colaboradores", "lancamentos_financeiros", "apontamento_diarias"];
+
 export function useTableData<T = any>(table: string) {
   const { profile, isGuest, sessionStable } = useAuth();
   const { selectedObraId } = useObra();
@@ -27,6 +29,8 @@ export function useTableData<T = any>(table: string) {
       let q = (supabase as any).from(table).select("*");
       if (tenantId) q = q.eq("tenant_id", tenantId);
       if (selectedObraId && !tablesWithoutObraId.includes(table)) q = q.eq("obra_id", selectedObraId);
+      // Soft delete: filter out deleted records
+      if (SOFT_DELETE_TABLES.includes(table)) q = q.is("deleted_at", null);
       q = q.order("created_at", { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
@@ -39,7 +43,6 @@ export function useTableData<T = any>(table: string) {
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: [table] });
   };
-
 
   const insert = async (record: Record<string, any>) => {
     if (isGuest) {
@@ -67,6 +70,17 @@ export function useTableData<T = any>(table: string) {
   const remove = async (id: string) => {
     if (isGuest) {
       toast.info("Modo convidado: dados não são salvos no banco");
+      return;
+    }
+    // Soft delete for supported tables
+    if (SOFT_DELETE_TABLES.includes(table)) {
+      const { error } = await (supabase as any).from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
+      if (error) {
+        toast.error("Erro ao excluir: " + error.message);
+      } else {
+        toast.success("Registro excluído");
+        refetchAll();
+      }
       return;
     }
     const { error } = await (supabase as any).from(table).delete().eq("id", id);
