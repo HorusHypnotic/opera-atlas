@@ -144,6 +144,9 @@ export default function AdminPage() {
           <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Users className="h-3.5 w-3.5" /> Equipe
           </TabsTrigger>
+          <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <ClipboardList className="h-3.5 w-3.5" /> Logs
+          </TabsTrigger>
           <TabsTrigger value="tenant" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Building2 className="h-3.5 w-3.5" /> Organização
           </TabsTrigger>
