@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, HardHat, Shield, Trash2, Rocket, Link2, Settings, BarChart3, Crown, Users, Building2, Mail } from "lucide-react";
+import { Plus, HardHat, Shield, Trash2, Rocket, Link2, Settings, BarChart3, Crown, Users, Building2, Mail, ClipboardList } from "lucide-react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { logAudit } from "@/lib/auditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +24,7 @@ import { AdminKPIs } from "@/components/admin/AdminKPIs";
 import { UsersTab } from "@/components/admin/UsersTab";
 import { InvitesTab } from "@/components/admin/InvitesTab";
 import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
+import { AuditLogTab } from "@/components/admin/AuditLogTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -144,6 +145,9 @@ export default function AdminPage() {
           <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Users className="h-3.5 w-3.5" /> Equipe
           </TabsTrigger>
+          <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <ClipboardList className="h-3.5 w-3.5" /> Logs
+          </TabsTrigger>
           <TabsTrigger value="tenant" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Building2 className="h-3.5 w-3.5" /> Organização
           </TabsTrigger>
@@ -249,6 +253,10 @@ export default function AdminPage() {
 
         <TabsContent value="equipe-obra" className="space-y-4">
           <ObraMembrosTab />
+        </TabsContent>
+
+        <TabsContent value="audit-log" className="space-y-4">
+          <AuditLogTab />
         </TabsContent>
 
         <TabsContent value="tenant" className="space-y-4">

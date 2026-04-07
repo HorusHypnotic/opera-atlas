@@ -4,6 +4,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useObra } from "@/hooks/useObra";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -12,19 +13,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 const sections = [
-  { title: "Visão Geral", url: "/", icon: LayoutDashboard },
-  { title: "Organização", url: "/organizacao", icon: Users, letter: "O" },
-  { title: "Padronização", url: "/padronizacao", icon: Package, letter: "P" },
-  { title: "Eficiência", url: "/eficiencia", icon: Wrench, letter: "E" },
-  { title: "Redução de Perdas", url: "/reducao-perdas", icon: ShieldAlert, letter: "R" },
-  { title: "Análise Contínua", url: "/analise-continua", icon: TrendingUp, letter: "A" },
-  { title: "Segurança & Qualidade", url: "/seguranca-qualidade", icon: ShieldCheck },
-  { title: "Ações Corretivas", url: "/acoes-corretivas", icon: ClipboardCheck },
-  { title: "Checklist Semanal", url: "/checklist", icon: ListChecks },
-  { title: "Colaboradores", url: "/colaboradores", icon: HardHat },
-  { title: "Obras", url: "/obras", icon: Building2 },
-  { title: "Economia", url: "/economia", icon: Banknote },
-  { title: "Relatório Equipe", url: "/relatorio-mao-obra", icon: FileText },
+  { title: "Visão Geral", url: "/", icon: LayoutDashboard, viewOnly: true },
+  { title: "Organização", url: "/organizacao", icon: Users, letter: "O", viewOnly: true },
+  { title: "Padronização", url: "/padronizacao", icon: Package, letter: "P", viewOnly: true },
+  { title: "Eficiência", url: "/eficiencia", icon: Wrench, letter: "E", viewOnly: true },
+  { title: "Redução de Perdas", url: "/reducao-perdas", icon: ShieldAlert, letter: "R", viewOnly: true },
+  { title: "Análise Contínua", url: "/analise-continua", icon: TrendingUp, letter: "A", viewOnly: true },
+  { title: "Segurança & Qualidade", url: "/seguranca-qualidade", icon: ShieldCheck, viewOnly: true },
+  { title: "Ações Corretivas", url: "/acoes-corretivas", icon: ClipboardCheck, viewOnly: false },
+  { title: "Checklist Semanal", url: "/checklist", icon: ListChecks, viewOnly: false },
+  { title: "Colaboradores", url: "/colaboradores", icon: HardHat, viewOnly: false },
+  { title: "Obras", url: "/obras", icon: Building2, viewOnly: false },
+  { title: "Economia", url: "/economia", icon: Banknote, viewOnly: true },
+  { title: "Relatório Equipe", url: "/relatorio-mao-obra", icon: FileText, viewOnly: false },
 ];
 
 export function AppSidebar() {
@@ -32,6 +33,12 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { profile, isAdmin, isGuest, isSuperAdmin, signOut } = useAuth();
+  const { isViewOnlyObra } = useObra();
+
+  // Filter sidebar items for visualizador-only users
+  const visibleSections = isViewOnlyObra
+    ? sections.filter(s => s.viewOnly)
+    : sections;
 
   return (
     <Sidebar collapsible="icon" data-tour="sidebar">
@@ -57,7 +64,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {sections.map((item) => (
+              {visibleSections.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

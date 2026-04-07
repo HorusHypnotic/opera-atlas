@@ -4,10 +4,12 @@ import { GlobalFilters } from "@/components/dashboard/GlobalFilters";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSign, Heart, FileText } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSign, Heart, FileText, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportOperaReport } from "@/utils/exportOperaReport";
+import { exportClientReport } from "@/utils/exportClientReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnalyticsAlerts } from "@/components/dashboard/AnalyticsAlerts";
 import { OperaScoreCard } from "@/components/dashboard/OperaScoreCard";
@@ -139,6 +141,40 @@ export default function DashboardOverview() {
     });
   };
 
+  const handleExportClientPDF = () => {
+    if (!selectedObra) return;
+    const today = new Date().toISOString().substring(0, 10);
+    const acoesPend = acoes.filter((a: any) => a.status === "pendente").length;
+    const acoesVenc = acoes.filter((a: any) => a.status === "pendente" && a.prazo && a.prazo < today).length;
+    const pctUsado = obraData?.orcamento_total && obraData.orcamento_total > 0
+      ? (financials.totalCustos / obraData.orcamento_total) * 100 : 0;
+
+    exportClientReport({
+      obraNome: selectedObra.nome,
+      empresaNome: profile?.full_name || "Construtora",
+      responsavel: selectedObra.responsavel || profile?.full_name || "—",
+      data: new Date().toLocaleDateString("pt-BR"),
+      operaScore: score.total,
+      orcamentoTotal: obraData?.orcamento_total || 0,
+      custoRealizado: financials.totalCustos,
+      percentualUtilizado: pctUsado,
+      saldo: financials.saldo,
+      margem: financials.margem,
+      faseAtual: (selectedObra as any)?.fase_atual || "iniciacao",
+      spiPercent: scheduleMetrics ? (scheduleMetrics.spi || 0) * 100 : 0,
+      diasDecorridos: scheduleMetrics?.diasCorridos || 0,
+      diasRestantes: scheduleMetrics?.diasRestantes || 0,
+      dataInicio: (selectedObra as any)?.data_inicio,
+      dataPrevisao: (selectedObra as any)?.data_previsao,
+      diasSemAcidente: safety.diasSemAcidente,
+      checklistCompliance: safety.checklistCompliance,
+      riscosAtivos: riscos.length,
+      acoesPendentes: acoesPend,
+      acoesVencidas: acoesVenc,
+      status: selectedObra.status,
+    });
+  };
+
   const sections = [
     { letter: "O", title: "Organização", subtitle: "Mão de Obra", icon: <Users className="h-5 w-5" />, url: "/organizacao", kpi: `${registros.length} registros`, status: registros.length === 0 ? "warning" as const : "ok" as const },
     { letter: "P", title: "Padronização", subtitle: "Insumos", icon: <Package className="h-5 w-5" />, url: "/padronizacao", kpi: `Desp: ${desperdicioMedio.toFixed(1)}%`, status: desperdicioMedio > 5 ? "warning" as const : "ok" as const },
@@ -170,8 +206,13 @@ export default function DashboardOverview() {
           <h1 className="text-2xl font-bold">Dashboard O.P.E.R.A.</h1>
           <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <TourTrigger onClick={tour.startTour} />
+          {selectedObra && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportClientPDF}>
+              <Share2 className="h-4 w-4" /> Relatório Cliente
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF} data-tour="export-pdf">
             <FileText className="h-4 w-4" /> Exportar PDF
           </Button>
