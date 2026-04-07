@@ -129,6 +129,7 @@ export type Database = {
         Row: {
           colaborador_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           obra_id: string
           observacao: string | null
@@ -141,6 +142,7 @@ export type Database = {
         Insert: {
           colaborador_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           obra_id: string
           observacao?: string | null
@@ -153,6 +155,7 @@ export type Database = {
         Update: {
           colaborador_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           obra_id?: string
           observacao?: string | null
@@ -500,6 +503,7 @@ export type Database = {
           ativo: boolean
           categoria: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           nome: string
           observacoes: string | null
@@ -515,6 +519,7 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           nome: string
           observacoes?: string | null
@@ -530,6 +535,7 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           nome?: string
           observacoes?: string | null
@@ -789,6 +795,7 @@ export type Database = {
         Row: {
           created_at: string
           data: string
+          deleted_at: string | null
           descricao: string | null
           fornecedor: string | null
           id: string
@@ -801,6 +808,7 @@ export type Database = {
         Insert: {
           created_at?: string
           data?: string
+          deleted_at?: string | null
           descricao?: string | null
           fornecedor?: string | null
           id?: string
@@ -813,6 +821,7 @@ export type Database = {
         Update: {
           created_at?: string
           data?: string
+          deleted_at?: string | null
           descricao?: string | null
           fornecedor?: string | null
           id?: string
@@ -1072,6 +1081,7 @@ export type Database = {
           custo_orcado_m2: number
           data_inicio: string | null
           data_previsao: string | null
+          deleted_at: string | null
           descricao: string | null
           endereco: string | null
           fase_atual: string
@@ -1091,6 +1101,7 @@ export type Database = {
           custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
+          deleted_at?: string | null
           descricao?: string | null
           endereco?: string | null
           fase_atual?: string
@@ -1110,6 +1121,7 @@ export type Database = {
           custo_orcado_m2?: number
           data_inicio?: string | null
           data_previsao?: string | null
+          deleted_at?: string | null
           descricao?: string | null
           endereco?: string | null
           fase_atual?: string
