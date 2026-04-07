@@ -27,15 +27,20 @@ interface ObraContextType {
   selectedObra: Obra | null;
   loading: boolean;
   refetch: () => void;
+  isViewOnlyObra: boolean;
 }
 
 const ObraContext = createContext<ObraContextType | undefined>(undefined);
 
 export function ObraProvider({ children }: { children: ReactNode }) {
-  const { profile, isGuest, sessionStable } = useAuth();
+  const { profile, isGuest, sessionStable, roles, user } = useAuth();
   const [obras, setObras] = useState<Obra[]>([]);
   const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [memberObraIds, setMemberObraIds] = useState<string[] | null>(null);
+
+  // Check if user is visualizador-only (no higher roles)
+  const isVisualizadorOnly = !isGuest && roles.length > 0 && roles.every(r => r === "visualizador");
 
   const fetchObras = async () => {
     if (isGuest) {
@@ -49,12 +54,37 @@ export function ObraProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    const { data } = await supabase
+
+    // If visualizador-only, fetch obra_membros to filter
+    let allowedObraIds: string[] | null = null;
+    if (isVisualizadorOnly && user?.id) {
+      const { data: membros } = await supabase
+        .from("obra_membros")
+        .select("obra_id")
+        .eq("user_id", user.id);
+      allowedObraIds = (membros || []).map((m: any) => m.obra_id);
+      setMemberObraIds(allowedObraIds);
+    } else {
+      setMemberObraIds(null);
+    }
+
+    let q = supabase
       .from("obras")
       .select("id, nome, endereco, status, data_inicio, data_previsao, orcamento_total, custo_orcado_m2, area_m2, fase_atual, abordagem, responsavel, descricao, tipo_obra")
       .eq("tenant_id", profile.tenant_id)
       .order("created_at", { ascending: false });
 
+    // Filter by allowed obras for visualizador
+    if (allowedObraIds !== null) {
+      if (allowedObraIds.length === 0) {
+        setObras([]);
+        setLoading(false);
+        return;
+      }
+      q = q.in("id", allowedObraIds);
+    }
+
+    const { data } = await q;
     const list = (data || []) as Obra[];
     setObras(list);
     if (!selectedObraId && list.length > 0) {
@@ -64,7 +94,6 @@ export function ObraProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Only fetch after session is stable to avoid competing with token refresh
     if (sessionStable) {
       fetchObras();
     }
@@ -74,7 +103,15 @@ export function ObraProvider({ children }: { children: ReactNode }) {
 
   return (
     <ObraContext.Provider
-      value={{ obras, selectedObraId, setSelectedObraId, selectedObra, loading, refetch: fetchObras }}
+      value={{
+        obras,
+        selectedObraId,
+        setSelectedObraId,
+        selectedObra,
+        loading,
+        refetch: fetchObras,
+        isViewOnlyObra: isVisualizadorOnly,
+      }}
     >
       {children}
     </ObraContext.Provider>
