@@ -35,6 +35,7 @@ export function UserPermissionsEditor() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [newRole, setNewRole] = useState<AppRole>("visualizador");
   const [newObraId, setNewObraId] = useState<string>("");
+  const [expirationDays, setExpirationDays] = useState<string>("");
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; desc: string; action: () => void; text?: string }>({
     open: false, title: "", desc: "", action: () => {}, text: undefined,
   });
