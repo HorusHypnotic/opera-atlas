@@ -1037,6 +1037,7 @@ export type Database = {
       obra_membros: {
         Row: {
           created_at: string
+          expires_at: string | null
           id: string
           obra_id: string
           tenant_id: string
@@ -1044,6 +1045,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           obra_id: string
           tenant_id: string
@@ -1051,6 +1053,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           obra_id?: string
           tenant_id?: string

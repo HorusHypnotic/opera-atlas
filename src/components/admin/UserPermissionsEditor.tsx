@@ -5,17 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { logAudit } from "@/lib/auditLog";
-import { Plus, Trash2, HardHat, Shield, UserX, Eye, Pencil, Users } from "lucide-react";
+import { Plus, Trash2, HardHat, Shield, UserX, Eye, Pencil, Users, Clock, CalendarClock } from "lucide-react";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
 interface ProfileRow { id: string; email: string; full_name: string | null; account_status?: string; }
 interface RoleRow { id: string; user_id: string; role: AppRole; }
 interface ObraRow { id: string; nome: string; }
-interface MembroRow { id: string; obra_id: string; user_id: string; }
+interface MembroRow { id: string; obra_id: string; user_id: string; expires_at: string | null; }
 
 const roleBadgeColor: Record<AppRole, string> = {
   admin: "bg-destructive/20 text-destructive",
@@ -35,6 +36,7 @@ export function UserPermissionsEditor() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [newRole, setNewRole] = useState<AppRole>("visualizador");
   const [newObraId, setNewObraId] = useState<string>("");
+  const [expirationDays, setExpirationDays] = useState<string>("");
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; desc: string; action: () => void; text?: string }>({
     open: false, title: "", desc: "", action: () => {}, text: undefined,
   });
@@ -45,7 +47,7 @@ export function UserPermissionsEditor() {
       supabase.from("profiles").select("id, email, full_name, account_status").eq("tenant_id", tenantId),
       supabase.from("user_roles").select("id, user_id, role").eq("tenant_id", tenantId),
       supabase.from("obras").select("id, nome").eq("tenant_id", tenantId).order("nome"),
-      supabase.from("obra_membros").select("id, obra_id, user_id").eq("tenant_id", tenantId),
+      supabase.from("obra_membros").select("id, obra_id, user_id, expires_at").eq("tenant_id", tenantId),
     ]);
     if (p.data) setProfiles(p.data as ProfileRow[]);
     if (r.data) setUserRoles(r.data as RoleRow[]);
@@ -98,12 +100,19 @@ export function UserPermissionsEditor() {
   const addObra = async () => {
     if (!selectedUserId || !newObraId || !tenantId) return;
     if (assignedObraIds.has(newObraId)) { toast.error("Já vinculado a esta obra"); return; }
-    const { error } = await supabase.from("obra_membros").insert({ user_id: selectedUserId, obra_id: newObraId, tenant_id: tenantId } as any);
+    const insertData: any = { user_id: selectedUserId, obra_id: newObraId, tenant_id: tenantId };
+    if (expirationDays && parseInt(expirationDays) > 0) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + parseInt(expirationDays));
+      insertData.expires_at = exp.toISOString();
+    }
+    const { error } = await supabase.from("obra_membros").insert(insertData);
     if (error) toast.error("Erro: " + error.message);
     else {
       const obraNome = obras.find(o => o.id === newObraId)?.nome;
-      await logAudit({ action: "ADD_OBRA_MEMBRO", target_type: "obra_membros", target_id: selectedUserId, metadata: { obra: obraNome, email: selectedProfile?.email } });
+      await logAudit({ action: "ADD_OBRA_MEMBRO", target_type: "obra_membros", target_id: selectedUserId, metadata: { obra: obraNome, email: selectedProfile?.email, expires_days: expirationDays || "sem limite" } });
       toast.success("Acesso à obra concedido!");
+      setExpirationDays("");
       fetchData();
     }
   };
@@ -217,19 +226,29 @@ export function UserPermissionsEditor() {
                 <p className="text-xs font-semibold mb-2 flex items-center gap-1">
                   <HardHat className="h-3 w-3" /> Acesso a obras
                 </p>
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="space-y-1.5 mb-2">
                   {selectedMembros.map(m => {
                     const obra = obras.find(o => o.id === m.obra_id);
+                    const isExpired = m.expires_at && new Date(m.expires_at) < new Date();
+                    const expiresLabel = m.expires_at
+                      ? isExpired
+                        ? "Expirado"
+                        : `Até ${new Date(m.expires_at).toLocaleDateString("pt-BR")}`
+                      : "Sem limite";
                     return (
-                      <Badge
-                        key={m.id}
-                        variant="secondary"
-                        className="text-xs cursor-pointer hover:bg-destructive/10 gap-1"
-                        onClick={() => removeObra(m.id, m.obra_id)}
-                      >
-                        <HardHat className="h-2.5 w-2.5" />
-                        {obra?.nome || "—"} ✕
-                      </Badge>
+                      <div key={m.id} className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs cursor-pointer hover:bg-destructive/10 gap-1 ${isExpired ? "opacity-50 line-through" : ""}`}
+                          onClick={() => removeObra(m.id, m.obra_id)}
+                        >
+                          <HardHat className="h-2.5 w-2.5" />
+                          {obra?.nome || "—"} ✕
+                        </Badge>
+                        <span className={`text-[10px] flex items-center gap-0.5 ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
+                          <Clock className="h-2.5 w-2.5" /> {expiresLabel}
+                        </span>
+                      </div>
                     );
                   })}
                   {selectedMembros.length === 0 && (
@@ -238,15 +257,26 @@ export function UserPermissionsEditor() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Select value={newObraId} onValueChange={setNewObraId}>
-                    <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Selecionar obra..." /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]"><SelectValue placeholder="Selecionar obra..." /></SelectTrigger>
                     <SelectContent>
                       {obras.filter(o => !assignedObraIds.has(o.id)).map(o => (
                         <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-1">
+                    <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Dias"
+                      value={expirationDays}
+                      onChange={e => setExpirationDays(e.target.value)}
+                      className="h-8 w-[70px] text-xs"
+                    />
+                  </div>
                   <Button size="sm" className="h-8 gap-1 text-xs" onClick={addObra} disabled={!newObraId}>
                     <Plus className="h-3 w-3" /> Vincular
                   </Button>

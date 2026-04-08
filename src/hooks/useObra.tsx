@@ -60,9 +60,13 @@ export function ObraProvider({ children }: { children: ReactNode }) {
     if (isVisualizadorOnly && user?.id) {
       const { data: membros } = await supabase
         .from("obra_membros")
-        .select("obra_id")
+        .select("obra_id, expires_at")
         .eq("user_id", user.id);
-      allowedObraIds = (membros || []).map((m: any) => m.obra_id);
+      // Filter out expired memberships
+      const now = new Date();
+      allowedObraIds = (membros || [])
+        .filter((m: any) => !m.expires_at || new Date(m.expires_at) > now)
+        .map((m: any) => m.obra_id);
       setMemberObraIds(allowedObraIds);
     } else {
       setMemberObraIds(null);
