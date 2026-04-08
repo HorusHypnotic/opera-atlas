@@ -1570,6 +1570,10 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
+      user_has_obra_access: {
+        Args: { _obra_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operacional" | "visualizador"
