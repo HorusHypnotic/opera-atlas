@@ -99,12 +99,19 @@ export function UserPermissionsEditor() {
   const addObra = async () => {
     if (!selectedUserId || !newObraId || !tenantId) return;
     if (assignedObraIds.has(newObraId)) { toast.error("Já vinculado a esta obra"); return; }
-    const { error } = await supabase.from("obra_membros").insert({ user_id: selectedUserId, obra_id: newObraId, tenant_id: tenantId } as any);
+    const insertData: any = { user_id: selectedUserId, obra_id: newObraId, tenant_id: tenantId };
+    if (expirationDays && parseInt(expirationDays) > 0) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + parseInt(expirationDays));
+      insertData.expires_at = exp.toISOString();
+    }
+    const { error } = await supabase.from("obra_membros").insert(insertData);
     if (error) toast.error("Erro: " + error.message);
     else {
       const obraNome = obras.find(o => o.id === newObraId)?.nome;
-      await logAudit({ action: "ADD_OBRA_MEMBRO", target_type: "obra_membros", target_id: selectedUserId, metadata: { obra: obraNome, email: selectedProfile?.email } });
+      await logAudit({ action: "ADD_OBRA_MEMBRO", target_type: "obra_membros", target_id: selectedUserId, metadata: { obra: obraNome, email: selectedProfile?.email, expires_days: expirationDays || "sem limite" } });
       toast.success("Acesso à obra concedido!");
+      setExpirationDays("");
       fetchData();
     }
   };
