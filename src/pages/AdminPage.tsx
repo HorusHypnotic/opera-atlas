@@ -133,7 +133,7 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex flex-nowrap h-auto gap-1 p-1 justify-start">
+        <TabsList className="w-full overflow-x-auto flex flex-nowrap h-auto gap-0.5 p-1 justify-start scrollbar-thin">
           <TabsTrigger value="usuarios" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
           </TabsTrigger>
