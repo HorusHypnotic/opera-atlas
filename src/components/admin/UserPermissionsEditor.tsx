@@ -15,7 +15,7 @@ type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 interface ProfileRow { id: string; email: string; full_name: string | null; account_status?: string; }
 interface RoleRow { id: string; user_id: string; role: AppRole; }
 interface ObraRow { id: string; nome: string; }
-interface MembroRow { id: string; obra_id: string; user_id: string; }
+interface MembroRow { id: string; obra_id: string; user_id: string; expires_at: string | null; }
 
 const roleBadgeColor: Record<AppRole, string> = {
   admin: "bg-destructive/20 text-destructive",
@@ -45,7 +45,7 @@ export function UserPermissionsEditor() {
       supabase.from("profiles").select("id, email, full_name, account_status").eq("tenant_id", tenantId),
       supabase.from("user_roles").select("id, user_id, role").eq("tenant_id", tenantId),
       supabase.from("obras").select("id, nome").eq("tenant_id", tenantId).order("nome"),
-      supabase.from("obra_membros").select("id, obra_id, user_id").eq("tenant_id", tenantId),
+      supabase.from("obra_membros").select("id, obra_id, user_id, expires_at").eq("tenant_id", tenantId),
     ]);
     if (p.data) setProfiles(p.data as ProfileRow[]);
     if (r.data) setUserRoles(r.data as RoleRow[]);
