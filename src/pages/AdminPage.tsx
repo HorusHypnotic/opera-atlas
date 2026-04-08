@@ -146,6 +146,9 @@ export default function AdminPage() {
           <TabsTrigger value="equipe-obra" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Users className="h-3.5 w-3.5" /> Equipe
           </TabsTrigger>
+          <TabsTrigger value="permissoes" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <KeyRound className="h-3.5 w-3.5" /> Permissões
+          </TabsTrigger>
           <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <ClipboardList className="h-3.5 w-3.5" /> Logs
           </TabsTrigger>
@@ -254,6 +257,10 @@ export default function AdminPage() {
 
         <TabsContent value="equipe-obra" className="space-y-4">
           <ObraMembrosTab />
+        </TabsContent>
+
+        <TabsContent value="permissoes" className="space-y-4">
+          <UserPermissionsEditor />
         </TabsContent>
 
         <TabsContent value="audit-log" className="space-y-4">
