@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { logAudit } from "@/lib/auditLog";
-import { Plus, Trash2, HardHat, Shield, UserX, Eye, Pencil, Users } from "lucide-react";
+import { Plus, Trash2, HardHat, Shield, UserX, Eye, Pencil, Users, Clock, CalendarClock } from "lucide-react";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -225,19 +226,29 @@ export function UserPermissionsEditor() {
                 <p className="text-xs font-semibold mb-2 flex items-center gap-1">
                   <HardHat className="h-3 w-3" /> Acesso a obras
                 </p>
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="space-y-1.5 mb-2">
                   {selectedMembros.map(m => {
                     const obra = obras.find(o => o.id === m.obra_id);
+                    const isExpired = m.expires_at && new Date(m.expires_at) < new Date();
+                    const expiresLabel = m.expires_at
+                      ? isExpired
+                        ? "Expirado"
+                        : `Até ${new Date(m.expires_at).toLocaleDateString("pt-BR")}`
+                      : "Sem limite";
                     return (
-                      <Badge
-                        key={m.id}
-                        variant="secondary"
-                        className="text-xs cursor-pointer hover:bg-destructive/10 gap-1"
-                        onClick={() => removeObra(m.id, m.obra_id)}
-                      >
-                        <HardHat className="h-2.5 w-2.5" />
-                        {obra?.nome || "—"} ✕
-                      </Badge>
+                      <div key={m.id} className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs cursor-pointer hover:bg-destructive/10 gap-1 ${isExpired ? "opacity-50 line-through" : ""}`}
+                          onClick={() => removeObra(m.id, m.obra_id)}
+                        >
+                          <HardHat className="h-2.5 w-2.5" />
+                          {obra?.nome || "—"} ✕
+                        </Badge>
+                        <span className={`text-[10px] flex items-center gap-0.5 ${isExpired ? "text-destructive" : "text-muted-foreground"}`}>
+                          <Clock className="h-2.5 w-2.5" /> {expiresLabel}
+                        </span>
+                      </div>
                     );
                   })}
                   {selectedMembros.length === 0 && (
@@ -246,15 +257,26 @@ export function UserPermissionsEditor() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Select value={newObraId} onValueChange={setNewObraId}>
-                    <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Selecionar obra..." /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]"><SelectValue placeholder="Selecionar obra..." /></SelectTrigger>
                     <SelectContent>
                       {obras.filter(o => !assignedObraIds.has(o.id)).map(o => (
                         <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-1">
+                    <CalendarClock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Dias"
+                      value={expirationDays}
+                      onChange={e => setExpirationDays(e.target.value)}
+                      className="h-8 w-[70px] text-xs"
+                    />
+                  </div>
                   <Button size="sm" className="h-8 gap-1 text-xs" onClick={addObra} disabled={!newObraId}>
                     <Plus className="h-3 w-3" /> Vincular
                   </Button>
