@@ -4,6 +4,7 @@ import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge as BadgeUI } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,7 @@ export default function RelatorioMaoObraPage() {
   const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
   const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
   const { data: vinculos = [] } = useTableData<ColaboradorObra>("colaborador_obras");
+  const { data: sequenciamento = [] } = useTableData<{ id: string; equipe: string; semana_inicio: number; semana_fim: number; status: string }>("sequenciamento_equipes");
 
   const [dataInicio, setDataInicio] = useState(() => {
     const d = new Date(); d.setDate(1);
@@ -468,6 +470,7 @@ export default function RelatorioMaoObraPage() {
             <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
             <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>
             <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
+            <TabsTrigger value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={exportPDF}>
@@ -742,6 +745,56 @@ export default function RelatorioMaoObraPage() {
                               status={assiduidade >= 90 ? "ok" : assiduidade >= 70 ? "warning" : "critical"}
                               label={`${assiduidade.toFixed(0)}%`}
                             />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ─── Sequenciamento Tab ─── */}
+        <TabsContent value="sequenciamento">
+          <div className="glass-card p-4">
+            <div className="mb-4 pb-3 border-b border-border">
+              <h2 className="text-base font-bold">Sequenciamento de Equipes</h2>
+              <p className="text-sm text-muted-foreground">
+                Planejamento e status das equipes na obra atual
+              </p>
+            </div>
+
+            {sequenciamento.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nenhum sequenciamento cadastrado para esta obra. Cadastre em Redução de Perdas.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-2 px-3">Equipe</th>
+                      <th className="text-center py-2 px-3">Semana Início</th>
+                      <th className="text-center py-2 px-3">Semana Fim</th>
+                      <th className="text-center py-2 px-3">Duração</th>
+                      <th className="text-center py-2 px-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sequenciamento.map((eq) => {
+                      const duracao = eq.semana_fim - eq.semana_inicio + 1;
+                      const statusColor = eq.status === "concluido" ? "bg-status-ok/20 text-status-ok" : eq.status === "em_andamento" ? "bg-chart-4/20 text-chart-4" : "bg-muted text-muted-foreground";
+                      const statusLabel = eq.status === "concluido" ? "Concluído" : eq.status === "em_andamento" ? "Em Andamento" : "Planejado";
+                      return (
+                        <tr key={eq.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
+                          <td className="py-2.5 px-3 font-medium">{eq.equipe}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{eq.semana_inicio}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{eq.semana_fim}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{duracao} sem.</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <Badge className={`${statusColor} text-[10px]`}>{statusLabel}</Badge>
                           </td>
                         </tr>
                       );
