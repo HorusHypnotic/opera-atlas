@@ -677,17 +677,23 @@ export default function RelatorioMaoObraPage() {
                           <td className="py-2.5 px-3 text-right font-mono font-semibold">R$ {total.toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-xs text-muted-foreground max-w-[150px] truncate">{a.observacao || "—"}</td>
                           <td className="py-2.5 px-3 text-center">
+                            {(canUpdate || canDelete) && (
                             <div className="flex items-center justify-center gap-1">
+                              {canUpdate && (
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(a)}>
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
+                              )}
+                              {canDelete && (
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
                                 const colab = colaboradores.find((c) => c.id === a.colaborador_id);
                                 setDeleteConfirm({ open: true, id: a.id, nome: colab?.nome || "—" });
                               }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
+                              )}
                             </div>
+                            )}
                           </td>
                         </tr>
                       );
