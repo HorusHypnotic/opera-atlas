@@ -15,6 +15,7 @@ import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
@@ -104,6 +105,7 @@ const CATEGORIAS: Record<string, string> = {
 
 export default function RelatorioMaoObraPage() {
   const { selectedObraId, obras } = useObra();
+  const { canInsert, canUpdate, canDelete } = usePermissions();
   const { data: colaboradores = [] } = useTableData<Colaborador>("colaboradores");
   const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
   const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
@@ -467,7 +469,7 @@ export default function RelatorioMaoObraPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
-            <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>
+            {canInsert && <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>}
             <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
             <TabsTrigger value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
           </TabsList>
@@ -568,11 +570,12 @@ export default function RelatorioMaoObraPage() {
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
-                {apontamentosPeriodo.length > 0 && (
+                {canDelete && apontamentosPeriodo.length > 0 && (
                   <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setZerarConfirm(true)}>
                     <RotateCcw className="h-3.5 w-3.5" /> Zerar Quinzena
                   </Button>
                 )}
+                {canInsert && (
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" onClick={openNewDialog}>
@@ -643,6 +646,7 @@ export default function RelatorioMaoObraPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+                )}
               </div>
             </div>
 
@@ -675,17 +679,23 @@ export default function RelatorioMaoObraPage() {
                           <td className="py-2.5 px-3 text-right font-mono font-semibold">R$ {total.toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-xs text-muted-foreground max-w-[150px] truncate">{a.observacao || "—"}</td>
                           <td className="py-2.5 px-3 text-center">
+                            {(canUpdate || canDelete) && (
                             <div className="flex items-center justify-center gap-1">
+                              {canUpdate && (
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(a)}>
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
+                              )}
+                              {canDelete && (
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
                                 const colab = colaboradores.find((c) => c.id === a.colaborador_id);
                                 setDeleteConfirm({ open: true, id: a.id, nome: colab?.nome || "—" });
                               }}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
+                              )}
                             </div>
+                            )}
                           </td>
                         </tr>
                       );
