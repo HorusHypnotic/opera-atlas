@@ -469,7 +469,7 @@ export default function RelatorioMaoObraPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
-            <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>
+            {canInsert && <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>}
             <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
             <TabsTrigger value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
           </TabsList>
