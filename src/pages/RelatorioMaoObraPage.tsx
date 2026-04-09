@@ -15,6 +15,7 @@ import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
@@ -104,6 +105,7 @@ const CATEGORIAS: Record<string, string> = {
 
 export default function RelatorioMaoObraPage() {
   const { selectedObraId, obras } = useObra();
+  const { canInsert, canUpdate, canDelete } = usePermissions();
   const { data: colaboradores = [] } = useTableData<Colaborador>("colaboradores");
   const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
   const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
