@@ -570,11 +570,12 @@ export default function RelatorioMaoObraPage() {
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
-                {apontamentosPeriodo.length > 0 && (
+                {canDelete && apontamentosPeriodo.length > 0 && (
                   <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setZerarConfirm(true)}>
                     <RotateCcw className="h-3.5 w-3.5" /> Zerar Quinzena
                   </Button>
                 )}
+                {canInsert && (
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" onClick={openNewDialog}>
