@@ -5,13 +5,152 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Users, Package, Wrench, ShieldAlert, TrendingUp,
   Check, ArrowRight, Phone, Mail, MapPin,
   BarChart3, Shield, Zap, Brain, ChevronRight,
   Star, CheckCircle2, Building2, MessageCircle, Rocket,
+  AlertTriangle, Eye, Target,
 } from "lucide-react";
 
 const whatsapp = "5594992193129";
+
+// ── FAQ Data ──
+const faqCategories = [
+  {
+    icon: "💰",
+    title: "Custo e valor",
+    items: [
+      {
+        q: "Isso não fica caro?",
+        a: "Não é custo de acompanhamento, é controle de desvio. Em obra, pequenos erros de execução e compra normalmente geram perdas maiores do que o próprio sistema evita.",
+      },
+      {
+        q: "Não cabe no orçamento da obra.",
+        a: "Na prática, isso não entra como custo adicional da obra, entra como camada de controle para evitar estouro de orçamento ao longo da execução.",
+      },
+      {
+        q: "Consigo alguém mais barato.",
+        a: "Sim. A diferença não é preço de execução, é capacidade de enxergar desvio de custo e prazo antes dele virar prejuízo.",
+      },
+    ],
+  },
+  {
+    icon: "🧱",
+    title: "Estrutura atual da obra",
+    items: [
+      {
+        q: "Já tenho engenheiro.",
+        a: "Isso cobre bem a execução. O O.P.E.R.A. atua na camada de acompanhamento contínuo de custo, prazo e desvio ao longo da obra.",
+      },
+      {
+        q: "Já tenho mestre de obra.",
+        a: "Ótimo para execução diária. O sistema organiza os dados da obra para transformar execução em leitura financeira e operacional.",
+      },
+      {
+        q: "Já uso planilhas.",
+        a: "Planilhas registram. O O.P.E.R.A. compara, cruza e sinaliza quando algo começa a sair do padrão ao longo do tempo.",
+      },
+    ],
+  },
+  {
+    icon: "❓",
+    title: "Necessidade",
+    items: [
+      {
+        q: "Minha obra está sob controle.",
+        a: "Esse é o cenário mais comum antes de aparecer desvio de custo ou prazo. O foco é justamente identificar isso antes de virar problema.",
+      },
+      {
+        q: "Não vejo necessidade disso.",
+        a: "Normalmente a necessidade só fica visível quando já existe impacto em custo ou atraso na obra.",
+      },
+      {
+        q: "Não é prioridade agora.",
+        a: "Em obra, controle raramente vira prioridade antes do problema aparecer. O custo normalmente vem depois da decisão.",
+      },
+    ],
+  },
+  {
+    icon: "⏱️",
+    title: "Timing",
+    items: [
+      {
+        q: "Agora não é o momento.",
+        a: "Quanto mais a obra avança sem controle contínuo, mais difícil fica corrigir desvio depois.",
+      },
+      {
+        q: "Depois a gente vê.",
+        a: "Funciona melhor no início da obra, antes de acumular erro de execução e custo.",
+      },
+    ],
+  },
+  {
+    icon: "🧠",
+    title: "Entendimento do sistema",
+    items: [
+      {
+        q: "Como funciona exatamente?",
+        a: "Acompanha a obra de forma contínua, organizando custo, prazo e execução para identificar desvio antes de virar prejuízo.",
+      },
+      {
+        q: "Nunca vi isso antes.",
+        a: "Normal. Não é uma ferramenta isolada, é uma camada de controle aplicada diretamente na operação da obra.",
+      },
+      {
+        q: "Tem resultado comprovado?",
+        a: "Os ganhos mais comuns estão em redução de desperdício e antecipação de problemas que normalmente só seriam percebidos tarde.",
+      },
+    ],
+  },
+  {
+    icon: "🏗️",
+    title: "Controle interno",
+    items: [
+      {
+        q: "Eu já acompanho isso internamente.",
+        a: "A diferença está na consolidação contínua e comparativa dos dados da obra ao longo do tempo.",
+      },
+      {
+        q: "Minha obra já é organizada.",
+        a: "Organização não garante visibilidade de desvio durante a execução.",
+      },
+    ],
+  },
+  {
+    icon: "📊",
+    title: "Comparação",
+    items: [
+      {
+        q: "Outro faz mais barato.",
+        a: "O ponto não é execução do serviço, é profundidade de leitura de desvio e antecipação de risco.",
+      },
+      {
+        q: "Já existe software disso.",
+        a: "Ferramenta sozinha registra dados. O O.P.E.R.A. transforma dados em leitura de obra e alerta operacional.",
+      },
+    ],
+  },
+  {
+    icon: "🔄",
+    title: "Decisão",
+    items: [
+      {
+        q: "Preciso falar com alguém.",
+        a: "Importante considerar também risco de custo e prazo, que normalmente impactam diretamente a decisão final.",
+      },
+      {
+        q: "Vou analisar.",
+        a: "Posso te enviar um resumo direto aplicado na sua obra para facilitar essa análise.",
+      },
+    ],
+  },
+];
 
 // ── Pricing Packages ──
 const packages = [
@@ -85,6 +224,7 @@ export default function LandingPage() {
   const [form, setForm] = useState({ nome: "", email: "", telefone: "", empresa: "", mensagem: "" });
   const [sending, setSending] = useState(false);
   const [vagasRestantes, setVagasRestantes] = useState<number | null>(null);
+  const [activeFaqCategory, setActiveFaqCategory] = useState(0);
 
   useEffect(() => {
     import("@/integrations/supabase/client").then(({ supabase }) => {
@@ -129,12 +269,13 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center font-bold text-primary-foreground text-sm">
               OP
             </div>
-            <span className="font-bold text-sm tracking-tight">Método O.P.E.R.A.</span>
+            <span className="font-bold text-sm tracking-tight">O.P.E.R.A. Control</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+            <a href="#problema" className="hover:text-foreground transition-colors">O Problema</a>
             <a href="#metodo" className="hover:text-foreground transition-colors">Método</a>
+            <a href="#faq" className="hover:text-foreground transition-colors">Dúvidas</a>
             <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
-            <a href="#sobre" className="hover:text-foreground transition-colors">Sobre</a>
             <a href="#contato" className="hover:text-foreground transition-colors">Contato</a>
             <button onClick={() => navigate("/beta")} className="text-primary font-semibold hover:text-primary/80 transition-colors">Beta</button>
           </div>
@@ -153,16 +294,16 @@ export default function LandingPage() {
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6">
-            <Zap className="h-3.5 w-3.5" /> Sistema de Gestão Operacional de Obras
+            <Zap className="h-3.5 w-3.5" /> Camada de controle operacional de obra
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] mb-6">
-            Gerencie suas obras com{" "}
-            <span className="text-primary">previsibilidade</span> e{" "}
-            <span className="text-primary">proteção de margem</span>
+            Controle de obra que mostra o{" "}
+            <span className="text-primary">desvio</span> antes dele virar{" "}
+            <span className="text-primary">prejuízo</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            O Método O.P.E.R.A. transforma dados do canteiro em decisões inteligentes.
-            Controle custos, elimine desperdícios e proteja sua margem de lucro.
+            Redução de desvio de custo e prazo durante a execução da obra.
+            O O.P.E.R.A. transforma execução em leitura contínua de custo, prazo e produtividade.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/beta")}>
@@ -172,7 +313,7 @@ export default function LandingPage() {
               Experimentar grátis <ArrowRight className="h-4 w-4" />
             </Button>
             <Button size="lg" variant="ghost" className="gap-2 text-base px-8" asChild>
-              <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Olá! Quero saber mais sobre o Método O.P.E.R.A.")}`} target="_blank" rel="noopener noreferrer">
+              <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Olá! Quero saber mais sobre o O.P.E.R.A. Control")}`} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
               </a>
             </Button>
@@ -201,6 +342,74 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── The Real Problem ── */}
+      <section id="problema" className="py-20 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">
+              O problema que <span className="text-primary">ninguém vê a tempo</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Obra não perde dinheiro no final — perde todos os dias em pequenos desvios invisíveis.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: AlertTriangle,
+                title: "Micro desvios diários",
+                desc: "Obra não estoura de uma vez. Estoura em pequenas perdas acumuladas que ninguém percebe enquanto acontecem.",
+              },
+              {
+                icon: Eye,
+                title: "Invisibilidade do problema",
+                desc: "Ninguém percebe o desvio enquanto ele acontece. Quando aparece, já virou custo real.",
+              },
+              {
+                icon: Target,
+                title: "Reação tardia",
+                desc: "O problema aparece tarde demais — quando já virou prejuízo consolidado e difícil de reverter.",
+              },
+            ].map((f) => (
+              <div key={f.title} className="glass-card p-8 text-center border-destructive/20">
+                <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-5">
+                  <f.icon className="h-7 w-7 text-destructive" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── What O.P.E.R.A. Does ── */}
+      <section className="py-20 px-4 sm:px-6 bg-card/30 border-y border-border">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">O que o O.P.E.R.A. faz</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Transforma execução em leitura contínua de custo, prazo e produtividade.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: BarChart3, title: "Leitura contínua da obra", desc: "Dados organizados e comparados ao longo do tempo. Não apenas registros — leitura operacional e financeira em tempo real." },
+              { icon: Shield, title: "Controle antecipado de desvio", desc: "Identifica desvios de custo e prazo antes de virarem prejuízo. Alertas de ruptura e ponto de equilíbrio." },
+              { icon: Brain, title: "Menos surpresa financeira", desc: "Previsão de atrasos, ranking de produtividade e detecção de desperdício. Decisão com dados, não com achismo." },
+            ].map((f) => (
+              <div key={f.title} className="glass-card p-8 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                  <f.icon className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── O.P.E.R.A. Method ── */}
       <section id="metodo" className="py-20 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
@@ -226,26 +435,49 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section className="py-20 px-4 sm:px-6 bg-card/30 border-y border-border">
-        <div className="max-w-6xl mx-auto">
+      {/* ── FAQ Dinâmico ── */}
+      <section id="faq" className="py-20 px-4 sm:px-6 bg-card/30 border-y border-border">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">Por que escolher o O.P.E.R.A.?</h2>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">
+              Perguntas que toda obra faz
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Respostas diretas, sem enrolação. Clique na categoria para explorar.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: BarChart3, title: "Dados em tempo real", desc: "Dashboard com KPIs atualizados automaticamente. Score operacional unificado." },
-              { icon: Shield, title: "Proteção de margem", desc: "Alertas de ruptura financeira, controle de aditivos e ponto de equilíbrio." },
-              { icon: Brain, title: "Inteligência preditiva", desc: "Previsão de atrasos, ranking de produtividade e detecção de desperdício com IA." },
-            ].map((f) => (
-              <div key={f.title} className="glass-card p-8 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                  <f.icon className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="font-bold text-lg mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground">{f.desc}</p>
-              </div>
+
+          {/* Category Tabs */}
+          <div className="flex flex-wrap gap-2 mb-8 justify-center">
+            {faqCategories.map((cat, i) => (
+              <button
+                key={cat.title}
+                onClick={() => setActiveFaqCategory(i)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  activeFaqCategory === i
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                {cat.icon} {cat.title}
+              </button>
             ))}
+          </div>
+
+          {/* FAQ Accordion */}
+          <div className="glass-card p-6 sm:p-8">
+            <Accordion type="single" collapsible className="w-full">
+              {faqCategories[activeFaqCategory].items.map((item, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className="border-border">
+                  <AccordionTrigger className="text-left text-base font-semibold hover:no-underline">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground text-sm leading-relaxed">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </div>
       </section>
@@ -463,9 +695,9 @@ export default function LandingPage() {
       <section className="py-16 px-4 sm:px-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-y border-border">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-black mb-4">
-            "Se você não mede, você não gerencia."
+            "Obra não perde dinheiro no final — perde todos os dias."
           </h2>
-          <p className="text-muted-foreground mb-8">— Eduardo Martins</p>
+          <p className="text-muted-foreground mb-8">O controle começa antes do prejuízo.</p>
           <Button size="lg" className="gap-2 text-base px-8" onClick={() => navigate("/login")}>
             Começar agora <ArrowRight className="h-4 w-4" />
           </Button>
@@ -477,7 +709,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center font-bold text-primary-foreground text-xs">OP</div>
-            <span className="text-sm font-bold">Método O.P.E.R.A.</span>
+            <span className="text-sm font-bold">O.P.E.R.A. Control</span>
           </div>
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Eduardo Martins — Gestão Operacional de Obras. Todos os direitos reservados.
