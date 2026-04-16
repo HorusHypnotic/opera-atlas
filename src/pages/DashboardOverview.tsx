@@ -66,7 +66,7 @@ export default function DashboardOverview() {
   const { data: presencas = [] } = useTableData("registro_presencas");
 
   // Opera Score
-  const score = useMemo(() => calculateOperaScore({ registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes }), [registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes]);
+  const score = useMemo(() => calculateOperaScore({ registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes, presencas, obra: selectedObra }), [registros, consumo, ativos, riscos, retrabalhos, lancamentos, incidentes, presencas, selectedObra]);
 
   // Financial intelligence
   const obraData = useMemo(() => selectedObra ? {
@@ -252,7 +252,7 @@ export default function DashboardOverview() {
 
       {/* Score + Radar side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
-        <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} />
+        <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} presencas={presencas} obra={selectedObra} />
         <OperaRadarChart score={score} />
       </div>
 
