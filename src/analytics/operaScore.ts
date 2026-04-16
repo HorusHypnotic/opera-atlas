@@ -59,10 +59,20 @@ export function calculateOperaScore(data: ScoreInput): OperaScoreBreakdown {
   const todayStr = today.toISOString().substring(0, 10);
   const weekAgo = new Date(today.getTime() - 7 * 86400000).toISOString().substring(0, 10);
 
-  // === O — Organização (20 pts): % de status OK ===
+  // === O — Organização (20 pts): registros (60%) + presença (40%) ===
   const okCount = data.registros.filter((r) => r.status === "ok").length;
   const orgRate = data.registros.length > 0 ? okCount / data.registros.length : 0;
-  const organizacao = Math.round(orgRate * 20);
+
+  // Presença real declarada (registro_presencas)
+  let taxaPresenca: number | null = null;
+  if (data.presencas && data.presencas.length > 0) {
+    const presentes = data.presencas.filter((p: any) => p.tipo === "presente").length;
+    taxaPresenca = presentes / data.presencas.length;
+  }
+
+  const organizacao = taxaPresenca !== null
+    ? Math.round(((orgRate * 0.6) + (taxaPresenca * 0.4)) * 20)
+    : Math.round(orgRate * 20);
 
   // Consistency checks - O
   if (data.registros.length === 0) {
@@ -97,6 +107,17 @@ export function calculateOperaScore(data: ScoreInput): OperaScoreBreakdown {
         action: "Vincular atividade aos registros",
       });
     }
+  }
+
+  if (!data.presencas || data.presencas.length === 0) {
+    consistencyItems.push({
+      key: "org_no_presenca",
+      label: "Sem controle de presença da equipe",
+      pillar: "organizacao",
+      status: "indisponivel",
+      message: "Não há registro de presença — controle de equipe comprometido",
+      action: "Registrar presença no relatório de equipe",
+    });
   }
 
   // === P — Padronização (20 pts): desperdício médio ===
@@ -135,7 +156,7 @@ export function calculateOperaScore(data: ScoreInput): OperaScoreBreakdown {
 
   // === E — Eficiência (20 pts): % de ativos em uso ===
   const ativosAtivos = data.ativos.filter((a) => a.status === "ativo").length;
-  const efRate = data.ativos.length > 0 ? ativosAtivos / data.ativos.length : 1;
+  const efRate = data.ativos.length > 0 ? ativosAtivos / data.ativos.length : 0;
   const eficiencia = Math.round(efRate * 20);
 
   // Consistency checks - E
@@ -240,6 +261,10 @@ export function calculateOperaScore(data: ScoreInput): OperaScoreBreakdown {
       action: "Resolver ou atualizar status das NCs",
     });
   }
+
+  // Sort consistency items by severity (indisponivel first, then parcial)
+  const severityWeight: Record<string, number> = { indisponivel: 2, parcial: 1, confiavel: 0 };
+  consistencyItems.sort((a, b) => severityWeight[b.status] - severityWeight[a.status]);
 
   // Build pillar consistency
   const byPillar = (p: ConsistencyItem["pillar"]) => consistencyItems.filter(i => i.pillar === p);
