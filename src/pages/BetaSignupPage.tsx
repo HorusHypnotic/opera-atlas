@@ -61,15 +61,15 @@ export default function BetaSignupPage() {
 
   useEffect(() => {
     const fetchVagas = async () => {
-      const [configRes, countRes] = await Promise.all([
+      const [configRes, vagasRes] = await Promise.all([
         supabase.from("beta_config").select("*").limit(1).maybeSingle(),
-        supabase.from("beta_waitlist").select("id", { count: "exact", head: true }).in("status", ["aguardando_aprovacao", "aprovado"]),
+        (supabase as any).rpc("get_beta_vagas_ocupadas"),
       ]);
       const config = configRes.data;
       if (config) {
         setBetaAtivo(config.beta_ativo);
         const limite = config.limite_vagas ?? 5;
-        const usado = countRes.count ?? 0;
+        const usado = (vagasRes.data as number) ?? 0;
         setVagasRestantes(Math.max(0, limite - usado));
       }
     };

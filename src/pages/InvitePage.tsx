@@ -34,11 +34,12 @@ export default function InvitePage() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    (supabase as any).from("invites").select("*").eq("token", token).eq("used", false).single()
+    (supabase as any).rpc("get_invite_by_token", { _token: token })
       .then(({ data }: any) => {
-        if (data && new Date(data.expires_at) > new Date()) {
-          setInvite(data);
-          setEmail(data.email);
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) {
+          setInvite({ ...row, token });
+          setEmail(row.email);
         }
         setLoading(false);
       });
