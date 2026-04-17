@@ -334,7 +334,48 @@ export default function RelatorioMaoObraPage() {
     toast.success(`${apontamentosPeriodo.length} apontamentos zerados para nova quinzena`);
   };
 
-  // ─── Export PDF ───
+  // ─── Quick presence (1-click for today) ───
+  const hojeStr = new Date().toISOString().split("T")[0];
+  const presencasHoje = useMemo(() => {
+    const map: Record<string, RegistroPresenca | undefined> = {};
+    for (const p of presencas) {
+      if (p.data === hojeStr && (!selectedObraId || p.obra_id === selectedObraId)) {
+        map[p.colaborador_id] = p;
+      }
+    }
+    return map;
+  }, [presencas, selectedObraId, hojeStr]);
+
+  const registrarPresencaRapida = async (colaboradorId: string, fracao: 0 | 0.5 | 1) => {
+    if (!selectedObraId) {
+      toast.error("Selecione uma obra primeiro");
+      return;
+    }
+    if (presencasHoje[colaboradorId]) {
+      toast.info("Presença de hoje já registrada — edite na aba Operacional se precisar mudar");
+      return;
+    }
+    const tipo = fracao === 0 ? "falta" : fracao === 0.5 ? "meio_periodo" : "presente";
+    const colab = colaboradores.find((c) => c.id === colaboradorId);
+    const vinculo = vinculos.find((v) => v.colaborador_id === colaboradorId && v.obra_id === selectedObraId && v.ativo);
+    const valorDiaria = vinculo?.valor_diaria_especial ?? colab?.valor_diaria ?? 0;
+
+    const { error } = await insertPresenca({
+      colaborador_id: colaboradorId,
+      obra_id: selectedObraId,
+      data: hojeStr,
+      tipo,
+      fracao_diaria: fracao,
+      valor_diaria_usado: Number(valorDiaria),
+    } as any);
+    if (error) {
+      toast.error("Erro ao registrar: " + error.message);
+      return;
+    }
+    const label = fracao === 0 ? "Falta" : fracao === 0.5 ? "½ diária" : "1 diária";
+    toast.success(`${label} registrada para ${colab?.nome || "colaborador"}`);
+  };
+
   const exportPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
