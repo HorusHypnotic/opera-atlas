@@ -1202,6 +1202,7 @@ export type Database = {
           colaborador_id: string
           created_at: string
           data: string
+          fracao_diaria: number
           horas_extra: number | null
           id: string
           obra_id: string
@@ -1216,6 +1217,7 @@ export type Database = {
           colaborador_id: string
           created_at?: string
           data?: string
+          fracao_diaria?: number
           horas_extra?: number | null
           id?: string
           obra_id: string
@@ -1230,6 +1232,7 @@ export type Database = {
           colaborador_id?: string
           created_at?: string
           data?: string
+          fracao_diaria?: number
           horas_extra?: number | null
           id?: string
           obra_id?: string
