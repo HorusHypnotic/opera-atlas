@@ -561,10 +561,18 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-right py-2 px-3">Total</th>
                       <th className="text-left py-2 px-3">PIX</th>
                       <th className="text-center py-2 px-3">Fonte</th>
+                      {canInsert && <th className="text-center py-2 px-3 print:hidden">Hoje</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {reportRows.map((r) => (
+                    {reportRows.map((r) => {
+                      const presHoje = presencasHoje[r.colaboradorId];
+                      const fracaoHoje = presHoje
+                        ? (presHoje.fracao_diaria != null
+                            ? Number(presHoje.fracao_diaria)
+                            : (presHoje.tipo === "falta" ? 0 : presHoje.tipo === "meio_periodo" ? 0.5 : 1))
+                        : null;
+                      return (
                       <tr key={r.colaboradorId} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                         <td className="py-2.5 px-3 font-medium">{r.nome}</td>
                         <td className="py-2.5 px-3">
@@ -585,8 +593,51 @@ export default function RelatorioMaoObraPage() {
                             {r.fonte === "manual" ? "Manual" : "Presença"}
                           </Badge>
                         </td>
+                        {canInsert && (
+                          <td className="py-2 px-3 text-center print:hidden">
+                            {presHoje ? (
+                              <Badge
+                                variant={fracaoHoje === 0 ? "destructive" : fracaoHoje === 0.5 ? "secondary" : "default"}
+                                className="text-[10px]"
+                              >
+                                {fracaoHoje === 0 ? "Falta" : fracaoHoje === 0.5 ? "½ hoje" : "✓ hoje"}
+                              </Badge>
+                            ) : (
+                              <div className="inline-flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 1)}
+                                  title="Registrar 1 diária para hoje"
+                                >
+                                  +1
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 0.5)}
+                                  title="Registrar meia diária para hoje"
+                                >
+                                  ½
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 0)}
+                                  title="Registrar falta para hoje"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        )}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30">
@@ -597,7 +648,7 @@ export default function RelatorioMaoObraPage() {
                       <td className="py-3 px-3 text-right font-mono font-bold text-primary">
                         R$ {subtotalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td colSpan={2}></td>
+                      <td colSpan={canInsert ? 3 : 2}></td>
                     </tr>
                   </tfoot>
                 </table>
