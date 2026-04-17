@@ -54,6 +54,7 @@ interface RegistroPresenca {
   obra_id: string;
   data: string;
   tipo: string;
+  fracao_diaria?: number;
   horas_extra: number;
   valor_diaria_usado: number | null;
   valor_diaria_especial: number | null;
@@ -183,15 +184,20 @@ export default function RelatorioMaoObraPage() {
       }
       const row = rows[colab.id];
 
-      // Operational tracking
-      if (p.tipo === "presente") {
-        row.presencas += 1;
-      } else if (p.tipo === "hora_extra") {
+      // Operational tracking — usa fracao_diaria como verdade
+      const fracao = p.fracao_diaria != null
+        ? Number(p.fracao_diaria)
+        : (p.tipo === "falta" || p.tipo === "falta_injustificada" || p.tipo === "falta_justificada" ? 0
+          : p.tipo === "meio_periodo" ? 0.5 : 1);
+
+      if (p.tipo === "hora_extra") {
         row.horasExtra += Number(p.horas_extra || 0);
-      } else if (p.tipo === "falta_injustificada") {
-        row.faltas += 1;
       } else if (p.tipo === "falta_justificada") {
         row.faltasJustificadas += 1;
+      } else if (fracao === 0) {
+        row.faltas += 1;
+      } else {
+        row.presencas += fracao; // 0.5 conta como meia presença
       }
 
       // Financial fallback only if no manual entry
@@ -203,10 +209,10 @@ export default function RelatorioMaoObraPage() {
       const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
       row.valorDiaria = Number(valorDiaria);
 
-      if (p.tipo === "presente") {
-        const valorDia = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
-        row.qtdDiarias += 1;
-        row.valorTotal += valorDia;
+      if (fracao > 0 && p.tipo !== "hora_extra") {
+        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
+        row.qtdDiarias += fracao;
+        row.valorTotal += valorBase * fracao;
       } else if (p.tipo === "hora_extra") {
         const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
         row.valorTotal += extraValue;
