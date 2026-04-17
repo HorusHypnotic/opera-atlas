@@ -230,10 +230,11 @@ export default function LandingPage() {
     import("@/integrations/supabase/client").then(({ supabase }) => {
       Promise.all([
         supabase.from("beta_config").select("limite_vagas, beta_ativo").limit(1).maybeSingle(),
-        supabase.from("beta_waitlist").select("id", { count: "exact", head: true }).in("status", ["aguardando_aprovacao", "aprovado"]),
-      ]).then(([configRes, countRes]) => {
+        (supabase as any).rpc("get_beta_vagas_ocupadas"),
+      ]).then(([configRes, vagasRes]: any[]) => {
         if (configRes.data?.beta_ativo) {
-          setVagasRestantes(Math.max(0, (configRes.data.limite_vagas ?? 5) - (countRes.count ?? 0)));
+          const usado = (vagasRes.data as number) ?? 0;
+          setVagasRestantes(Math.max(0, (configRes.data.limite_vagas ?? 5) - usado));
         }
       });
     });

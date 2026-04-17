@@ -42,12 +42,11 @@ export default function BetaStatusPage() {
   const searchStatus = async (email: string) => {
     if (!email.trim()) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("beta_waitlist")
-      .select("*")
-      .eq("email", email.trim().toLowerCase())
-      .maybeSingle();
-    setBetaEntry(data);
+    const { data } = await (supabase as any).rpc("get_beta_status_by_email", {
+      _email: email.trim().toLowerCase(),
+    });
+    const row = Array.isArray(data) ? data[0] : data;
+    setBetaEntry(row || null);
     setSearched(true);
     setLoading(false);
   };

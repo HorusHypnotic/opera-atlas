@@ -1559,6 +1559,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_beta_status_by_email: {
+        Args: { _email: string }
+        Returns: {
+          created_at: string
+          nome: string
+          status: string
+        }[]
+      }
+      get_beta_vagas_ocupadas: { Args: never; Returns: number }
+      get_invite_by_token: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          obra_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string
+          tenant_nome: string
+          used: boolean
+        }[]
+      }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_any_role: {
         Args: {
@@ -1580,6 +1602,7 @@ export type Database = {
         Args: { _obra_id: string; _user_id: string }
         Returns: boolean
       }
+      validar_codigo_influencer: { Args: { _codigo: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operacional" | "visualizador"

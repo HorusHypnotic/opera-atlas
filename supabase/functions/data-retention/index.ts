@@ -43,9 +43,53 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 🔒 Auth: require either a valid cron secret OR a super_admin JWT
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const providedSecret = req.headers.get("x-cron-secret");
+  const authHeader = req.headers.get("Authorization");
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  let authorized = false;
+
+  // Path 1: cron secret match
+  if (cronSecret && providedSecret && providedSecret === cronSecret) {
+    authorized = true;
+  }
+
+  // Path 2: super_admin JWT
+  if (!authorized && authHeader?.startsWith("Bearer ")) {
+    try {
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData } = await userClient.auth.getClaims(token);
+      const userId = claimsData?.claims?.sub;
+      if (userId) {
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const { data: prof } = await adminClient
+          .from("profiles")
+          .select("is_super_admin")
+          .eq("id", userId)
+          .maybeSingle();
+        if (prof?.is_super_admin) authorized = true;
+      }
+    } catch (e) {
+      console.warn("[data-retention] auth check failed:", e);
+    }
+  }
+
+  if (!authorized) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Default retention: 3 months. Can be configured per plan later.
