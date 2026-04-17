@@ -108,7 +108,7 @@ export default function RelatorioMaoObraPage() {
   const { canInsert, canUpdate, canDelete } = usePermissions();
   const { data: colaboradores = [] } = useTableData<Colaborador>("colaboradores");
   const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
-  const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
+  const { data: presencas = [], insert: insertPresenca } = useTableData<RegistroPresenca>("registro_presencas");
   const { data: vinculos = [] } = useTableData<ColaboradorObra>("colaborador_obras");
   const { data: sequenciamento = [] } = useTableData<{ id: string; equipe: string; semana_inicio: number; semana_fim: number; status: string }>("sequenciamento_equipes");
 

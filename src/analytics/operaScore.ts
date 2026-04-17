@@ -63,11 +63,17 @@ export function calculateOperaScore(data: ScoreInput): OperaScoreBreakdown {
   const okCount = data.registros.filter((r) => r.status === "ok").length;
   const orgRate = data.registros.length > 0 ? okCount / data.registros.length : 0;
 
-  // Presença real declarada (registro_presencas)
+  // Presença real declarada (registro_presencas) — usa fracao_diaria como fonte única
+  // presente=1, meio_periodo=0.5, falta=0. Soma fracoes / total de registros.
   let taxaPresenca: number | null = null;
   if (data.presencas && data.presencas.length > 0) {
-    const presentes = data.presencas.filter((p: any) => p.tipo === "presente").length;
-    taxaPresenca = presentes / data.presencas.length;
+    const somaFracoes = data.presencas.reduce((acc: number, p: any) => {
+      const fracao = p.fracao_diaria != null
+        ? Number(p.fracao_diaria)
+        : (p.tipo === "falta" ? 0 : p.tipo === "meio_periodo" ? 0.5 : 1);
+      return acc + fracao;
+    }, 0);
+    taxaPresenca = somaFracoes / data.presencas.length;
   }
 
   const organizacao = taxaPresenca !== null
