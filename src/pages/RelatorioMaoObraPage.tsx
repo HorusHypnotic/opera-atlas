@@ -376,6 +376,96 @@ export default function RelatorioMaoObraPage() {
     toast.success(`${label} registrada para ${colab?.nome || "colaborador"}`);
   };
 
+  // ─── Build per-obra report rows (used when no obra selected) ───
+  const buildRowsForObra = (obraId: string): ReportRow[] => {
+    const rows: Record<string, ReportRow> = {};
+
+    const filteredApontamentos = apontamentos.filter((a) => {
+      if (a.obra_id !== obraId) return false;
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
+      return true;
+    });
+    for (const a of filteredApontamentos) {
+      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
+      const row = rows[colab.id];
+      row.fonte = "manual";
+      row.qtdDiarias += Number(a.quantidade_diarias);
+      row.valorDiaria = Number(a.valor_diaria);
+      row.valorTotal += Number(a.quantidade_diarias) * Number(a.valor_diaria);
+      if (a.observacao) row.observacao = a.observacao;
+    }
+
+    const filteredPresencas = presencas.filter((p) => {
+      if (p.obra_id !== obraId) return false;
+      if (p.data < dataInicio || p.data > dataFim) return false;
+      return true;
+    });
+    for (const p of filteredPresencas) {
+      const colab = colaboradores.find((c) => c.id === p.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
+      const row = rows[colab.id];
+
+      const fracao = p.fracao_diaria != null
+        ? Number(p.fracao_diaria)
+        : (p.tipo === "falta" || p.tipo === "falta_injustificada" || p.tipo === "falta_justificada" ? 0
+          : p.tipo === "meio_periodo" ? 0.5 : 1);
+
+      if (p.tipo === "hora_extra") row.horasExtra += Number(p.horas_extra || 0);
+      else if (p.tipo === "falta_justificada") row.faltasJustificadas += 1;
+      else if (fracao === 0) row.faltas += 1;
+      else row.presencas += fracao;
+
+      if (row.fonte === "manual") continue;
+
+      const vinculo = vinculos.find((v) => v.colaborador_id === colab.id && v.obra_id === obraId && v.ativo);
+      const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
+      row.valorDiaria = Number(valorDiaria);
+
+      if (fracao > 0 && p.tipo !== "hora_extra") {
+        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
+        row.qtdDiarias += fracao;
+        row.valorTotal += valorBase * fracao;
+      } else if (p.tipo === "hora_extra") {
+        const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
+        row.valorTotal += extraValue;
+        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
+      }
+    }
+
+    return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
+  };
+
+  const buildReportBlocks = () => {
+    if (selectedObraId) {
+      return [{
+        obraNome: obraAtual?.nome || "Obra",
+        rows: reportRows,
+        subtotal: subtotalGeral,
+        totalDiarias,
+      }];
+    }
+    const obraIds = new Set<string>();
+    apontamentos.forEach((a) => { if (a.periodo_fim >= dataInicio && a.periodo_inicio <= dataFim) obraIds.add(a.obra_id); });
+    presencas.forEach((p) => { if (p.data >= dataInicio && p.data <= dataFim) obraIds.add(p.obra_id); });
+    return Array.from(obraIds)
+      .map((obraId) => {
+        const obra = obras.find((o) => o.id === obraId);
+        const rows = buildRowsForObra(obraId);
+        const sub = rows.reduce((s, r) => s + r.valorTotal, 0);
+        const td = rows.reduce((s, r) => s + r.qtdDiarias, 0);
+        return { obraNome: obra?.nome || "Obra desconhecida", rows, subtotal: sub, totalDiarias: td };
+      })
+      .filter((b) => b.rows.length > 0)
+      .sort((a, b) => a.obraNome.localeCompare(b.obraNome));
+  };
+
   const exportPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -388,7 +478,7 @@ export default function RelatorioMaoObraPage() {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Obra: ${obraAtual?.nome || "Todas"}`, 14, y); y += 5;
+    doc.text(`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`, 14, y); y += 5;
     doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 5;
     doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 8;
 
@@ -396,25 +486,59 @@ export default function RelatorioMaoObraPage() {
     doc.line(14, y, pageWidth - 14, y);
     y += 6;
 
-    if (reportRows.length > 0) {
+    const blocks = buildReportBlocks();
+
+    if (blocks.length === 0) {
+      doc.text("Nenhum dado encontrado para o período selecionado.", 14, y);
+      doc.save(`relatorio-equipe-${dataInicio}-${dataFim}.pdf`);
+      return;
+    }
+
+    let totalGeralValor = 0;
+    let totalGeralDiarias = 0;
+
+    blocks.forEach((block, idx) => {
+      const lastY = (doc as any).lastAutoTable?.finalY;
+      let titleY = idx === 0 ? y : (lastY ? lastY + 10 : y);
+      if (titleY > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage();
+        titleY = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Obra: ${block.obraNome}`, 14, titleY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
       autoTable(doc, {
-        startY: y,
+        startY: titleY + 3,
         head: [["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]],
-        body: reportRows.map((r) => [
+        body: block.rows.map((r) => [
           r.nome, r.funcao,
           `R$ ${r.valorDiaria.toFixed(2)}`,
           r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
           `R$ ${r.valorTotal.toFixed(2)}`,
           r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
         ]),
-        foot: [["", "", "", "SUBTOTAL", `R$ ${subtotalGeral.toFixed(2)}`, ""]],
+        foot: [["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, `R$ ${block.subtotal.toFixed(2)}`, ""]],
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: [41, 37, 36], textColor: 255 },
         footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: "bold" },
         margin: { left: 14 },
       });
-    } else {
-      doc.text("Nenhum dado encontrado para o período selecionado.", 14, y);
+
+      totalGeralValor += block.subtotal;
+      totalGeralDiarias += block.totalDiarias;
+    });
+
+    if (blocks.length > 1) {
+      const finalY = (doc as any).lastAutoTable?.finalY || y;
+      let tgY = finalY + 10;
+      if (tgY > doc.internal.pageSize.getHeight() - 20) { doc.addPage(); tgY = 20; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(`TOTAL GERAL — ${totalGeralDiarias.toFixed(1)} diárias — R$ ${totalGeralValor.toFixed(2)}`, 14, tgY);
     }
 
     doc.save(`relatorio-equipe-${dataInicio}-${dataFim}.pdf`);
@@ -422,19 +546,36 @@ export default function RelatorioMaoObraPage() {
 
   const exportExcel = async () => {
     const XLSX = await import("xlsx");
-    const wsData = [
+    const blocks = buildReportBlocks();
+    const wsData: any[][] = [
       ["RELATÓRIO FINANCEIRO DE EQUIPE"],
-      [`Obra: ${obraAtual?.nome || "Todas"}`],
+      [`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`],
       [`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`],
       [],
-      ["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"],
-      ...reportRows.map((r) => [
-        r.nome, r.funcao, r.valorDiaria, r.qtdDiarias, r.valorTotal,
-        r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
-      ]),
-      [],
-      ["", "", "", "SUBTOTAL GERAL", subtotalGeral, ""],
     ];
+
+    let totalGeralValor = 0;
+    let totalGeralDiarias = 0;
+
+    blocks.forEach((block) => {
+      wsData.push([`Obra: ${block.obraNome}`]);
+      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]);
+      block.rows.forEach((r) => {
+        wsData.push([
+          r.nome, r.funcao, r.valorDiaria, r.qtdDiarias, r.valorTotal,
+          r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
+        ]);
+      });
+      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, block.subtotal, ""]);
+      wsData.push([]);
+      totalGeralValor += block.subtotal;
+      totalGeralDiarias += block.totalDiarias;
+    });
+
+    if (blocks.length > 1) {
+      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, totalGeralValor, ""]);
+    }
+
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Mão de Obra");
