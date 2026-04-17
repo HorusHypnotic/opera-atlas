@@ -54,6 +54,7 @@ interface RegistroPresenca {
   obra_id: string;
   data: string;
   tipo: string;
+  fracao_diaria?: number;
   horas_extra: number;
   valor_diaria_usado: number | null;
   valor_diaria_especial: number | null;
@@ -108,7 +109,7 @@ export default function RelatorioMaoObraPage() {
   const { canInsert, canUpdate, canDelete } = usePermissions();
   const { data: colaboradores = [] } = useTableData<Colaborador>("colaboradores");
   const { data: apontamentos = [], insert: insertApontamento, update: updateApontamento, remove: removeApontamento } = useTableData<ApontamentoDiaria>("apontamento_diarias");
-  const { data: presencas = [] } = useTableData<RegistroPresenca>("registro_presencas");
+  const { data: presencas = [], insert: insertPresenca } = useTableData<RegistroPresenca>("registro_presencas");
   const { data: vinculos = [] } = useTableData<ColaboradorObra>("colaborador_obras");
   const { data: sequenciamento = [] } = useTableData<{ id: string; equipe: string; semana_inicio: number; semana_fim: number; status: string }>("sequenciamento_equipes");
 
@@ -183,15 +184,20 @@ export default function RelatorioMaoObraPage() {
       }
       const row = rows[colab.id];
 
-      // Operational tracking
-      if (p.tipo === "presente") {
-        row.presencas += 1;
-      } else if (p.tipo === "hora_extra") {
+      // Operational tracking — usa fracao_diaria como verdade
+      const fracao = p.fracao_diaria != null
+        ? Number(p.fracao_diaria)
+        : (p.tipo === "falta" || p.tipo === "falta_injustificada" || p.tipo === "falta_justificada" ? 0
+          : p.tipo === "meio_periodo" ? 0.5 : 1);
+
+      if (p.tipo === "hora_extra") {
         row.horasExtra += Number(p.horas_extra || 0);
-      } else if (p.tipo === "falta_injustificada") {
-        row.faltas += 1;
       } else if (p.tipo === "falta_justificada") {
         row.faltasJustificadas += 1;
+      } else if (fracao === 0) {
+        row.faltas += 1;
+      } else {
+        row.presencas += fracao; // 0.5 conta como meia presença
       }
 
       // Financial fallback only if no manual entry
@@ -203,10 +209,10 @@ export default function RelatorioMaoObraPage() {
       const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
       row.valorDiaria = Number(valorDiaria);
 
-      if (p.tipo === "presente") {
-        const valorDia = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
-        row.qtdDiarias += 1;
-        row.valorTotal += valorDia;
+      if (fracao > 0 && p.tipo !== "hora_extra") {
+        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
+        row.qtdDiarias += fracao;
+        row.valorTotal += valorBase * fracao;
       } else if (p.tipo === "hora_extra") {
         const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
         row.valorTotal += extraValue;
@@ -328,7 +334,48 @@ export default function RelatorioMaoObraPage() {
     toast.success(`${apontamentosPeriodo.length} apontamentos zerados para nova quinzena`);
   };
 
-  // ─── Export PDF ───
+  // ─── Quick presence (1-click for today) ───
+  const hojeStr = new Date().toISOString().split("T")[0];
+  const presencasHoje = useMemo(() => {
+    const map: Record<string, RegistroPresenca | undefined> = {};
+    for (const p of presencas) {
+      if (p.data === hojeStr && (!selectedObraId || p.obra_id === selectedObraId)) {
+        map[p.colaborador_id] = p;
+      }
+    }
+    return map;
+  }, [presencas, selectedObraId, hojeStr]);
+
+  const registrarPresencaRapida = async (colaboradorId: string, fracao: 0 | 0.5 | 1) => {
+    if (!selectedObraId) {
+      toast.error("Selecione uma obra primeiro");
+      return;
+    }
+    if (presencasHoje[colaboradorId]) {
+      toast.info("Presença de hoje já registrada — edite na aba Operacional se precisar mudar");
+      return;
+    }
+    const tipo = fracao === 0 ? "falta" : fracao === 0.5 ? "meio_periodo" : "presente";
+    const colab = colaboradores.find((c) => c.id === colaboradorId);
+    const vinculo = vinculos.find((v) => v.colaborador_id === colaboradorId && v.obra_id === selectedObraId && v.ativo);
+    const valorDiaria = vinculo?.valor_diaria_especial ?? colab?.valor_diaria ?? 0;
+
+    const { error } = await insertPresenca({
+      colaborador_id: colaboradorId,
+      obra_id: selectedObraId,
+      data: hojeStr,
+      tipo,
+      fracao_diaria: fracao,
+      valor_diaria_usado: Number(valorDiaria),
+    } as any);
+    if (error) {
+      toast.error("Erro ao registrar: " + error.message);
+      return;
+    }
+    const label = fracao === 0 ? "Falta" : fracao === 0.5 ? "½ diária" : "1 diária";
+    toast.success(`${label} registrada para ${colab?.nome || "colaborador"}`);
+  };
+
   const exportPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -514,10 +561,18 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-right py-2 px-3">Total</th>
                       <th className="text-left py-2 px-3">PIX</th>
                       <th className="text-center py-2 px-3">Fonte</th>
+                      {canInsert && <th className="text-center py-2 px-3 print:hidden">Hoje</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {reportRows.map((r) => (
+                    {reportRows.map((r) => {
+                      const presHoje = presencasHoje[r.colaboradorId];
+                      const fracaoHoje = presHoje
+                        ? (presHoje.fracao_diaria != null
+                            ? Number(presHoje.fracao_diaria)
+                            : (presHoje.tipo === "falta" ? 0 : presHoje.tipo === "meio_periodo" ? 0.5 : 1))
+                        : null;
+                      return (
                       <tr key={r.colaboradorId} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                         <td className="py-2.5 px-3 font-medium">{r.nome}</td>
                         <td className="py-2.5 px-3">
@@ -538,8 +593,51 @@ export default function RelatorioMaoObraPage() {
                             {r.fonte === "manual" ? "Manual" : "Presença"}
                           </Badge>
                         </td>
+                        {canInsert && (
+                          <td className="py-2 px-3 text-center print:hidden">
+                            {presHoje ? (
+                              <Badge
+                                variant={fracaoHoje === 0 ? "destructive" : fracaoHoje === 0.5 ? "secondary" : "default"}
+                                className="text-[10px]"
+                              >
+                                {fracaoHoje === 0 ? "Falta" : fracaoHoje === 0.5 ? "½ hoje" : "✓ hoje"}
+                              </Badge>
+                            ) : (
+                              <div className="inline-flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 1)}
+                                  title="Registrar 1 diária para hoje"
+                                >
+                                  +1
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 0.5)}
+                                  title="Registrar meia diária para hoje"
+                                >
+                                  ½
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                                  onClick={() => registrarPresencaRapida(r.colaboradorId, 0)}
+                                  title="Registrar falta para hoje"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        )}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30">
@@ -550,7 +648,7 @@ export default function RelatorioMaoObraPage() {
                       <td className="py-3 px-3 text-right font-mono font-bold text-primary">
                         R$ {subtotalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td colSpan={2}></td>
+                      <td colSpan={canInsert ? 3 : 2}></td>
                     </tr>
                   </tfoot>
                 </table>
