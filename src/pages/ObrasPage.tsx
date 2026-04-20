@@ -40,6 +40,7 @@ interface ObraFull {
   abordagem: string;
   descricao: string | null;
   tipo_obra: string;
+  tamanho_equipe_esperada: number;
   created_at: string;
 }
 
@@ -105,6 +106,7 @@ export default function ObrasPage() {
     data_inicio: "", data_previsao: "", orcamento_total: "",
     custo_orcado_m2: "", area_m2: "", fase_atual: "iniciacao",
     abordagem: "preditiva", tipo_obra: "residencial", status: "em_andamento",
+    tamanho_equipe_esperada: "",
   });
 
   const fetchObras = async () => {
@@ -126,6 +128,7 @@ export default function ObrasPage() {
       data_inicio: "", data_previsao: "", orcamento_total: "",
       custo_orcado_m2: "", area_m2: "", fase_atual: "iniciacao",
       abordagem: "preditiva", tipo_obra: "residencial", status: "em_andamento",
+      tamanho_equipe_esperada: "",
     });
     setEditingObra(null);
   };
@@ -146,6 +149,7 @@ export default function ObrasPage() {
       abordagem: obra.abordagem || "preditiva",
       tipo_obra: obra.tipo_obra || "residencial",
       status: obra.status || "em_andamento",
+      tamanho_equipe_esperada: obra.tamanho_equipe_esperada?.toString() || "",
     });
     setDialogOpen(true);
   };
@@ -166,6 +170,7 @@ export default function ObrasPage() {
       abordagem: form.abordagem,
       tipo_obra: form.tipo_obra,
       status: form.status,
+      tamanho_equipe_esperada: parseInt(form.tamanho_equipe_esperada) || 0,
       tenant_id: tenantId,
     };
 
@@ -301,6 +306,24 @@ export default function ObrasPage() {
                       const custoM2 = (parseFloat(area) || 0) > 0 ? orcamento / parseFloat(area) : 0;
                       setForm(p => ({ ...p, area_m2: area, custo_orcado_m2: custoM2 > 0 ? custoM2.toFixed(2) : p.custo_orcado_m2 }));
                     }} placeholder="0" />
+                  </div>
+                </div>
+
+                {/* Row 4.5 - Capacity Planning */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      Equipe esperada (pessoas)
+                      <span className="text-[10px] text-primary">novo</span>
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.tamanho_equipe_esperada}
+                      onChange={e => setForm(p => ({ ...p, tamanho_equipe_esperada: e.target.value }))}
+                      placeholder="Ex: 12"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Base para Eficiência de Presença</p>
                   </div>
                 </div>
 
