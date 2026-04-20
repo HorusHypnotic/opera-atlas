@@ -1093,6 +1093,7 @@ export type Database = {
           orcamento_total: number
           responsavel: string | null
           status: string
+          tamanho_equipe_esperada: number
           tenant_id: string
           tipo_obra: string
           updated_at: string
@@ -1113,6 +1114,7 @@ export type Database = {
           orcamento_total?: number
           responsavel?: string | null
           status?: string
+          tamanho_equipe_esperada?: number
           tenant_id: string
           tipo_obra?: string
           updated_at?: string
@@ -1133,6 +1135,7 @@ export type Database = {
           orcamento_total?: number
           responsavel?: string | null
           status?: string
+          tamanho_equipe_esperada?: number
           tenant_id?: string
           tipo_obra?: string
           updated_at?: string
@@ -1273,6 +1276,7 @@ export type Database = {
           created_at: string
           data_registro: string
           entrada: string | null
+          equipe: string | null
           id: string
           nome: string
           obra_id: string
@@ -1286,6 +1290,7 @@ export type Database = {
           created_at?: string
           data_registro?: string
           entrada?: string | null
+          equipe?: string | null
           id?: string
           nome: string
           obra_id: string
@@ -1299,6 +1304,7 @@ export type Database = {
           created_at?: string
           data_registro?: string
           entrada?: string | null
+          equipe?: string | null
           id?: string
           nome?: string
           obra_id?: string
@@ -1559,6 +1565,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      dashboard_aggregates: {
+        Args: { _end?: string; _obra_id?: string; _start?: string }
+        Returns: Json
+      }
+      eficiencia_presenca: {
+        Args: { _data?: string; _obra_id: string }
+        Returns: {
+          eficiencia: number
+          esperado: number
+          presente: number
+        }[]
+      }
       get_beta_status_by_email: {
         Args: { _email: string }
         Returns: {
@@ -1597,6 +1615,16 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      produtividade_por_equipe: {
+        Args: { _end?: string; _obra_id: string; _start?: string }
+        Returns: {
+          dias_trabalhados: number
+          equipe: string
+          producao_media_dia: number
+          producao_total: number
+          registros: number
+        }[]
+      }
       setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
       user_has_obra_access: {
         Args: { _obra_id: string; _user_id: string }

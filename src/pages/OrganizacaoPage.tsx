@@ -7,6 +7,9 @@ import { AddRecordDialog, EditRecordDialog, DeleteRecordButton, FieldDef } from 
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
+import { calculateProdutividadePorEquipe, calculateCapacidade } from "@/analytics/capacidade";
+import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
+import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 
 interface RegistroDiario {
   id: string;
@@ -17,6 +20,7 @@ interface RegistroDiario {
   producao: string | null;
   status: string;
   data_registro: string;
+  equipe?: string | null;
 }
 
 export default function OrganizacaoPage() {
@@ -24,6 +28,14 @@ export default function OrganizacaoPage() {
   const { data: registros = [], isLoading, insert, update, remove } = useTableData<RegistroDiario>("registros_diarios");
   const { data: lancamentos = [] } = useTableData("lancamentos_financeiros");
   const { data: colaboradores = [] } = useTableData("colaboradores");
+  const { data: presencas = [] } = useTableData("registro_presencas");
+
+  // Equipes únicas já registradas (para auto-completar como sugestões)
+  const equipesExistentes = useMemo(() => {
+    const set = new Set<string>();
+    registros.forEach((r: any) => { if (r.equipe) set.add(r.equipe); });
+    return Array.from(set).sort();
+  }, [registros]);
 
   // Build fields dynamically with collaborator options from DB
   const fields: FieldDef[] = useMemo(() => [
@@ -37,6 +49,7 @@ export default function OrganizacaoPage() {
     },
     { name: "entrada", label: "Entrada", type: "time" as const },
     { name: "saida", label: "Saída", type: "time" as const },
+    { name: "equipe", label: "Equipe (opcional)", placeholder: equipesExistentes.length > 0 ? `Ex: ${equipesExistentes[0]}` : "Ex: Equipe A — Alvenaria" },
     { name: "atividade", label: "Atividade", placeholder: "Ex: Alvenaria" },
     { name: "producao", label: "Produção", placeholder: "Ex: 12 m²" },
     { name: "status", label: "Status", type: "select" as const, defaultValue: "ok", options: [
@@ -45,7 +58,7 @@ export default function OrganizacaoPage() {
       { value: "critical", label: "Crítico" },
     ]},
     { name: "data_registro", label: "Data", type: "date" as const, defaultValue: new Date().toISOString().split("T")[0] },
-  ], [colaboradores]);
+  ], [colaboradores, equipesExistentes]);
 
   const totalRegistros = registros.length;
   const okCount = registros.filter((r) => r.status === "ok").length;
@@ -69,6 +82,14 @@ export default function OrganizacaoPage() {
     ? ((custoPorM2 - custoOrcadoM2) / custoOrcadoM2) * 100
     : 0;
 
+  // Capacidade & Produtividade por equipe
+  const tamanhoEquipeEsperada = obraAtual?.tamanho_equipe_esperada || 0;
+  const capacidade = useMemo(
+    () => calculateCapacidade(presencas as any[], tamanhoEquipeEsperada),
+    [presencas, tamanhoEquipeEsperada],
+  );
+  const equipes = useMemo(() => calculateProdutividadePorEquipe(registros as any[]), [registros]);
+
   return (
     <div>
       <GlobalFilters />
@@ -86,6 +107,12 @@ export default function OrganizacaoPage() {
         <KPICard title="Desvio Orçado" value={custoOrcadoM2 > 0 ? `${desvioPercent > 0 ? "+" : ""}${desvioPercent.toFixed(1)}%` : "—"} icon={<TrendingDown className="h-5 w-5" />} tooltip="Desvio do custo real vs. orçado por m²" status={desvioPercent > 10 ? "critical" : desvioPercent > 0 ? "warning" : "ok"} subtitle={custoOrcadoM2 > 0 ? `Orçado: R$ ${custoOrcadoM2}/m²` : "Defina na obra"} />
       </div>
 
+      {/* Camada de Planejamento: Capacidade + Produtividade por Equipe */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <CapacidadePresencaCard metrics={capacidade} obraNome={obraAtual?.nome} />
+        <ProdutividadeEquipeCard equipes={equipes} />
+      </div>
+
       <div className="glass-card p-4 overflow-x-auto">
         <h3 className="text-sm font-semibold mb-3">Colaboradores — Controle Diário</h3>
         {isLoading ? (
@@ -99,6 +126,7 @@ export default function OrganizacaoPage() {
                 <th className="text-left py-2 px-3">Nome</th>
                 <th className="text-left py-2 px-3">Entrada</th>
                 <th className="text-left py-2 px-3">Saída</th>
+                <th className="text-left py-2 px-3">Equipe</th>
                 <th className="text-left py-2 px-3">Atividade</th>
                 <th className="text-left py-2 px-3">Produção</th>
                 <th className="text-left py-2 px-3">Data</th>
@@ -112,6 +140,7 @@ export default function OrganizacaoPage() {
                   <td className="py-2.5 px-3 font-medium">{c.nome}</td>
                   <td className="py-2.5 px-3 font-mono text-xs">{c.entrada || "—"}</td>
                   <td className="py-2.5 px-3 font-mono text-xs">{c.saida || "—"}</td>
+                  <td className="py-2.5 px-3 text-xs">{c.equipe || "—"}</td>
                   <td className="py-2.5 px-3">{c.atividade || "—"}</td>
                   <td className="py-2.5 px-3 font-mono">{c.producao || "—"}</td>
                   <td className="py-2.5 px-3 text-xs">{c.data_registro}</td>

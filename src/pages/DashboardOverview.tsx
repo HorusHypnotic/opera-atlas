@@ -35,6 +35,10 @@ import { ObraComparisonCard } from "@/components/dashboard/ObraComparisonCard";
 import { ProductTour } from "@/components/tour/ProductTour";
 import { TourTrigger } from "@/components/tour/TourTrigger";
 import { useProductTour } from "@/hooks/useProductTour";
+import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
+import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
+import { calculateCapacidade, calculateProdutividadePorEquipe } from "@/analytics/capacidade";
+import { useDashboardAggregates } from "@/hooks/useDashboardAggregates";
 
 import { calculateOperaScore } from "@/analytics/operaScore";
 import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
@@ -95,6 +99,16 @@ export default function DashboardOverview() {
 
   // Safety
   const safety = useMemo(() => calculateSafetyMetrics(incidentes, checklist), [incidentes, checklist]);
+
+  // Capacidade & Produtividade por equipe (Camada de Planejamento)
+  const capacidade = useMemo(
+    () => calculateCapacidade(presencas as any[], (selectedObra as any)?.tamanho_equipe_esperada || 0),
+    [presencas, selectedObra],
+  );
+  const equipesProdutividade = useMemo(() => calculateProdutividadePorEquipe(registros as any[]), [registros]);
+
+  // Server-side aggregates (cache 60s) — para futuras otimizações de performance
+  useDashboardAggregates();
 
   // Notifications
   const today = new Date().toISOString().substring(0, 10);
@@ -254,6 +268,12 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
         <OperaScoreCard registros={registros} consumo={consumo} ativos={ativos} riscos={riscos} retrabalhos={retrabalhos} lancamentos={lancamentos} incidentes={incidentes} presencas={presencas} obra={selectedObra} />
         <OperaRadarChart score={score} />
+      </div>
+
+      {/* Camada de Planejamento: Capacidade Real vs Esperada + Produtividade por Equipe */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <CapacidadePresencaCard metrics={capacidade} obraNome={selectedObra?.nome} />
+        <ProdutividadeEquipeCard equipes={equipesProdutividade} />
       </div>
 
       {/* KPI Row */}
