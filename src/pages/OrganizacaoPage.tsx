@@ -7,8 +7,8 @@ import { AddRecordDialog, EditRecordDialog, DeleteRecordButton, FieldDef } from 
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
-import { calculateCapacidade } from "@/analytics/capacidade";
 import { useProdutividadeEquipe } from "@/hooks/useProdutividadeEquipe";
+import { useEficienciaPresenca } from "@/hooks/useDashboardAggregates";
 import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
 import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 
@@ -83,13 +83,8 @@ export default function OrganizacaoPage() {
     ? ((custoPorM2 - custoOrcadoM2) / custoOrcadoM2) * 100
     : 0;
 
-  // Capacidade & Produtividade por equipe
-  const tamanhoEquipeEsperada = obraAtual?.tamanho_equipe_esperada || 0;
-  const capacidade = useMemo(
-    () => calculateCapacidade(presencas as any[], tamanhoEquipeEsperada),
-    [presencas, tamanhoEquipeEsperada],
-  );
-  // RPC oficial — fonte única de verdade (usa producao_valor + equipe_normalizada)
+  // Capacidade & Produtividade por equipe — RPC oficial (fonte única).
+  const { data: capacidade, isLoading: capacidadeLoading } = useEficienciaPresenca(selectedObraId);
   const { data: equipes = [] } = useProdutividadeEquipe(selectedObraId);
 
   return (
@@ -111,7 +106,7 @@ export default function OrganizacaoPage() {
 
       {/* Camada de Planejamento: Capacidade + Produtividade por Equipe */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <CapacidadePresencaCard metrics={capacidade} obraNome={obraAtual?.nome} />
+        <CapacidadePresencaCard data={capacidade} obraNome={obraAtual?.nome} isLoading={capacidadeLoading} />
         <ProdutividadeEquipeCard equipes={equipes} />
       </div>
 
