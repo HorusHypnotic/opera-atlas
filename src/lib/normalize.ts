@@ -21,3 +21,5 @@ export function parseProducaoValor(value: string | null | undefined): number | n
   if (!match) return null;
   const n = parseFloat(match[0]);
   return Number.isFinite(n) ? n : null;
+}
+
