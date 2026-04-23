@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useObra } from "@/hooks/useObra";
+import { usePeriodFilter } from "@/hooks/usePeriodFilter";
 
 export interface DashboardAggregates {
   periodo?: { inicio: string; fim: string };
@@ -14,32 +15,30 @@ export interface DashboardAggregates {
 
 /**
  * Server-side aggregates via RPC (1 round-trip ao invés de 12).
- * Cache de 60s — invalidate manualmente após mutations críticas.
+ * Período vem do PeriodFilterContext — queryKey inclui start/end para refetch automático.
  */
 export function useDashboardAggregates(start?: string, end?: string) {
   const { profile, isGuest, sessionStable } = useAuth();
   const { selectedObraId } = useObra();
+  const { start: ctxStart, end: ctxEnd } = usePeriodFilter();
   const tenantId = profile?.tenant_id || null;
 
-  const today = new Date().toISOString().substring(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().substring(0, 10);
-  const _start = start || thirtyDaysAgo;
-  const _end = end || today;
+  const _start = start ?? ctxStart ?? null; // null = sem corte (todo o período)
+  const _end = end ?? ctxEnd;
 
   return useQuery({
     queryKey: ["dashboard_aggregates", tenantId, selectedObraId, _start, _end],
     queryFn: async (): Promise<DashboardAggregates> => {
       if (isGuest || !tenantId) return {};
-      const { data, error } = await supabase.rpc("dashboard_aggregates", {
-        _obra_id: selectedObraId || null,
-        _start,
-        _end,
-      });
+      const args: any = { _obra_id: selectedObraId || null, _end };
+      if (_start) args._start = _start;
+      const { data, error } = await supabase.rpc("dashboard_aggregates", args);
       if (error) throw error;
       return (data as DashboardAggregates) || {};
     },
     enabled: !!tenantId && sessionStable && !isGuest,
-    staleTime: 60_000, // 60s cache
+    staleTime: 10_000, // 10s — filtros respondem rápido
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -49,13 +48,17 @@ export interface EficienciaPresencaRow {
   eficiencia: number | null;
 }
 
+/**
+ * Eficiência de presença (capacidade real vs. esperada). Fonte oficial — substitui calculateCapacidade no client.
+ */
 export function useEficienciaPresenca(obraId: string | null, data?: string) {
   const { profile, isGuest, sessionStable } = useAuth();
+  const { end: ctxEnd } = usePeriodFilter();
   const tenantId = profile?.tenant_id || null;
-  const _data = data || new Date().toISOString().substring(0, 10);
+  const _data = data || ctxEnd;
 
   return useQuery({
-    queryKey: ["eficiencia_presenca", obraId, _data],
+    queryKey: ["eficiencia_presenca", tenantId, obraId, _data],
     queryFn: async (): Promise<EficienciaPresencaRow | null> => {
       if (!obraId || isGuest || !tenantId) return null;
       const { data: rows, error } = await supabase.rpc("eficiencia_presenca", {
@@ -67,6 +70,7 @@ export function useEficienciaPresenca(obraId: string | null, data?: string) {
       return row || null;
     },
     enabled: !!obraId && !!tenantId && sessionStable && !isGuest,
-    staleTime: 60_000,
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
   });
 }
