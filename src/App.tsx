@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ObraProvider } from "@/hooks/useObra";
+import { PeriodFilterProvider } from "@/hooks/usePeriodFilter";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardOverview from "./pages/DashboardOverview";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/*" element={
               <ProtectedRoute>
                 <ObraProvider>
+                  <PeriodFilterProvider>
                   <AppLayout>
                     <Routes>
                       <Route path="/" element={<DashboardOverview />} />
@@ -73,6 +75,7 @@ const App = () => (
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
+                  </PeriodFilterProvider>
                 </ObraProvider>
               </ProtectedRoute>
             } />
