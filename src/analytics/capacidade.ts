@@ -90,12 +90,25 @@ export interface ProdutividadeEquipe {
   producaoMediaDia: number;
 }
 
+/**
+ * @deprecated Prefira useProdutividadeEquipe (RPC). Mantido apenas para fallback offline/guest.
+ * Usa producao_valor (numérico do banco) quando disponível; só regex no producao texto se ausente.
+ */
 export function calculateProdutividadePorEquipe(registros: any[]): ProdutividadeEquipe[] {
   const grupos: Record<string, { registros: number; dias: Set<string>; producao: number }> = {};
 
   registros.forEach((r) => {
-    const key = (r.equipe || r.atividade || "Sem equipe").toString().trim();
-    const prod = Number(r.producao);
+    const rawKey = (r.equipe_normalizada || r.equipe || r.atividade || "sem_equipe").toString().trim();
+    const key = rawKey.toLowerCase().replace(/\s+/g, "_");
+    let prod: number;
+    if (typeof r.producao_valor === "number" && !isNaN(r.producao_valor)) {
+      prod = r.producao_valor;
+    } else if (typeof r.producao === "string") {
+      const match = r.producao.replace(",", ".").match(/[0-9]+(?:\.[0-9]+)?/);
+      prod = match ? parseFloat(match[0]) : NaN;
+    } else {
+      prod = Number(r.producao);
+    }
     if (!grupos[key]) grupos[key] = { registros: 0, dias: new Set(), producao: 0 };
     grupos[key].registros += 1;
     if (r.data_registro) grupos[key].dias.add(r.data_registro);
