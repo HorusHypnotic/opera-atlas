@@ -1277,10 +1277,12 @@ export type Database = {
           data_registro: string
           entrada: string | null
           equipe: string | null
+          equipe_normalizada: string | null
           id: string
           nome: string
           obra_id: string
           producao: string | null
+          producao_valor: number | null
           saida: string | null
           status: string
           tenant_id: string
@@ -1291,10 +1293,12 @@ export type Database = {
           data_registro?: string
           entrada?: string | null
           equipe?: string | null
+          equipe_normalizada?: string | null
           id?: string
           nome: string
           obra_id: string
           producao?: string | null
+          producao_valor?: number | null
           saida?: string | null
           status?: string
           tenant_id: string
@@ -1305,10 +1309,12 @@ export type Database = {
           data_registro?: string
           entrada?: string | null
           equipe?: string | null
+          equipe_normalizada?: string | null
           id?: string
           nome?: string
           obra_id?: string
           producao?: string | null
+          producao_valor?: number | null
           saida?: string | null
           status?: string
           tenant_id?: string
