@@ -64,7 +64,16 @@ export function calculateColaboradorRanking(
     const nome = r.nome || "Desconhecido";
     if (!byNome[nome]) byNome[nome] = { dias: 0, prod: 0, faltas: 0 };
     byNome[nome].dias++;
-    byNome[nome].prod += Number(r.producao) || 0;
+    let prod: number;
+    if (typeof r.producao_valor === "number" && !isNaN(r.producao_valor)) {
+      prod = r.producao_valor;
+    } else if (typeof r.producao === "string") {
+      const m = r.producao.replace(",", ".").match(/[0-9]+(?:\.[0-9]+)?/);
+      prod = m ? parseFloat(m[0]) : 0;
+    } else {
+      prod = Number(r.producao) || 0;
+    }
+    byNome[nome].prod += prod;
   });
 
   presencas.forEach(p => {

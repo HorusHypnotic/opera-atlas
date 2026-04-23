@@ -1,14 +1,43 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ProdutividadeEquipe } from "@/analytics/capacidade";
+
+/**
+ * Aceita tanto o formato do RPC (snake_case) quanto o legado (camelCase).
+ * RPC é a fonte oficial — preferir useProdutividadeEquipe.
+ */
+export interface EquipeRow {
+  equipe: string;
+  registros: number;
+  dias_trabalhados?: number;
+  diasTrabalhados?: number;
+  producao_total?: number;
+  producaoTotal?: number;
+  producao_media_dia?: number;
+  producaoMediaDia?: number;
+}
 
 interface Props {
-  equipes: ProdutividadeEquipe[];
+  equipes: EquipeRow[];
+}
+
+function formatEquipe(slug: string): string {
+  if (!slug) return "—";
+  return slug
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 export function ProdutividadeEquipeCard({ equipes }: Props) {
-  const top = equipes.slice(0, 5);
+  const normalized = equipes.map((e) => ({
+    equipe: e.equipe,
+    registros: e.registros,
+    dias: e.dias_trabalhados ?? e.diasTrabalhados ?? 0,
+    producaoTotal: e.producao_total ?? e.producaoTotal ?? 0,
+    producaoMediaDia: e.producao_media_dia ?? e.producaoMediaDia ?? 0,
+  }));
+  const top = normalized.slice(0, 5);
   const max = top.reduce((m, e) => Math.max(m, e.producaoTotal), 0) || 1;
 
   return (
@@ -28,8 +57,8 @@ export function ProdutividadeEquipeCard({ equipes }: Props) {
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-xs">
                 <p className="text-xs">
-                  Soma de produção registrada por equipe (ou atividade quando equipe não estiver definida).
-                  Para detalhar por equipe, preencha o campo <strong>Equipe</strong> no Registro Diário.
+                  Soma de produção numérica por equipe (campo <strong>Equipe</strong> no Registro Diário).
+                  Equipes são normalizadas automaticamente (ex: "Equipe A" e "equipe a" agrupam).
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -46,7 +75,7 @@ export function ProdutividadeEquipeCard({ equipes }: Props) {
             {top.map((e) => (
               <div key={e.equipe} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium truncate flex-1 mr-2">{e.equipe}</span>
+                  <span className="font-medium truncate flex-1 mr-2">{formatEquipe(e.equipe)}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {e.producaoTotal.toLocaleString("pt-BR")}
                   </span>
@@ -58,7 +87,7 @@ export function ProdutividadeEquipeCard({ equipes }: Props) {
                   />
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{e.diasTrabalhados} dia(s) • {e.registros} registro(s)</span>
+                  <span>{e.dias} dia(s) • {e.registros} registro(s)</span>
                   <span>~ {e.producaoMediaDia.toLocaleString("pt-BR")}/dia</span>
                 </div>
               </div>

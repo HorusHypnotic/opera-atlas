@@ -7,7 +7,8 @@ import { AddRecordDialog, EditRecordDialog, DeleteRecordButton, FieldDef } from 
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
-import { calculateProdutividadePorEquipe, calculateCapacidade } from "@/analytics/capacidade";
+import { calculateCapacidade } from "@/analytics/capacidade";
+import { useProdutividadeEquipe } from "@/hooks/useProdutividadeEquipe";
 import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
 import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 
@@ -88,7 +89,8 @@ export default function OrganizacaoPage() {
     () => calculateCapacidade(presencas as any[], tamanhoEquipeEsperada),
     [presencas, tamanhoEquipeEsperada],
   );
-  const equipes = useMemo(() => calculateProdutividadePorEquipe(registros as any[]), [registros]);
+  // RPC oficial — fonte única de verdade (usa producao_valor + equipe_normalizada)
+  const { data: equipes = [] } = useProdutividadeEquipe(selectedObraId);
 
   return (
     <div>

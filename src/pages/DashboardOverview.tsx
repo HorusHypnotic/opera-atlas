@@ -37,7 +37,8 @@ import { TourTrigger } from "@/components/tour/TourTrigger";
 import { useProductTour } from "@/hooks/useProductTour";
 import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
-import { calculateCapacidade, calculateProdutividadePorEquipe } from "@/analytics/capacidade";
+import { calculateCapacidade } from "@/analytics/capacidade";
+import { useProdutividadeEquipe } from "@/hooks/useProdutividadeEquipe";
 import { useDashboardAggregates } from "@/hooks/useDashboardAggregates";
 
 import { calculateOperaScore } from "@/analytics/operaScore";
@@ -105,7 +106,8 @@ export default function DashboardOverview() {
     () => calculateCapacidade(presencas as any[], (selectedObra as any)?.tamanho_equipe_esperada || 0),
     [presencas, selectedObra],
   );
-  const equipesProdutividade = useMemo(() => calculateProdutividadePorEquipe(registros as any[]), [registros]);
+  // RPC oficial: produtividade por equipe (usa producao_valor + equipe_normalizada)
+  const { data: equipesProdutividade = [] } = useProdutividadeEquipe((selectedObra as any)?.id || null);
 
   // Server-side aggregates (cache 60s) — para futuras otimizações de performance
   useDashboardAggregates();
