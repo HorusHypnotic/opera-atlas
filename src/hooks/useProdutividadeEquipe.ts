@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { usePeriodFilter } from "@/hooks/usePeriodFilter";
 
 export interface ProdutividadeEquipeRow {
   equipe: string;
@@ -12,30 +13,28 @@ export interface ProdutividadeEquipeRow {
 
 /**
  * RPC oficial — fonte única de verdade para produtividade por equipe.
- * Usa producao_valor (numérico) e equipe_normalizada (lowercase + underscore).
+ * Período vem do PeriodFilterContext — queryKey inclui start/end (refetch automático ao trocar filtro).
  */
 export function useProdutividadeEquipe(obraId: string | null, start?: string, end?: string) {
   const { profile, isGuest, sessionStable } = useAuth();
+  const { start: ctxStart, end: ctxEnd } = usePeriodFilter();
   const tenantId = profile?.tenant_id || null;
 
-  const today = new Date().toISOString().substring(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().substring(0, 10);
-  const _start = start || thirtyDaysAgo;
-  const _end = end || today;
+  const _start = start ?? ctxStart ?? null;
+  const _end = end ?? ctxEnd;
 
   return useQuery({
     queryKey: ["produtividade_equipe", tenantId, obraId, _start, _end],
     queryFn: async (): Promise<ProdutividadeEquipeRow[]> => {
       if (!obraId || isGuest || !tenantId) return [];
-      const { data, error } = await supabase.rpc("produtividade_por_equipe", {
-        _obra_id: obraId,
-        _start,
-        _end,
-      });
+      const args: any = { _obra_id: obraId, _end };
+      if (_start) args._start = _start;
+      const { data, error } = await supabase.rpc("produtividade_por_equipe", args);
       if (error) throw error;
       return (data as ProdutividadeEquipeRow[]) || [];
     },
     enabled: !!obraId && !!tenantId && sessionStable && !isGuest,
-    staleTime: 60_000,
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
   });
 }

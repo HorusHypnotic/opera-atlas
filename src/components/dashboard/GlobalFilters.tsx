@@ -1,22 +1,23 @@
-import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useObra } from "@/hooks/useObra";
 import { Filter, Eye } from "lucide-react";
-import { PeriodFilter, PeriodFilterContext, createPeriodFilter } from "@/hooks/usePeriodFilter";
+import { PeriodFilter, usePeriodFilter } from "@/hooks/usePeriodFilter";
 import { Badge } from "@/components/ui/badge";
 
 interface GlobalFiltersProps {
   children?: React.ReactNode;
 }
 
+/**
+ * Renderiza apenas a UI dos filtros. O estado vive em PeriodFilterProvider
+ * (montado globalmente em App.tsx) — todos os hooks RPC consomem o mesmo período.
+ */
 export function GlobalFilters({ children }: GlobalFiltersProps) {
   const { obras, selectedObraId, setSelectedObraId, isViewOnlyObra } = useObra();
-  const [period, setPeriod] = useState<PeriodFilter>("30d");
-
-  const periodFilter = createPeriodFilter(period);
+  const { period, setPeriod } = usePeriodFilter();
 
   return (
-    <PeriodFilterContext.Provider value={{ period, setPeriod, getDateFrom: periodFilter.getDateFrom }}>
+    <>
       <div className="flex flex-wrap items-center gap-3 mb-6 p-4 glass-card">
         <Filter className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium text-muted-foreground mr-1">Filtros:</span>
@@ -51,6 +52,6 @@ export function GlobalFilters({ children }: GlobalFiltersProps) {
         </Select>
       </div>
       {children}
-    </PeriodFilterContext.Provider>
+    </>
   );
 }

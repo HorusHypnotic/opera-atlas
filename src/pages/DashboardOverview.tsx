@@ -37,9 +37,8 @@ import { TourTrigger } from "@/components/tour/TourTrigger";
 import { useProductTour } from "@/hooks/useProductTour";
 import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
-import { calculateCapacidade } from "@/analytics/capacidade";
 import { useProdutividadeEquipe } from "@/hooks/useProdutividadeEquipe";
-import { useDashboardAggregates } from "@/hooks/useDashboardAggregates";
+import { useDashboardAggregates, useEficienciaPresenca } from "@/hooks/useDashboardAggregates";
 
 import { calculateOperaScore } from "@/analytics/operaScore";
 import { calculateFinancials, calculateBurnRate } from "@/analytics/financeiro";
@@ -101,15 +100,11 @@ export default function DashboardOverview() {
   // Safety
   const safety = useMemo(() => calculateSafetyMetrics(incidentes, checklist), [incidentes, checklist]);
 
-  // Capacidade & Produtividade por equipe (Camada de Planejamento)
-  const capacidade = useMemo(
-    () => calculateCapacidade(presencas as any[], (selectedObra as any)?.tamanho_equipe_esperada || 0),
-    [presencas, selectedObra],
-  );
-  // RPC oficial: produtividade por equipe (usa producao_valor + equipe_normalizada)
+  // Capacidade & Produtividade por equipe (Camada de Planejamento) — RPC oficial.
+  const { data: capacidade, isLoading: capacidadeLoading } = useEficienciaPresenca((selectedObra as any)?.id || null);
   const { data: equipesProdutividade = [] } = useProdutividadeEquipe((selectedObra as any)?.id || null);
 
-  // Server-side aggregates (cache 60s) — para futuras otimizações de performance
+  // Server-side aggregates (cache 10s) — para futuras otimizações de performance
   useDashboardAggregates();
 
   // Notifications
@@ -274,7 +269,7 @@ export default function DashboardOverview() {
 
       {/* Camada de Planejamento: Capacidade Real vs Esperada + Produtividade por Equipe */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <CapacidadePresencaCard metrics={capacidade} obraNome={selectedObra?.nome} />
+        <CapacidadePresencaCard data={capacidade} obraNome={selectedObra?.nome} isLoading={capacidadeLoading} />
         <ProdutividadeEquipeCard equipes={equipesProdutividade} />
       </div>
 
