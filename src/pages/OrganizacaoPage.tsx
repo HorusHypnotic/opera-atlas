@@ -7,7 +7,8 @@ import { AddRecordDialog, EditRecordDialog, DeleteRecordButton, FieldDef } from 
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { Users, DollarSign, BarChart3, Ruler, TrendingDown } from "lucide-react";
-import { calculateProdutividadePorEquipe, calculateCapacidade } from "@/analytics/capacidade";
+import { calculateCapacidade } from "@/analytics/capacidade";
+import { useProdutividadeEquipe } from "@/hooks/useProdutividadeEquipe";
 import { ProdutividadeEquipeCard } from "@/components/dashboard/ProdutividadeEquipeCard";
 import { CapacidadePresencaCard } from "@/components/dashboard/CapacidadePresencaCard";
 
