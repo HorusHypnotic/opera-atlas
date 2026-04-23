@@ -89,7 +89,8 @@ export default function OrganizacaoPage() {
     () => calculateCapacidade(presencas as any[], tamanhoEquipeEsperada),
     [presencas, tamanhoEquipeEsperada],
   );
-  const equipes = useMemo(() => calculateProdutividadePorEquipe(registros as any[]), [registros]);
+  // RPC oficial — fonte única de verdade (usa producao_valor + equipe_normalizada)
+  const { data: equipes = [] } = useProdutividadeEquipe(selectedObraId);
 
   return (
     <div>
