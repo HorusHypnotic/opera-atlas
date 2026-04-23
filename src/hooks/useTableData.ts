@@ -52,8 +52,21 @@ export function useTableData<T = any>(table: string) {
     if (!tenantId) return { error: { message: "Sem tenant" } };
     const payload = { ...record, tenant_id: tenantId } as any;
     if (selectedObraId && !tablesWithoutObraId.includes(table)) payload.obra_id = selectedObraId;
+    // Normaliza equipe em registros_diarios (espelha equipe_normalizada do DB)
+    if (table === "registros_diarios" && typeof payload.equipe === "string") {
+      const trimmed = payload.equipe.trim();
+      payload.equipe = trimmed === "" ? null : trimmed;
+    }
     const { error } = await (supabase as any).from(table).insert(payload);
-    if (!error) refetchAll();
+    if (error) {
+      // Tratamento amigável de duplicidade de presença
+      if (table === "registro_presencas" && (error.code === "23505" || /uniq_presenca/i.test(error.message || ""))) {
+        toast.error("Este colaborador já tem presença registrada hoje nesta obra. Edite o registro existente.");
+        return { error };
+      }
+    } else {
+      refetchAll();
+    }
     return { error };
   };
 
