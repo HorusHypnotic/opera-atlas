@@ -70,8 +70,9 @@ export function useEficienciaPresenca(obraId: string | null, data?: string) {
       const row = Array.isArray(rows) ? rows[0] : rows;
       return row || null;
     },
-    enabled: !!obraId && !!tenantId && sessionStable && !isGuest,
-    staleTime: 10_000,
+    enabled: !!obraId && !!tenantId && !!_data && sessionStable && !isGuest,
+    staleTime: 0, // filtros = sempre fresh (coordenada #6)
+    gcTime: 30_000,
     refetchOnWindowFocus: true,
   });
 }
