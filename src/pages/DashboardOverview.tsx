@@ -5,9 +5,11 @@ import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSign, Heart, FileText, Share2 } from "lucide-react";
+import { Users, Package, Wrench, ShieldAlert, TrendingUp, ShieldCheck, DollarSign, Heart, FileText, Share2, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useFeatureFlag } from "@/lib/featureFlags";
 import { exportOperaReport } from "@/utils/exportOperaReport";
 import { exportClientReport } from "@/utils/exportClientReport";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
@@ -104,8 +106,32 @@ export default function DashboardOverview() {
   const { data: capacidade, isLoading: capacidadeLoading } = useEficienciaPresenca((selectedObra as any)?.id || null);
   const { data: equipesProdutividade = [] } = useProdutividadeEquipe((selectedObra as any)?.id || null);
 
-  // Server-side aggregates (cache 10s) — para futuras otimizações de performance
-  useDashboardAggregates();
+  // Feature flag: dashboard unificado (RPC server-side para finance/safety/score components).
+  // Quando ativa: cards passam a consumir agregados do servidor em paralelo ao legacy.
+  const [unifiedDashboard, setUnifiedDashboard] = useFeatureFlag("unified_dashboard");
+  const { data: aggregates } = useDashboardAggregates({
+    includeFinance: unifiedDashboard,
+    includeSafety: unifiedDashboard,
+    includeScoreComponents: unifiedDashboard,
+  });
+
+  // Quando flag ativa, sobrescreve métricas-chave com a fonte server-side (período-aware).
+  // Mantém estrutura de objeto para não quebrar componentes downstream.
+  const financialsEffective = unifiedDashboard && aggregates?.financeiro ? {
+    ...financials,
+    receita: aggregates.financeiro.receita,
+    totalCustos: aggregates.financeiro.custo,
+    saldo: aggregates.financeiro.saldo,
+    custoRetrabalho: aggregates.financeiro.custo_retrabalho ?? financials.custoRetrabalho,
+  } : financials;
+
+  const safetyEffective = unifiedDashboard && aggregates?.safety ? {
+    ...safety,
+    diasSemAcidente: aggregates.safety.dias_sem_acidente,
+    taxaResolucao: aggregates.safety.taxa_resolucao,
+    indiceSeveridade: aggregates.safety.indice_severidade,
+    checklistCompliance: aggregates.safety.checklist_compliance,
+  } : safety;
 
   // Notifications
   const today = new Date().toISOString().substring(0, 10);
@@ -218,6 +244,12 @@ export default function DashboardOverview() {
           <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Feature flag — fonte unificada (admins/avançado) */}
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground glass-card px-2 py-1.5 cursor-pointer" title="Quando ativo, KPIs de financeiro/segurança/score consomem dashboard_aggregates RPC (período-aware) ao invés do legacy useTableData">
+            <Zap className={`h-3.5 w-3.5 ${unifiedDashboard ? "text-primary" : ""}`} />
+            <span className="hidden sm:inline">Fonte unificada</span>
+            <Switch checked={unifiedDashboard} onCheckedChange={setUnifiedDashboard} />
+          </label>
           <TourTrigger onClick={tour.startTour} />
           {selectedObra && (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportClientPDF}>
@@ -259,7 +291,7 @@ export default function DashboardOverview() {
       />
 
       {/* Economy Hero */}
-      <EconomyHeroCard financials={financials} orcamentoTotal={obraData?.orcamento_total || 0} />
+      <EconomyHeroCard financials={financialsEffective} orcamentoTotal={obraData?.orcamento_total || 0} />
 
       {/* Score + Radar side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
@@ -275,10 +307,10 @@ export default function DashboardOverview() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" data-tour="kpi-row">
-        <KPICard title="Saldo" value={`R$ ${(financials.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financials.saldo >= 0 ? "ok" : "critical"} />
+        <KPICard title="Saldo" value={`R$ ${(financialsEffective.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financialsEffective.saldo >= 0 ? "ok" : "critical"} />
         <KPICard title="Obras" value={obras.length} icon={<TrendingUp className="h-4 w-4" />} tooltip="Total de obras cadastradas" status="ok" />
-        <KPICard title="Dias s/ Acidente" value={safety.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
-        <KPICard title="Inspeções" value={`${safety.taxaResolucao.toFixed(0)}%`} icon={<ShieldCheck className="h-4 w-4" />} tooltip="Taxa de resolução de incidentes" status={safety.taxaResolucao >= 90 ? "ok" : "warning"} />
+        <KPICard title="Dias s/ Acidente" value={safetyEffective.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
+        <KPICard title="Inspeções" value={`${safetyEffective.taxaResolucao.toFixed(0)}%`} icon={<ShieldCheck className="h-4 w-4" />} tooltip="Taxa de resolução de incidentes" status={safetyEffective.taxaResolucao >= 90 ? "ok" : "warning"} />
         <KPICard title="Absenteísmo" value={`${productivity.absenteismo.toFixed(1)}%`} icon={<Users className="h-4 w-4" />} tooltip="Faltas ÷ total de dias" status={productivity.absenteismo > 5 ? "critical" : productivity.absenteismo > 3 ? "warning" : "ok"} />
         <KPICard title="Colaboradores" value={productivity.colaboradoresAtivos} icon={<Users className="h-4 w-4" />} tooltip="Colaboradores ativos cadastrados" status="ok" />
       </div>
@@ -291,9 +323,9 @@ export default function DashboardOverview() {
         </h2>
         <FinancialCharts
           burnRate={burnRate}
-          custoRealM2={financials.custoRealM2}
+          custoRealM2={financialsEffective.custoRealM2}
           custoOrcadoM2={obraData?.custo_orcado_m2 || 0}
-          projecaoCustoFinal={financials.projecaoCustoFinal}
+          projecaoCustoFinal={financialsEffective.projecaoCustoFinal}
           orcamentoTotal={obraData?.orcamento_total || 0}
         />
       </div>
@@ -302,10 +334,10 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <ProductivityCard metrics={productivity} registros={registros} presencas={presencas} />
         <SafetyHeroCard
-          diasSemAcidente={safety.diasSemAcidente}
-          indiceSeveridade={safety.indiceSeveridade}
-          taxaResolucao={safety.taxaResolucao}
-          checklistCompliance={safety.checklistCompliance}
+          diasSemAcidente={safetyEffective.diasSemAcidente}
+          indiceSeveridade={safetyEffective.indiceSeveridade}
+          taxaResolucao={safetyEffective.taxaResolucao}
+          checklistCompliance={safetyEffective.checklistCompliance}
         />
       </div>
 
