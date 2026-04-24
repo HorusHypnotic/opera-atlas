@@ -36,8 +36,9 @@ export function useDashboardAggregates(start?: string, end?: string) {
       if (error) throw error;
       return (data as DashboardAggregates) || {};
     },
-    enabled: !!tenantId && sessionStable && !isGuest,
-    staleTime: 10_000, // 10s — filtros respondem rápido
+    enabled: !!tenantId && !!_end && sessionStable && !isGuest,
+    staleTime: 0, // filtros = sempre fresh (coordenada #6)
+    gcTime: 30_000,
     refetchOnWindowFocus: true,
   });
 }
