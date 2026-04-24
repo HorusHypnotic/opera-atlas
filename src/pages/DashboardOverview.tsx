@@ -106,8 +106,32 @@ export default function DashboardOverview() {
   const { data: capacidade, isLoading: capacidadeLoading } = useEficienciaPresenca((selectedObra as any)?.id || null);
   const { data: equipesProdutividade = [] } = useProdutividadeEquipe((selectedObra as any)?.id || null);
 
-  // Server-side aggregates (cache 10s) — para futuras otimizações de performance
-  useDashboardAggregates();
+  // Feature flag: dashboard unificado (RPC server-side para finance/safety/score components).
+  // Quando ativa: cards passam a consumir agregados do servidor em paralelo ao legacy.
+  const [unifiedDashboard, setUnifiedDashboard] = useFeatureFlag("unified_dashboard");
+  const { data: aggregates } = useDashboardAggregates({
+    includeFinance: unifiedDashboard,
+    includeSafety: unifiedDashboard,
+    includeScoreComponents: unifiedDashboard,
+  });
+
+  // Quando flag ativa, sobrescreve métricas-chave com a fonte server-side (período-aware).
+  // Mantém estrutura de objeto para não quebrar componentes downstream.
+  const financialsEffective = unifiedDashboard && aggregates?.financeiro ? {
+    ...financials,
+    receita: aggregates.financeiro.receita,
+    totalCustos: aggregates.financeiro.custo,
+    saldo: aggregates.financeiro.saldo,
+    custoRetrabalho: aggregates.financeiro.custo_retrabalho ?? financials.custoRetrabalho,
+  } : financials;
+
+  const safetyEffective = unifiedDashboard && aggregates?.safety ? {
+    ...safety,
+    diasSemAcidente: aggregates.safety.dias_sem_acidente,
+    taxaResolucao: aggregates.safety.taxa_resolucao,
+    indiceSeveridade: aggregates.safety.indice_severidade,
+    checklistCompliance: aggregates.safety.checklist_compliance,
+  } : safety;
 
   // Notifications
   const today = new Date().toISOString().substring(0, 10);
