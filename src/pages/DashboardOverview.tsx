@@ -244,6 +244,12 @@ export default function DashboardOverview() {
           <p className="text-sm text-muted-foreground">Visão consolidada • {selectedObra?.nome || "Todas as obras"}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Feature flag — fonte unificada (admins/avançado) */}
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground glass-card px-2 py-1.5 cursor-pointer" title="Quando ativo, KPIs de financeiro/segurança/score consomem dashboard_aggregates RPC (período-aware) ao invés do legacy useTableData">
+            <Zap className={`h-3.5 w-3.5 ${unifiedDashboard ? "text-primary" : ""}`} />
+            <span className="hidden sm:inline">Fonte unificada</span>
+            <Switch checked={unifiedDashboard} onCheckedChange={setUnifiedDashboard} />
+          </label>
           <TourTrigger onClick={tour.startTour} />
           {selectedObra && (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportClientPDF}>
