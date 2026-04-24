@@ -291,7 +291,7 @@ export default function DashboardOverview() {
       />
 
       {/* Economy Hero */}
-      <EconomyHeroCard financials={financials} orcamentoTotal={obraData?.orcamento_total || 0} />
+      <EconomyHeroCard financials={financialsEffective} orcamentoTotal={obraData?.orcamento_total || 0} />
 
       {/* Score + Radar side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" data-tour="opera-score">
@@ -307,10 +307,10 @@ export default function DashboardOverview() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" data-tour="kpi-row">
-        <KPICard title="Saldo" value={`R$ ${(financials.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financials.saldo >= 0 ? "ok" : "critical"} />
+        <KPICard title="Saldo" value={`R$ ${(financialsEffective.saldo / 1000).toFixed(0)}k`} icon={<DollarSign className="h-4 w-4" />} tooltip="Receitas - Custos" status={financialsEffective.saldo >= 0 ? "ok" : "critical"} />
         <KPICard title="Obras" value={obras.length} icon={<TrendingUp className="h-4 w-4" />} tooltip="Total de obras cadastradas" status="ok" />
-        <KPICard title="Dias s/ Acidente" value={safety.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
-        <KPICard title="Inspeções" value={`${safety.taxaResolucao.toFixed(0)}%`} icon={<ShieldCheck className="h-4 w-4" />} tooltip="Taxa de resolução de incidentes" status={safety.taxaResolucao >= 90 ? "ok" : "warning"} />
+        <KPICard title="Dias s/ Acidente" value={safetyEffective.diasSemAcidente} icon={<Heart className="h-4 w-4" />} tooltip="Dias consecutivos sem acidentes" status="ok" />
+        <KPICard title="Inspeções" value={`${safetyEffective.taxaResolucao.toFixed(0)}%`} icon={<ShieldCheck className="h-4 w-4" />} tooltip="Taxa de resolução de incidentes" status={safetyEffective.taxaResolucao >= 90 ? "ok" : "warning"} />
         <KPICard title="Absenteísmo" value={`${productivity.absenteismo.toFixed(1)}%`} icon={<Users className="h-4 w-4" />} tooltip="Faltas ÷ total de dias" status={productivity.absenteismo > 5 ? "critical" : productivity.absenteismo > 3 ? "warning" : "ok"} />
         <KPICard title="Colaboradores" value={productivity.colaboradoresAtivos} icon={<Users className="h-4 w-4" />} tooltip="Colaboradores ativos cadastrados" status="ok" />
       </div>
@@ -323,9 +323,9 @@ export default function DashboardOverview() {
         </h2>
         <FinancialCharts
           burnRate={burnRate}
-          custoRealM2={financials.custoRealM2}
+          custoRealM2={financialsEffective.custoRealM2}
           custoOrcadoM2={obraData?.custo_orcado_m2 || 0}
-          projecaoCustoFinal={financials.projecaoCustoFinal}
+          projecaoCustoFinal={financialsEffective.projecaoCustoFinal}
           orcamentoTotal={obraData?.orcamento_total || 0}
         />
       </div>
@@ -334,10 +334,10 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <ProductivityCard metrics={productivity} registros={registros} presencas={presencas} />
         <SafetyHeroCard
-          diasSemAcidente={safety.diasSemAcidente}
-          indiceSeveridade={safety.indiceSeveridade}
-          taxaResolucao={safety.taxaResolucao}
-          checklistCompliance={safety.checklistCompliance}
+          diasSemAcidente={safetyEffective.diasSemAcidente}
+          indiceSeveridade={safetyEffective.indiceSeveridade}
+          taxaResolucao={safetyEffective.taxaResolucao}
+          checklistCompliance={safetyEffective.checklistCompliance}
         />
       </div>
 
