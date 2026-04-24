@@ -33,8 +33,9 @@ export function useProdutividadeEquipe(obraId: string | null, start?: string, en
       if (error) throw error;
       return (data as ProdutividadeEquipeRow[]) || [];
     },
-    enabled: !!obraId && !!tenantId && sessionStable && !isGuest,
-    staleTime: 10_000,
+    enabled: !!obraId && !!tenantId && !!_end && sessionStable && !isGuest,
+    staleTime: 0, // filtros = sempre fresh (coordenada #6)
+    gcTime: 30_000,
     refetchOnWindowFocus: true,
   });
 }
