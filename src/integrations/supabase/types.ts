@@ -1572,7 +1572,14 @@ export type Database = {
     }
     Functions: {
       dashboard_aggregates: {
-        Args: { _end?: string; _obra_id?: string; _start?: string }
+        Args: {
+          _end?: string
+          _include_finance?: boolean
+          _include_safety?: boolean
+          _include_score_components?: boolean
+          _obra_id?: string
+          _start?: string
+        }
         Returns: Json
       }
       eficiencia_presenca: {
