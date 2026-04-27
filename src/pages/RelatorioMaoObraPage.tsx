@@ -489,8 +489,6 @@ export default function RelatorioMaoObraPage() {
     return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
   };
 
-    return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
-  };
 
   const buildReportBlocks = () => {
     if (selectedObraId) {
