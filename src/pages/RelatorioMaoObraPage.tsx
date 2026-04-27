@@ -402,28 +402,11 @@ export default function RelatorioMaoObraPage() {
   };
 
   // ─── Build per-obra report rows (used when no obra selected) ───
+  // Mesmo modelo: BASE (presença) + DELTA (apontamento) + LEGADO isolado
   const buildRowsForObra = (obraId: string): ReportRow[] => {
     const rows: Record<string, ReportRow> = {};
 
-    const filteredApontamentos = apontamentos.filter((a) => {
-      if (a.obra_id !== obraId) return false;
-      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
-      return true;
-    });
-    for (const a of filteredApontamentos) {
-      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
-      if (!colab) continue;
-      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
-      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
-      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
-      const row = rows[colab.id];
-      row.fonte = "manual";
-      row.qtdDiarias += Number(a.quantidade_diarias);
-      row.valorDiaria = Number(a.valor_diaria);
-      row.valorTotal += Number(a.quantidade_diarias) * Number(a.valor_diaria);
-      if (a.observacao) row.observacao = a.observacao;
-    }
-
+    // BASE: presença
     const filteredPresencas = presencas.filter((p) => {
       if (p.obra_id !== obraId) return false;
       if (p.data < dataInicio || p.data > dataFim) return false;
@@ -447,22 +430,64 @@ export default function RelatorioMaoObraPage() {
       else if (fracao === 0) row.faltas += 1;
       else row.presencas += fracao;
 
-      if (row.fonte === "manual") continue;
-
       const vinculo = vinculos.find((v) => v.colaborador_id === colab.id && v.obra_id === obraId && v.ativo);
-      const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
-      row.valorDiaria = Number(valorDiaria);
+      const valorBase =
+        (p.valor_diaria_usado != null && Number(p.valor_diaria_usado) > 0 ? Number(p.valor_diaria_usado) : null)
+        ?? (p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : null)
+        ?? (vinculo?.valor_diaria_especial != null ? Number(vinculo.valor_diaria_especial) : null)
+        ?? Number(colab.valor_diaria);
+      row.valorDiaria = valorBase;
 
       if (fracao > 0 && p.tipo !== "hora_extra") {
-        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
-        row.qtdDiarias += fracao;
-        row.valorTotal += valorBase * fracao;
+        row.qtdBasePresenca += fracao;
+        row.valorBasePresenca += valorBase * fracao;
       } else if (p.tipo === "hora_extra") {
-        const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
-        row.valorTotal += extraValue;
-        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
+        const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
+        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        row.valorBasePresenca += extraValue;
       }
     }
+
+    // DELTA: apontamento
+    const filteredApontamentos = apontamentos.filter((a) => {
+      if (a.obra_id !== obraId) return false;
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
+      return true;
+    });
+    for (const a of filteredApontamentos) {
+      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
+      const row = rows[colab.id];
+
+      const valor = Number(a.quantidade_diarias) * Number(a.valor_diaria);
+      const tipo = a.tipo || "ajuste";
+      if (tipo === "legacy_historico") {
+        row.valorLegado += valor;
+      } else {
+        row.qtdAjuste += Number(a.quantidade_diarias);
+        row.valorAjuste += valor;
+      }
+      if (a.observacao) row.observacao = a.observacao;
+    }
+
+    // Consolidação
+    for (const row of Object.values(rows)) {
+      row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
+      row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
+      const hasAjuste = row.valorAjuste !== 0;
+      const hasLegado = row.valorLegado > 0;
+      if (hasLegado && !hasBase && !hasAjuste) row.fonte = "legado";
+      else if (hasBase && hasAjuste) row.fonte = "misto";
+      else if (hasAjuste && !hasBase) row.fonte = "ajuste";
+      else row.fonte = "presenca";
+    }
+
+    return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
+  };
 
     return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
   };
