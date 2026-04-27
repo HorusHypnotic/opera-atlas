@@ -778,8 +778,12 @@ export default function RelatorioMaoObraPage() {
                           {r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—"}
                         </td>
                         <td className="py-2.5 px-3 text-center">
-                          <Badge variant={r.fonte === "manual" ? "default" : "secondary"} className="text-[10px]">
-                            {r.fonte === "manual" ? "Manual" : "Presença"}
+                          <Badge
+                            variant={r.fonte === "legado" ? "outline" : r.fonte === "misto" ? "default" : r.fonte === "ajuste" ? "default" : "secondary"}
+                            className="text-[10px]"
+                            title={`Base: R$ ${r.valorBasePresenca.toFixed(2)} | Ajuste: R$ ${r.valorAjuste.toFixed(2)}${r.valorLegado > 0 ? ` | Legado: R$ ${r.valorLegado.toFixed(2)}` : ""}`}
+                          >
+                            {r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença + Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença"}
                           </Badge>
                         </td>
                         {canInsert && (
