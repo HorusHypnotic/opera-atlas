@@ -137,6 +137,7 @@ export type Database = {
           periodo_inicio: string
           quantidade_diarias: number
           tenant_id: string
+          tipo: string
           valor_diaria: number
         }
         Insert: {
@@ -150,6 +151,7 @@ export type Database = {
           periodo_inicio?: string
           quantidade_diarias?: number
           tenant_id: string
+          tipo?: string
           valor_diaria?: number
         }
         Update: {
@@ -163,6 +165,7 @@ export type Database = {
           periodo_inicio?: string
           quantidade_diarias?: number
           tenant_id?: string
+          tipo?: string
           valor_diaria?: number
         }
         Relationships: [
