@@ -46,6 +46,7 @@ interface ApontamentoDiaria {
   valor_diaria: number;
   observacao: string | null;
   created_at: string;
+  tipo?: "ajuste" | "complemento" | "correcao" | "legacy_historico";
 }
 
 interface RegistroPresenca {
@@ -77,10 +78,16 @@ interface ReportRow {
   valorDiaria: number;
   qtdDiarias: number;
   valorTotal: number;
+  // Decomposição auditável: total = valorBasePresenca + valorAjuste + valorLegado
+  valorBasePresenca: number;
+  valorAjuste: number;
+  valorLegado: number;
+  qtdBasePresenca: number;
+  qtdAjuste: number;
   pixChave: string;
   pixTipo: string;
   observacao: string;
-  fonte: "manual" | "presenca";
+  fonte: "presenca" | "ajuste" | "misto" | "legado";
   // operational (from presence)
   presencas: number;
   faltas: number;
