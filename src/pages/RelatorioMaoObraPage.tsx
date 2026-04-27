@@ -46,6 +46,7 @@ interface ApontamentoDiaria {
   valor_diaria: number;
   observacao: string | null;
   created_at: string;
+  tipo?: "ajuste" | "complemento" | "correcao" | "legacy_historico";
 }
 
 interface RegistroPresenca {
@@ -77,10 +78,16 @@ interface ReportRow {
   valorDiaria: number;
   qtdDiarias: number;
   valorTotal: number;
+  // Decomposição auditável: total = valorBasePresenca + valorAjuste + valorLegado
+  valorBasePresenca: number;
+  valorAjuste: number;
+  valorLegado: number;
+  qtdBasePresenca: number;
+  qtdAjuste: number;
   pixChave: string;
   pixTipo: string;
   observacao: string;
-  fonte: "manual" | "presenca";
+  fonte: "presenca" | "ajuste" | "misto" | "legado";
   // operational (from presence)
   presencas: number;
   faltas: number;
@@ -136,36 +143,13 @@ export default function RelatorioMaoObraPage() {
   const colabAtivos = useMemo(() => colaboradores.filter((c) => c.ativo), [colaboradores]);
 
   // ─── Build report rows ───
-  // Priority: 1) manual apontamento_diarias  2) fallback to presence calc
+  // MODELO ÚNICO: presença = BASE | apontamento (ajuste/complemento/correcao) = DELTA
+  // legacy_historico = exibido em coluna separada, NÃO recalculado
+  // Snapshot: valor_diaria_usado vence cascata (histórico imutável)
   const reportRows = useMemo(() => {
     const rows: Record<string, ReportRow> = {};
 
-    // 1) Manual entries (apontamento_diarias)
-    const filteredApontamentos = apontamentos.filter((a) => {
-      if (selectedObraId && a.obra_id !== selectedObraId) return false;
-      // overlap check with filter period
-      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
-      return true;
-    });
-
-    for (const a of filteredApontamentos) {
-      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
-      if (!colab) continue;
-      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
-      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
-
-      if (!rows[colab.id]) {
-        rows[colab.id] = makeEmptyRow(colab);
-      }
-      const row = rows[colab.id];
-      row.fonte = "manual";
-      row.qtdDiarias += Number(a.quantidade_diarias);
-      row.valorDiaria = Number(a.valor_diaria);
-      row.valorTotal += Number(a.quantidade_diarias) * Number(a.valor_diaria);
-      if (a.observacao) row.observacao = a.observacao;
-    }
-
-    // 2) Fallback: presence-based for workers WITHOUT manual entries
+    // ── 1) BASE: presença (sempre entra, faltas reduzem) ──
     const filteredPresencas = presencas.filter((p) => {
       if (selectedObraId && p.obra_id !== selectedObraId) return false;
       if (p.data < dataInicio || p.data > dataFim) return false;
@@ -178,46 +162,82 @@ export default function RelatorioMaoObraPage() {
       if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
       if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
 
-      // Always track operational data
-      if (!rows[colab.id]) {
-        rows[colab.id] = makeEmptyRow(colab);
-      }
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
       const row = rows[colab.id];
 
-      // Operational tracking — usa fracao_diaria como verdade
       const fracao = p.fracao_diaria != null
         ? Number(p.fracao_diaria)
         : (p.tipo === "falta" || p.tipo === "falta_injustificada" || p.tipo === "falta_justificada" ? 0
           : p.tipo === "meio_periodo" ? 0.5 : 1);
 
-      if (p.tipo === "hora_extra") {
-        row.horasExtra += Number(p.horas_extra || 0);
-      } else if (p.tipo === "falta_justificada") {
-        row.faltasJustificadas += 1;
-      } else if (fracao === 0) {
-        row.faltas += 1;
-      } else {
-        row.presencas += fracao; // 0.5 conta como meia presença
-      }
+      // Operacional
+      if (p.tipo === "hora_extra") row.horasExtra += Number(p.horas_extra || 0);
+      else if (p.tipo === "falta_justificada") row.faltasJustificadas += 1;
+      else if (fracao === 0) row.faltas += 1;
+      else row.presencas += fracao;
 
-      // Financial fallback only if no manual entry
-      if (row.fonte === "manual") continue;
-
+      // Resolução de valor — snapshot vence cascata (HISTÓRICO IMUTÁVEL)
       const vinculo = vinculos.find(
         (v) => v.colaborador_id === colab.id && v.obra_id === (selectedObraId || p.obra_id) && v.ativo
       );
-      const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
-      row.valorDiaria = Number(valorDiaria);
+      const valorBase =
+        (p.valor_diaria_usado != null && Number(p.valor_diaria_usado) > 0 ? Number(p.valor_diaria_usado) : null)
+        ?? (p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : null)
+        ?? (vinculo?.valor_diaria_especial != null ? Number(vinculo.valor_diaria_especial) : null)
+        ?? Number(colab.valor_diaria);
+      row.valorDiaria = valorBase;
 
       if (fracao > 0 && p.tipo !== "hora_extra") {
-        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
-        row.qtdDiarias += fracao;
-        row.valorTotal += valorBase * fracao;
+        row.qtdBasePresenca += fracao;
+        row.valorBasePresenca += valorBase * fracao;
       } else if (p.tipo === "hora_extra") {
-        const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
-        row.valorTotal += extraValue;
-        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
+        const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
+        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        row.valorBasePresenca += extraValue;
       }
+    }
+
+    // ── 2) DELTA: apontamento_diarias (ajuste/complemento/correcao soma; legado isolado) ──
+    const filteredApontamentos = apontamentos.filter((a) => {
+      if (selectedObraId && a.obra_id !== selectedObraId) return false;
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
+      return true;
+    });
+
+    for (const a of filteredApontamentos) {
+      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
+      const row = rows[colab.id];
+
+      const valor = Number(a.quantidade_diarias) * Number(a.valor_diaria);
+      const tipo = a.tipo || "ajuste";
+
+      if (tipo === "legacy_historico") {
+        row.valorLegado += valor;
+      } else {
+        row.qtdAjuste += Number(a.quantidade_diarias);
+        row.valorAjuste += valor;
+      }
+      if (a.observacao) row.observacao = a.observacao;
+    }
+
+    // ── 3) Consolidação: total = base + ajuste + legado ──
+    for (const row of Object.values(rows)) {
+      row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
+      row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+
+      const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
+      const hasAjuste = row.valorAjuste !== 0;
+      const hasLegado = row.valorLegado > 0;
+
+      if (hasLegado && !hasBase && !hasAjuste) row.fonte = "legado";
+      else if (hasBase && hasAjuste) row.fonte = "misto";
+      else if (hasAjuste && !hasBase) row.fonte = "ajuste";
+      else row.fonte = "presenca";
     }
 
     return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -231,6 +251,11 @@ export default function RelatorioMaoObraPage() {
       valorDiaria: Number(colab.valor_diaria),
       qtdDiarias: 0,
       valorTotal: 0,
+      valorBasePresenca: 0,
+      valorAjuste: 0,
+      valorLegado: 0,
+      qtdBasePresenca: 0,
+      qtdAjuste: 0,
       pixChave: colab.pix_chave || "",
       pixTipo: colab.pix_tipo || "",
       observacao: "",
@@ -377,28 +402,11 @@ export default function RelatorioMaoObraPage() {
   };
 
   // ─── Build per-obra report rows (used when no obra selected) ───
+  // Mesmo modelo: BASE (presença) + DELTA (apontamento) + LEGADO isolado
   const buildRowsForObra = (obraId: string): ReportRow[] => {
     const rows: Record<string, ReportRow> = {};
 
-    const filteredApontamentos = apontamentos.filter((a) => {
-      if (a.obra_id !== obraId) return false;
-      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
-      return true;
-    });
-    for (const a of filteredApontamentos) {
-      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
-      if (!colab) continue;
-      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
-      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
-      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
-      const row = rows[colab.id];
-      row.fonte = "manual";
-      row.qtdDiarias += Number(a.quantidade_diarias);
-      row.valorDiaria = Number(a.valor_diaria);
-      row.valorTotal += Number(a.quantidade_diarias) * Number(a.valor_diaria);
-      if (a.observacao) row.observacao = a.observacao;
-    }
-
+    // BASE: presença
     const filteredPresencas = presencas.filter((p) => {
       if (p.obra_id !== obraId) return false;
       if (p.data < dataInicio || p.data > dataFim) return false;
@@ -422,25 +430,65 @@ export default function RelatorioMaoObraPage() {
       else if (fracao === 0) row.faltas += 1;
       else row.presencas += fracao;
 
-      if (row.fonte === "manual") continue;
-
       const vinculo = vinculos.find((v) => v.colaborador_id === colab.id && v.obra_id === obraId && v.ativo);
-      const valorDiaria = vinculo?.valor_diaria_especial ?? colab.valor_diaria;
-      row.valorDiaria = Number(valorDiaria);
+      const valorBase =
+        (p.valor_diaria_usado != null && Number(p.valor_diaria_usado) > 0 ? Number(p.valor_diaria_usado) : null)
+        ?? (p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : null)
+        ?? (vinculo?.valor_diaria_especial != null ? Number(vinculo.valor_diaria_especial) : null)
+        ?? Number(colab.valor_diaria);
+      row.valorDiaria = valorBase;
 
       if (fracao > 0 && p.tipo !== "hora_extra") {
-        const valorBase = p.valor_diaria_especial != null ? Number(p.valor_diaria_especial) : Number(valorDiaria);
-        row.qtdDiarias += fracao;
-        row.valorTotal += valorBase * fracao;
+        row.qtdBasePresenca += fracao;
+        row.valorBasePresenca += valorBase * fracao;
       } else if (p.tipo === "hora_extra") {
-        const extraValue = (Number(p.horas_extra || 0) / 8) * Number(valorDiaria);
-        row.valorTotal += extraValue;
-        row.qtdDiarias += Number(p.horas_extra || 0) / 8;
+        const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
+        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        row.valorBasePresenca += extraValue;
       }
+    }
+
+    // DELTA: apontamento
+    const filteredApontamentos = apontamentos.filter((a) => {
+      if (a.obra_id !== obraId) return false;
+      if (a.periodo_fim < dataInicio || a.periodo_inicio > dataFim) return false;
+      return true;
+    });
+    for (const a of filteredApontamentos) {
+      const colab = colaboradores.find((c) => c.id === a.colaborador_id);
+      if (!colab) continue;
+      if (filtroFuncao !== "all" && colab.categoria !== filtroFuncao) continue;
+      if (filtroTrabalhador !== "all" && colab.id !== filtroTrabalhador) continue;
+      if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
+      const row = rows[colab.id];
+
+      const valor = Number(a.quantidade_diarias) * Number(a.valor_diaria);
+      const tipo = a.tipo || "ajuste";
+      if (tipo === "legacy_historico") {
+        row.valorLegado += valor;
+      } else {
+        row.qtdAjuste += Number(a.quantidade_diarias);
+        row.valorAjuste += valor;
+      }
+      if (a.observacao) row.observacao = a.observacao;
+    }
+
+    // Consolidação
+    for (const row of Object.values(rows)) {
+      row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
+      row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
+      const hasAjuste = row.valorAjuste !== 0;
+      const hasLegado = row.valorLegado > 0;
+      if (hasLegado && !hasBase && !hasAjuste) row.fonte = "legado";
+      else if (hasBase && hasAjuste) row.fonte = "misto";
+      else if (hasAjuste && !hasBase) row.fonte = "ajuste";
+      else row.fonte = "presenca";
     }
 
     return Object.values(rows).sort((a, b) => a.nome.localeCompare(b.nome));
   };
+
 
   const buildReportBlocks = () => {
     if (selectedObraId) {
@@ -730,8 +778,12 @@ export default function RelatorioMaoObraPage() {
                           {r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—"}
                         </td>
                         <td className="py-2.5 px-3 text-center">
-                          <Badge variant={r.fonte === "manual" ? "default" : "secondary"} className="text-[10px]">
-                            {r.fonte === "manual" ? "Manual" : "Presença"}
+                          <Badge
+                            variant={r.fonte === "legado" ? "outline" : r.fonte === "misto" ? "default" : r.fonte === "ajuste" ? "default" : "secondary"}
+                            className="text-[10px]"
+                            title={`Base: R$ ${r.valorBasePresenca.toFixed(2)} | Ajuste: R$ ${r.valorAjuste.toFixed(2)}${r.valorLegado > 0 ? ` | Legado: R$ ${r.valorLegado.toFixed(2)}` : ""}`}
+                          >
+                            {r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença + Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença"}
                           </Badge>
                         </td>
                         {canInsert && (
