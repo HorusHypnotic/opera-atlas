@@ -166,16 +166,18 @@ export default function RelatorioMaoObraPage() {
       if (!rows[colab.id]) rows[colab.id] = makeEmptyRow(colab);
       const row = rows[colab.id];
 
-      const fracao = p.fracao_diaria != null
-        ? Number(p.fracao_diaria)
-        : (p.tipo === "falta" || p.tipo === "falta_injustificada" || p.tipo === "falta_justificada" ? 0
-          : p.tipo === "meio_periodo" ? 0.5 : 1);
+      // Blindagem: tipo manda sobre fracao_diaria — falta NUNCA vira diária por fallback
+      if ((p.tipo || "").toLowerCase().startsWith("falta")) {
+        if (p.tipo === "falta_justificada") row.faltasJustificadas += 1;
+        else row.faltas += 1;
+        continue; // falta não entra em base, não soma valor — fim
+      }
+
+      const fracao = resolvePresencaFracao(p);
 
       // Operacional
       if (p.tipo === "hora_extra") row.horasExtra += Number(p.horas_extra || 0);
-      else if (p.tipo === "falta_justificada") row.faltasJustificadas += 1;
-      else if (fracao === 0) row.faltas += 1;
-      else row.presencas += fracao;
+      else if (fracao > 0) row.presencas += fracao;
 
       // Resolução de valor — snapshot vence cascata (HISTÓRICO IMUTÁVEL)
       const vinculo = vinculos.find(
