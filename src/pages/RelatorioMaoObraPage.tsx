@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { resolvePresencaFracao } from "@/lib/payrollRules";
 
 // ─── Types ───
 interface Colaborador {
