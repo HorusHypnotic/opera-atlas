@@ -1211,8 +1211,10 @@ export type Database = {
           motivo: string | null
           motivo_reabertura: string | null
           obra_id: string
+          pdf_url: string | null
           reaberto_em: string | null
           reaberto_por: string | null
+          snapshot_json: Json | null
           tenant_id: string
         }
         Insert: {
@@ -1224,8 +1226,10 @@ export type Database = {
           motivo?: string | null
           motivo_reabertura?: string | null
           obra_id: string
+          pdf_url?: string | null
           reaberto_em?: string | null
           reaberto_por?: string | null
+          snapshot_json?: Json | null
           tenant_id: string
         }
         Update: {
@@ -1237,8 +1241,10 @@ export type Database = {
           motivo?: string | null
           motivo_reabertura?: string | null
           obra_id?: string
+          pdf_url?: string | null
           reaberto_em?: string | null
           reaberto_por?: string | null
+          snapshot_json?: Json | null
           tenant_id?: string
         }
         Relationships: []
@@ -1667,7 +1673,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      audit_logs_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          new_fields_count: number | null
+          old_fields_count: number | null
+          operation: string | null
+          row_id: string | null
+          table_name: string | null
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          new_fields_count?: never
+          old_fields_count?: never
+          operation?: string | null
+          row_id?: string | null
+          table_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          new_fields_count?: never
+          old_fields_count?: never
+          operation?: string | null
+          row_id?: string | null
+          table_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       dashboard_aggregates: {
@@ -1736,6 +1777,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      jsonb_object_keys_count: { Args: { _obj: Json }; Returns: number }
       produtividade_por_equipe: {
         Args: { _end?: string; _obra_id: string; _start?: string }
         Returns: {
@@ -1752,6 +1794,11 @@ export type Database = {
         Returns: boolean
       }
       validar_codigo_influencer: { Args: { _codigo: string }; Returns: boolean }
+      validar_fechamento: {
+        Args: { _data_fim: string; _data_inicio: string; _obra_id: string }
+        Returns: Json
+      }
+      verificar_hash_periodo: { Args: { _periodo_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operacional" | "visualizador"
