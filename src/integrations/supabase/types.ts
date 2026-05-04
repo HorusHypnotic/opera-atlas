@@ -1211,8 +1211,10 @@ export type Database = {
           motivo: string | null
           motivo_reabertura: string | null
           obra_id: string
+          pdf_url: string | null
           reaberto_em: string | null
           reaberto_por: string | null
+          snapshot_json: Json | null
           tenant_id: string
         }
         Insert: {
@@ -1224,8 +1226,10 @@ export type Database = {
           motivo?: string | null
           motivo_reabertura?: string | null
           obra_id: string
+          pdf_url?: string | null
           reaberto_em?: string | null
           reaberto_por?: string | null
+          snapshot_json?: Json | null
           tenant_id: string
         }
         Update: {
@@ -1237,8 +1241,10 @@ export type Database = {
           motivo?: string | null
           motivo_reabertura?: string | null
           obra_id?: string
+          pdf_url?: string | null
           reaberto_em?: string | null
           reaberto_por?: string | null
+          snapshot_json?: Json | null
           tenant_id?: string
         }
         Relationships: []
@@ -1788,6 +1794,11 @@ export type Database = {
         Returns: boolean
       }
       validar_codigo_influencer: { Args: { _codigo: string }; Returns: boolean }
+      validar_fechamento: {
+        Args: { _data_fim: string; _data_inicio: string; _obra_id: string }
+        Returns: Json
+      }
+      verificar_hash_periodo: { Args: { _periodo_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operacional" | "visualizador"
