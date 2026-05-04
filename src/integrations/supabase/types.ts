@@ -1667,7 +1667,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      audit_logs_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          new_fields_count: number | null
+          old_fields_count: number | null
+          operation: string | null
+          row_id: string | null
+          table_name: string | null
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          new_fields_count?: never
+          old_fields_count?: never
+          operation?: string | null
+          row_id?: string | null
+          table_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          new_fields_count?: never
+          old_fields_count?: never
+          operation?: string | null
+          row_id?: string | null
+          table_name?: string | null
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       dashboard_aggregates: {
@@ -1736,6 +1771,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      jsonb_object_keys_count: { Args: { _obj: Json }; Returns: number }
       produtividade_por_equipe: {
         Args: { _end?: string; _obra_id: string; _start?: string }
         Returns: {
