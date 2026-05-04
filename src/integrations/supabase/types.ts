@@ -1689,6 +1689,15 @@ export type Database = {
           presente: number
         }[]
       }
+      folha_pagamento: {
+        Args: {
+          _colaborador_id?: string
+          _data_fim: string
+          _data_inicio: string
+          _obra_id: string
+        }
+        Returns: Json
+      }
       get_beta_status_by_email: {
         Args: { _email: string }
         Returns: {
