@@ -138,6 +138,8 @@ export type Database = {
           quantidade_diarias: number
           tenant_id: string
           tipo: string
+          updated_at: string
+          updated_by: string | null
           valor_diaria: number
         }
         Insert: {
@@ -152,6 +154,8 @@ export type Database = {
           quantidade_diarias?: number
           tenant_id: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor_diaria?: number
         }
         Update: {
@@ -166,6 +170,8 @@ export type Database = {
           quantidade_diarias?: number
           tenant_id?: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor_diaria?: number
         }
         Relationships: [
@@ -280,6 +286,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      audit_logs_db: {
+        Row: {
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          row_id: string
+          table_name: string
+          tenant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          row_id: string
+          table_name: string
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          row_id?: string
+          table_name?: string
+          tenant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       beta_config: {
         Row: {
@@ -806,6 +848,8 @@ export type Database = {
           status_pagamento: string
           tenant_id: string
           tipo: string
+          updated_at: string
+          updated_by: string | null
           valor: number
         }
         Insert: {
@@ -819,6 +863,8 @@ export type Database = {
           status_pagamento?: string
           tenant_id: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor?: number
         }
         Update: {
@@ -832,6 +878,8 @@ export type Database = {
           status_pagamento?: string
           tenant_id?: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor?: number
         }
         Relationships: [
@@ -1153,6 +1201,48 @@ export type Database = {
           },
         ]
       }
+      periodos_fechados: {
+        Row: {
+          fechado_em: string
+          fechado_por: string
+          hash_snapshot: string
+          id: string
+          mes: string
+          motivo: string | null
+          motivo_reabertura: string | null
+          obra_id: string
+          reaberto_em: string | null
+          reaberto_por: string | null
+          tenant_id: string
+        }
+        Insert: {
+          fechado_em?: string
+          fechado_por: string
+          hash_snapshot: string
+          id?: string
+          mes: string
+          motivo?: string | null
+          motivo_reabertura?: string | null
+          obra_id: string
+          reaberto_em?: string | null
+          reaberto_por?: string | null
+          tenant_id: string
+        }
+        Update: {
+          fechado_em?: string
+          fechado_por?: string
+          hash_snapshot?: string
+          id?: string
+          mes?: string
+          motivo?: string | null
+          motivo_reabertura?: string | null
+          obra_id?: string
+          reaberto_em?: string | null
+          reaberto_por?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_status: string
@@ -1216,6 +1306,8 @@ export type Database = {
           servico_especial: string | null
           tenant_id: string
           tipo: string
+          updated_at: string
+          updated_by: string | null
           valor_diaria_especial: number | null
           valor_diaria_usado: number | null
         }
@@ -1231,6 +1323,8 @@ export type Database = {
           servico_especial?: string | null
           tenant_id: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor_diaria_especial?: number | null
           valor_diaria_usado?: number | null
         }
@@ -1246,6 +1340,8 @@ export type Database = {
           servico_especial?: string | null
           tenant_id?: string
           tipo?: string
+          updated_at?: string
+          updated_by?: string | null
           valor_diaria_especial?: number | null
           valor_diaria_usado?: number | null
         }
@@ -1592,6 +1688,15 @@ export type Database = {
           esperado: number
           presente: number
         }[]
+      }
+      folha_pagamento: {
+        Args: {
+          _colaborador_id?: string
+          _data_fim: string
+          _data_inicio: string
+          _obra_id: string
+        }
+        Returns: Json
       }
       get_beta_status_by_email: {
         Args: { _email: string }
