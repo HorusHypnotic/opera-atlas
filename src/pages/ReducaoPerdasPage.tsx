@@ -129,40 +129,55 @@ export default function ReducaoPerdasPage() {
         </TabsContent>
 
         <TabsContent value="equipes">
-          <div className="glass-card p-4">
+          {/* glass-card sem overflow-hidden — scroll fica isolado no trilho */}
+          <div className="glass-card p-4 overflow-visible">
             {equipes.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">Nenhuma equipe no sequenciamento.</p> : (() => {
               // Escala dinâmica: cobre a maior semana_fim, com mínimo 22 e folga de 2 semanas
               const maxSemana = Math.max(22, ...equipes.map((e) => e.semana_fim || 0)) + 2;
-              const PX_POR_SEMANA = 48; // largura mínima por semana para legibilidade
+              const PX_POR_SEMANA = 48; // largura por semana (absoluta, sem % — evita drift)
               const trilhoWidth = maxSemana * PX_POR_SEMANA;
               return (
                 <div className="space-y-2">
+                  {/* Régua de semanas */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-32 shrink-0" />
+                    <div className="flex-1 min-w-0 overflow-x-auto">
+                      <div className="relative h-5 text-[10px] text-muted-foreground" style={{ width: trilhoWidth, minWidth: "100%" }}>
+                        {Array.from({ length: maxSemana + 1 }).map((_, i) => (
+                          <div key={i} className="absolute top-0 border-l border-border/40 h-full pl-1" style={{ left: i * PX_POR_SEMANA, width: PX_POR_SEMANA }}>
+                            S{i}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="shrink-0 w-[180px]" />
+                  </div>
+
                   {equipes.map((eq) => {
                     const inicio = Math.max(0, eq.semana_inicio || 0);
                     const fim = Math.max(inicio + 1, eq.semana_fim || inicio + 1);
+                    const leftPx = inicio * PX_POR_SEMANA;
+                    const widthPx = Math.max((fim - inicio) * PX_POR_SEMANA, 24);
                     return (
                       <div key={eq.id} className="flex items-center gap-3">
-                        <span className="w-32 text-xs text-right text-muted-foreground shrink-0">{eq.equipe}</span>
+                        <span className="w-32 text-xs text-right text-muted-foreground shrink-0 truncate">{eq.equipe}</span>
                         {/* Trilho com scroll horizontal — barras nunca extrapolam */}
                         <div className="flex-1 min-w-0 overflow-x-auto">
                           <div className="h-7 bg-secondary rounded relative" style={{ width: trilhoWidth, minWidth: "100%" }}>
                             <div
-                              className={`absolute h-full rounded flex items-center justify-center text-[10px] font-semibold whitespace-nowrap px-1 ${
+                              className={`absolute top-0 h-full rounded flex items-center justify-center text-[10px] font-semibold whitespace-nowrap px-1 ${
                                 eq.status === "concluido" ? "bg-status-ok/30 text-status-ok" :
                                 eq.status === "em_andamento" ? "bg-primary/30 text-primary" :
                                 "bg-muted-foreground/20 text-muted-foreground"
                               }`}
-                              style={{
-                                left: `${(inicio / maxSemana) * 100}%`,
-                                width: `${Math.max(((fim - inicio) / maxSemana) * 100, 2)}%`,
-                              }}
+                              style={{ left: leftPx, width: widthPx }}
                             >
                               S{eq.semana_inicio}-S{eq.semana_fim}
                             </div>
                           </div>
                         </div>
-                        {/* Ações sempre visíveis fora do scroll, mantendo edição mesmo de itens fora da viewport */}
-                        <div className="flex items-center gap-1 shrink-0">
+                        {/* Ações sempre visíveis FORA do scroll horizontal */}
+                        <div className="flex items-center gap-1 shrink-0 w-[180px] justify-end">
                           <StatusBadge status={eq.status as any} />
                           <EditRecordDialog title="Editar Equipe" fields={equipeFields} record={eq} onSubmit={updateEquipe} />
                           <DeleteRecordButton onConfirm={() => removeEquipe(eq.id)} itemName={eq.equipe} />
