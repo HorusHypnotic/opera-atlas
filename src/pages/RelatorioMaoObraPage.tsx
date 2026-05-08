@@ -566,19 +566,28 @@ export default function RelatorioMaoObraPage() {
 
       autoTable(doc, {
         startY: titleY + 3,
-        head: [["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]],
-        body: block.rows.map((r) => [
-          r.nome, r.funcao,
-          `R$ ${r.valorDiaria.toFixed(2)}`,
-          r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
-          `R$ ${r.valorTotal.toFixed(2)}`,
-          r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
-        ]),
-        foot: [["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, `R$ ${block.subtotal.toFixed(2)}`, ""]],
-        styles: { fontSize: 9, cellPadding: 3 },
+        head: [["Nome", "Função", "Diária", "Qtd", "Base Presença", "Ajuste", "Legado", "TOTAL", "Origem", "PIX"]],
+        body: block.rows.map((r) => {
+          const expected = r.valorDiaria * r.qtdDiarias;
+          const delta = r.valorTotal - expected;
+          const flag = Math.abs(delta) > 0.01 ? " ⚠" : "";
+          return [
+            r.nome, r.funcao,
+            `R$ ${r.valorDiaria.toFixed(2)}`,
+            r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
+            `R$ ${r.valorBasePresenca.toFixed(2)}`,
+            `R$ ${r.valorAjuste.toFixed(2)}`,
+            `R$ ${r.valorLegado.toFixed(2)}`,
+            `R$ ${r.valorTotal.toFixed(2)}${flag}`,
+            r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Pres+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
+            r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
+          ];
+        }),
+        foot: [["", "", "", `${block.totalDiarias.toFixed(1)}`, "", "", "", `R$ ${block.subtotal.toFixed(2)}`, "", ""]],
+        styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [41, 37, 36], textColor: 255 },
         footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: "bold" },
-        margin: { left: 14 },
+        margin: { left: 8, right: 8 },
       });
 
       totalGeralValor += block.subtotal;
