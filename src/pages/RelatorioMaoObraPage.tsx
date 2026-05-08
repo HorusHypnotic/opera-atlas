@@ -621,6 +621,7 @@ export default function RelatorioMaoObraPage() {
       ["RELATÓRIO FINANCEIRO DE EQUIPE"],
       [`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`],
       [`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`],
+      ["AVISO: TOTAL = Base Presença + Ajuste + Legado. Confira o breakdown antes de pagar."],
       [],
     ];
 
@@ -629,21 +630,26 @@ export default function RelatorioMaoObraPage() {
 
     blocks.forEach((block) => {
       wsData.push([`Obra: ${block.obraNome}`]);
-      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]);
+      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Base Presença (R$)", "Ajuste (R$)", "Legado (R$)", "TOTAL (R$)", "Esperado (Diária×Qtd)", "Delta", "Origem", "PIX"]);
       block.rows.forEach((r) => {
+        const expected = r.valorDiaria * r.qtdDiarias;
+        const delta = r.valorTotal - expected;
         wsData.push([
-          r.nome, r.funcao, r.valorDiaria, r.qtdDiarias, r.valorTotal,
+          r.nome, r.funcao, r.valorDiaria, r.qtdDiarias,
+          r.valorBasePresenca, r.valorAjuste, r.valorLegado, r.valorTotal,
+          expected, delta,
+          r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
           r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
         ]);
       });
-      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, block.subtotal, ""]);
+      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, "", "", "", block.subtotal, "", "", "", ""]);
       wsData.push([]);
       totalGeralValor += block.subtotal;
       totalGeralDiarias += block.totalDiarias;
     });
 
     if (blocks.length > 1) {
-      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, totalGeralValor, ""]);
+      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, "", "", "", totalGeralValor, "", "", "", ""]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
