@@ -19,7 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
-  Plus, Pencil, Trash2, RotateCcw,
+  Plus, Pencil, Trash2, RotateCcw, AlertTriangle,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -520,24 +520,32 @@ export default function RelatorioMaoObraPage() {
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "landscape" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 20;
+    let y = 14;
 
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("RELATÓRIO FINANCEIRO DE EQUIPE", 14, y);
-    y += 8;
+    y += 6;
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`, 14, y); y += 5;
-    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 5;
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 8;
+    doc.text(`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`, 14, y); y += 4;
+    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 4;
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 5;
+
+    // Aviso obrigatório de composição
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 60, 0);
+    doc.text("AVISO: TOTAL = Base Presença + Ajuste + Legado. Confira o breakdown antes de pagar. ⚠ = ajuste oculto.", 14, y);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    y += 5;
 
     doc.setDrawColor(200);
     doc.line(14, y, pageWidth - 14, y);
-    y += 6;
+    y += 4;
 
     const blocks = buildReportBlocks();
 
@@ -566,19 +574,28 @@ export default function RelatorioMaoObraPage() {
 
       autoTable(doc, {
         startY: titleY + 3,
-        head: [["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]],
-        body: block.rows.map((r) => [
-          r.nome, r.funcao,
-          `R$ ${r.valorDiaria.toFixed(2)}`,
-          r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
-          `R$ ${r.valorTotal.toFixed(2)}`,
-          r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
-        ]),
-        foot: [["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, `R$ ${block.subtotal.toFixed(2)}`, ""]],
-        styles: { fontSize: 9, cellPadding: 3 },
+        head: [["Nome", "Função", "Diária", "Qtd", "Base Presença", "Ajuste", "Legado", "TOTAL", "Origem", "PIX"]],
+        body: block.rows.map((r) => {
+          const expected = r.valorDiaria * r.qtdDiarias;
+          const delta = r.valorTotal - expected;
+          const flag = Math.abs(delta) > 0.01 ? " ⚠" : "";
+          return [
+            r.nome, r.funcao,
+            `R$ ${r.valorDiaria.toFixed(2)}`,
+            r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
+            `R$ ${r.valorBasePresenca.toFixed(2)}`,
+            `R$ ${r.valorAjuste.toFixed(2)}`,
+            `R$ ${r.valorLegado.toFixed(2)}`,
+            `R$ ${r.valorTotal.toFixed(2)}${flag}`,
+            r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Pres+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
+            r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
+          ];
+        }),
+        foot: [["", "", "", `${block.totalDiarias.toFixed(1)}`, "", "", "", `R$ ${block.subtotal.toFixed(2)}`, "", ""]],
+        styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [41, 37, 36], textColor: 255 },
         footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: "bold" },
-        margin: { left: 14 },
+        margin: { left: 8, right: 8 },
       });
 
       totalGeralValor += block.subtotal;
@@ -604,6 +621,7 @@ export default function RelatorioMaoObraPage() {
       ["RELATÓRIO FINANCEIRO DE EQUIPE"],
       [`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`],
       [`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`],
+      ["AVISO: TOTAL = Base Presença + Ajuste + Legado. Confira o breakdown antes de pagar."],
       [],
     ];
 
@@ -612,21 +630,26 @@ export default function RelatorioMaoObraPage() {
 
     blocks.forEach((block) => {
       wsData.push([`Obra: ${block.obraNome}`]);
-      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Total (R$)", "PIX"]);
+      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Base Presença (R$)", "Ajuste (R$)", "Legado (R$)", "TOTAL (R$)", "Esperado (Diária×Qtd)", "Delta", "Origem", "PIX"]);
       block.rows.forEach((r) => {
+        const expected = r.valorDiaria * r.qtdDiarias;
+        const delta = r.valorTotal - expected;
         wsData.push([
-          r.nome, r.funcao, r.valorDiaria, r.qtdDiarias, r.valorTotal,
+          r.nome, r.funcao, r.valorDiaria, r.qtdDiarias,
+          r.valorBasePresenca, r.valorAjuste, r.valorLegado, r.valorTotal,
+          expected, delta,
+          r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
           r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
         ]);
       });
-      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, block.subtotal, ""]);
+      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, "", "", "", block.subtotal, "", "", "", ""]);
       wsData.push([]);
       totalGeralValor += block.subtotal;
       totalGeralDiarias += block.totalDiarias;
     });
 
     if (blocks.length > 1) {
-      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, totalGeralValor, ""]);
+      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, "", "", "", totalGeralValor, "", "", "", ""]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -739,6 +762,17 @@ export default function RelatorioMaoObraPage() {
               </p>
             </div>
 
+            {/* ⚠ Banner anti-prejuízo: composição do total */}
+            <div className="mb-4 p-3 rounded-md border border-orange-500/40 bg-orange-500/10 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+              <div className="text-xs leading-relaxed">
+                <strong className="text-orange-600 dark:text-orange-400">ATENÇÃO antes de pagar:</strong>{" "}
+                O <strong>TOTAL</strong> não é simplesmente <em>diária × qtd</em>. Ele é a soma de{" "}
+                <strong>Base Presença + Ajuste + Legado</strong>. Sempre confira as colunas de breakdown.
+                Linhas marcadas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold">⚠ ajuste</span> indicam que o total difere de <code>diária × qtd</code>.
+              </div>
+            </div>
+
             {reportRows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 Nenhum registro encontrado. Use a aba "Apontamentos" para lançar diárias manualmente.
@@ -751,10 +785,13 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-left py-2 px-3">Nome</th>
                       <th className="text-left py-2 px-3">Função</th>
                       <th className="text-right py-2 px-3">Diária</th>
-                      <th className="text-right py-2 px-3">Qtd Diárias</th>
-                      <th className="text-right py-2 px-3">Total</th>
+                      <th className="text-right py-2 px-3">Qtd</th>
+                      <th className="text-right py-2 px-3 text-blue-600 dark:text-blue-400" title="Valor calculado a partir das presenças registradas">Base Presença</th>
+                      <th className="text-right py-2 px-3 text-orange-600 dark:text-orange-400" title="Ajustes/complementos/correções manuais">Ajuste</th>
+                      <th className="text-right py-2 px-3 text-muted-foreground" title="Valores históricos importados (somente leitura)">Legado</th>
+                      <th className="text-right py-2 px-3 font-bold">TOTAL</th>
+                      <th className="text-center py-2 px-3">Origem</th>
                       <th className="text-left py-2 px-3">PIX</th>
-                      <th className="text-center py-2 px-3">Fonte</th>
                       {canInsert && <th className="text-center py-2 px-3 print:hidden">Hoje</th>}
                     </tr>
                   </thead>
@@ -766,9 +803,22 @@ export default function RelatorioMaoObraPage() {
                             ? Number(presHoje.fracao_diaria)
                             : (presHoje.tipo === "falta" ? 0 : presHoje.tipo === "meio_periodo" ? 0.5 : 1))
                         : null;
+                      const expected = r.valorDiaria * r.qtdDiarias;
+                      const delta = r.valorTotal - expected;
+                      const hasHiddenAdjust = Math.abs(delta) > 0.01;
                       return (
-                      <tr key={r.colaboradorId} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
-                        <td className="py-2.5 px-3 font-medium">{r.nome}</td>
+                      <tr key={r.colaboradorId} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${hasHiddenAdjust ? "bg-orange-500/5" : ""}`}>
+                        <td className="py-2.5 px-3 font-medium">
+                          {r.nome}
+                          {hasHiddenAdjust && (
+                            <span
+                              className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold"
+                              title={`Esperado (diária × qtd) = R$ ${expected.toFixed(2)} | Diferença = R$ ${delta.toFixed(2)}`}
+                            >
+                              ⚠ ajuste
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3">
                           <Badge variant="outline" className="text-[10px]">{r.funcao}</Badge>
                         </td>
@@ -776,11 +826,17 @@ export default function RelatorioMaoObraPage() {
                         <td className="py-2.5 px-3 text-right font-mono">
                           {r.qtdDiarias % 1 === 0 ? r.qtdDiarias : r.qtdDiarias.toFixed(1)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                          R$ {r.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        <td className="py-2.5 px-3 text-right font-mono text-blue-600 dark:text-blue-400">
+                          R$ {r.valorBasePresenca.toFixed(2)}
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                          {r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—"}
+                        <td className={`py-2.5 px-3 text-right font-mono ${r.valorAjuste !== 0 ? "text-orange-600 dark:text-orange-400 font-semibold" : "text-muted-foreground"}`}>
+                          {r.valorAjuste !== 0 ? `R$ ${r.valorAjuste.toFixed(2)}` : "—"}
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-mono ${r.valorLegado > 0 ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
+                          {r.valorLegado > 0 ? `R$ ${r.valorLegado.toFixed(2)}` : "—"}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold">
+                          R$ {r.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           <Badge
@@ -788,8 +844,11 @@ export default function RelatorioMaoObraPage() {
                             className="text-[10px]"
                             title={`Base: R$ ${r.valorBasePresenca.toFixed(2)} | Ajuste: R$ ${r.valorAjuste.toFixed(2)}${r.valorLegado > 0 ? ` | Legado: R$ ${r.valorLegado.toFixed(2)}` : ""}`}
                           >
-                            {r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença + Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença"}
+                            {r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Pres+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença"}
                           </Badge>
+                        </td>
+                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
+                          {r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—"}
                         </td>
                         {canInsert && (
                           <td className="py-2 px-3 text-center print:hidden">
@@ -839,9 +898,15 @@ export default function RelatorioMaoObraPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30">
-                      <td colSpan={3} className="py-3 px-3 font-bold text-right">SUBTOTAL GERAL</td>
-                      <td className="py-3 px-3 text-right font-mono font-bold">
-                        {totalDiarias % 1 === 0 ? totalDiarias : totalDiarias.toFixed(1)}
+                      <td colSpan={4} className="py-3 px-3 font-bold text-right">SUBTOTAL GERAL</td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
+                        R$ {reportRows.reduce((s, r) => s + r.valorBasePresenca, 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-orange-600 dark:text-orange-400">
+                        R$ {reportRows.reduce((s, r) => s + r.valorAjuste, 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-muted-foreground">
+                        R$ {reportRows.reduce((s, r) => s + r.valorLegado, 0).toFixed(2)}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-primary">
                         R$ {subtotalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
