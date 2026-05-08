@@ -520,24 +520,32 @@ export default function RelatorioMaoObraPage() {
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "landscape" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 20;
+    let y = 14;
 
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("RELATÓRIO FINANCEIRO DE EQUIPE", 14, y);
-    y += 8;
+    y += 6;
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`, 14, y); y += 5;
-    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 5;
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 8;
+    doc.text(`Obra: ${selectedObraId ? (obraAtual?.nome || "—") : "Todas as obras"}`, 14, y); y += 4;
+    doc.text(`Período: ${formatDate(dataInicio)} - ${formatDate(dataFim)}`, 14, y); y += 4;
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y); y += 5;
+
+    // Aviso obrigatório de composição
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 60, 0);
+    doc.text("AVISO: TOTAL = Base Presença + Ajuste + Legado. Confira o breakdown antes de pagar. ⚠ = ajuste oculto.", 14, y);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    y += 5;
 
     doc.setDrawColor(200);
     doc.line(14, y, pageWidth - 14, y);
-    y += 6;
+    y += 4;
 
     const blocks = buildReportBlocks();
 
