@@ -19,7 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
-  Plus, Pencil, Trash2, RotateCcw,
+  Plus, Pencil, Trash2, RotateCcw, AlertTriangle,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
