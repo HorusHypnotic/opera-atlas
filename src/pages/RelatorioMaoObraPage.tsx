@@ -62,6 +62,7 @@ interface RegistroPresenca {
   valor_diaria_especial: number | null;
   servico_especial: string | null;
   observacao: string | null;
+  status_contabil?: "prevista" | "confirmada" | "ajustada";
 }
 
 interface ColaboradorObra {
@@ -85,6 +86,16 @@ interface ReportRow {
   valorLegado: number;
   qtdBasePresenca: number;
   qtdAjuste: number;
+  // Estado contábil — separa previsão de confirmado
+  valorConfirmado: number;     // presença real (status_contabil = confirmada)
+  qtdConfirmada: number;
+  valorAjustadoPresenca: number; // presença alterada após o dia (status = ajustada)
+  qtdAjustadaPresenca: number;
+  valorPrevisto: number;       // dias futuros assumidos (status = prevista)
+  qtdPrevista: number;
+  valorConsolidado: number;    // confirmado + ajustado_presenca + ajuste manual + legado
+  valorProjetado: number;      // consolidado + previsto
+  temPrevisao: boolean;
   pixChave: string;
   pixTipo: string;
   observacao: string;
@@ -190,13 +201,25 @@ export default function RelatorioMaoObraPage() {
         ?? Number(colab.valor_diaria);
       row.valorDiaria = valorBase;
 
+      // Estado contábil: prevista (futuro) | confirmada (real) | ajustada (alterada após data)
+      // Fallback: se coluna ainda não veio, infere por data (compatibilidade)
+      const status = (p.status_contabil
+        ?? (p.data > new Date().toISOString().split("T")[0] ? "prevista" : "confirmada")) as "prevista" | "confirmada" | "ajustada";
+
       if (fracao > 0 && p.tipo !== "hora_extra") {
         row.qtdBasePresenca += fracao;
         row.valorBasePresenca += valorBase * fracao;
+        if (status === "prevista")       { row.qtdPrevista += fracao;          row.valorPrevisto += valorBase * fracao; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += fracao;  row.valorAjustadoPresenca += valorBase * fracao; }
+        else                             { row.qtdConfirmada += fracao;        row.valorConfirmado += valorBase * fracao; }
       } else if (p.tipo === "hora_extra") {
         const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
-        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        const extraQtd = Number(p.horas_extra || 0) / 8;
+        row.qtdBasePresenca += extraQtd;
         row.valorBasePresenca += extraValue;
+        if (status === "prevista")       { row.qtdPrevista += extraQtd;         row.valorPrevisto += extraValue; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += extraQtd; row.valorAjustadoPresenca += extraValue; }
+        else                             { row.qtdConfirmada += extraQtd;       row.valorConfirmado += extraValue; }
       }
     }
 
@@ -228,10 +251,15 @@ export default function RelatorioMaoObraPage() {
       if (a.observacao) row.observacao = a.observacao;
     }
 
-    // ── 3) Consolidação: total = base + ajuste + legado ──
+    // ── 3) Consolidação: total, consolidado (sem previsão) e projetado (com previsão) ──
     for (const row of Object.values(rows)) {
       row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
       row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      // Consolidado = realmente devido HOJE (sem previsões futuras)
+      row.valorConsolidado = row.valorConfirmado + row.valorAjustadoPresenca + row.valorAjuste + row.valorLegado;
+      // Projetado = consolidado + previsões (estimativa se sexta acontecer)
+      row.valorProjetado = row.valorConsolidado + row.valorPrevisto;
+      row.temPrevisao = row.valorPrevisto > 0 || row.qtdPrevista > 0;
 
       const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
       const hasAjuste = row.valorAjuste !== 0;
@@ -259,6 +287,15 @@ export default function RelatorioMaoObraPage() {
       valorLegado: 0,
       qtdBasePresenca: 0,
       qtdAjuste: 0,
+      valorConfirmado: 0,
+      qtdConfirmada: 0,
+      valorAjustadoPresenca: 0,
+      qtdAjustadaPresenca: 0,
+      valorPrevisto: 0,
+      qtdPrevista: 0,
+      valorConsolidado: 0,
+      valorProjetado: 0,
+      temPrevisao: false,
       pixChave: colab.pix_chave || "",
       pixTipo: colab.pix_tipo || "",
       observacao: "",
@@ -273,6 +310,14 @@ export default function RelatorioMaoObraPage() {
   const subtotalGeral = reportRows.reduce((s, r) => s + r.valorTotal, 0);
   const totalDiarias = reportRows.reduce((s, r) => s + r.qtdDiarias, 0);
   const totalTrabalhadores = reportRows.length;
+  // Estado contábil agregado
+  const totalConsolidado = reportRows.reduce((s, r) => s + r.valorConsolidado, 0);
+  const totalProjetado   = reportRows.reduce((s, r) => s + r.valorProjetado, 0);
+  const totalPrevisto    = reportRows.reduce((s, r) => s + r.valorPrevisto, 0);
+  const qtdPrevistaTotal = reportRows.reduce((s, r) => s + r.qtdPrevista, 0);
+  const qtdConfirmadaTotal = reportRows.reduce((s, r) => s + r.qtdConfirmada, 0);
+  const contemPrevisoes  = totalPrevisto > 0;
+  const colabsComPrevisao = reportRows.filter((r) => r.temPrevisao).length;
 
   // ─── Apontamentos for current period ───
   const apontamentosPeriodo = useMemo(() => {
@@ -443,13 +488,23 @@ export default function RelatorioMaoObraPage() {
         ?? Number(colab.valor_diaria);
       row.valorDiaria = valorBase;
 
+      const status = (p.status_contabil
+        ?? (p.data > new Date().toISOString().split("T")[0] ? "prevista" : "confirmada")) as "prevista" | "confirmada" | "ajustada";
+
       if (fracao > 0 && p.tipo !== "hora_extra") {
         row.qtdBasePresenca += fracao;
         row.valorBasePresenca += valorBase * fracao;
+        if (status === "prevista")       { row.qtdPrevista += fracao;          row.valorPrevisto += valorBase * fracao; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += fracao;  row.valorAjustadoPresenca += valorBase * fracao; }
+        else                             { row.qtdConfirmada += fracao;        row.valorConfirmado += valorBase * fracao; }
       } else if (p.tipo === "hora_extra") {
         const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
-        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        const extraQtd = Number(p.horas_extra || 0) / 8;
+        row.qtdBasePresenca += extraQtd;
         row.valorBasePresenca += extraValue;
+        if (status === "prevista")       { row.qtdPrevista += extraQtd;         row.valorPrevisto += extraValue; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += extraQtd; row.valorAjustadoPresenca += extraValue; }
+        else                             { row.qtdConfirmada += extraQtd;       row.valorConfirmado += extraValue; }
       }
     }
 
@@ -482,6 +537,9 @@ export default function RelatorioMaoObraPage() {
     for (const row of Object.values(rows)) {
       row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
       row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      row.valorConsolidado = row.valorConfirmado + row.valorAjustadoPresenca + row.valorAjuste + row.valorLegado;
+      row.valorProjetado = row.valorConsolidado + row.valorPrevisto;
+      row.temPrevisao = row.valorPrevisto > 0 || row.qtdPrevista > 0;
       const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
       const hasAjuste = row.valorAjuste !== 0;
       const hasLegado = row.valorLegado > 0;
@@ -762,14 +820,38 @@ export default function RelatorioMaoObraPage() {
               </p>
             </div>
 
+            {/* 🔴 Banner CRÍTICO: contém previsões (dias futuros) */}
+            {contemPrevisoes && (
+              <div className="mb-4 p-4 rounded-md border-2 border-red-500/60 bg-red-500/10 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+                <div className="text-sm leading-relaxed">
+                  <strong className="text-red-600 dark:text-red-400 block mb-1">⚠ PRÉVIA OPERACIONAL — NÃO PAGAR ANTES DE CONFIRMAR</strong>
+                  Este relatório contém <strong>R$ {totalPrevisto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong> em{" "}
+                  <strong>{qtdPrevistaTotal.toFixed(1)} diárias previstas</strong> (dias futuros assumidos como presentes) de{" "}
+                  <strong>{colabsComPrevisao}</strong> colaborador(es). Esses valores <strong>não são consolidados</strong> — só viram pagamento real após o dia ocorrer.
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="px-3 py-1.5 rounded bg-green-500/10 border border-green-500/30">
+                      <span className="text-muted-foreground">CONSOLIDADO (devido hoje):</span>{" "}
+                      <strong className="text-green-700 dark:text-green-400">R$ {totalConsolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div className="px-3 py-1.5 rounded bg-yellow-500/10 border border-yellow-500/30">
+                      <span className="text-muted-foreground">PROJETADO (com previsões):</span>{" "}
+                      <strong className="text-yellow-700 dark:text-yellow-400">R$ {totalProjetado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ⚠ Banner anti-prejuízo: composição do total */}
             <div className="mb-4 p-3 rounded-md border border-orange-500/40 bg-orange-500/10 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
               <div className="text-xs leading-relaxed">
                 <strong className="text-orange-600 dark:text-orange-400">ATENÇÃO antes de pagar:</strong>{" "}
                 O <strong>TOTAL</strong> não é simplesmente <em>diária × qtd</em>. Ele é a soma de{" "}
-                <strong>Base Presença + Ajuste + Legado</strong>. Sempre confira as colunas de breakdown.
+                <strong>Confirmadas + Previstas + Ajuste + Legado</strong>. Sempre confira o breakdown.
                 Linhas marcadas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold">⚠ ajuste</span> indicam que o total difere de <code>diária × qtd</code>.
+                Linhas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 font-bold">🟡 previsão</span> incluem dias que ainda não ocorreram.
               </div>
             </div>
 
@@ -786,7 +868,8 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-left py-2 px-3">Função</th>
                       <th className="text-right py-2 px-3">Diária</th>
                       <th className="text-right py-2 px-3">Qtd</th>
-                      <th className="text-right py-2 px-3 text-blue-600 dark:text-blue-400" title="Valor calculado a partir das presenças registradas">Base Presença</th>
+                      <th className="text-right py-2 px-3 text-blue-600 dark:text-blue-400" title="Valor de presenças JÁ CONFIRMADAS (dia ocorreu)">Confirmadas</th>
+                      <th className="text-right py-2 px-3 text-yellow-600 dark:text-yellow-400" title="Dias FUTUROS assumidos como presentes — não consolidado">🟡 Previstas</th>
                       <th className="text-right py-2 px-3 text-orange-600 dark:text-orange-400" title="Ajustes/complementos/correções manuais">Ajuste</th>
                       <th className="text-right py-2 px-3 text-muted-foreground" title="Valores históricos importados (somente leitura)">Legado</th>
                       <th className="text-right py-2 px-3 font-bold">TOTAL</th>
@@ -807,9 +890,17 @@ export default function RelatorioMaoObraPage() {
                       const delta = r.valorTotal - expected;
                       const hasHiddenAdjust = Math.abs(delta) > 0.01;
                       return (
-                      <tr key={r.colaboradorId} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${hasHiddenAdjust ? "bg-orange-500/5" : ""}`}>
+                      <tr key={r.colaboradorId} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${r.temPrevisao ? "bg-yellow-500/5" : hasHiddenAdjust ? "bg-orange-500/5" : ""}`}>
                         <td className="py-2.5 px-3 font-medium">
                           {r.nome}
+                          {r.temPrevisao && (
+                            <span
+                              className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 font-bold"
+                              title={`Inclui ${r.qtdPrevista.toFixed(1)} diária(s) PREVISTA(S) — R$ ${r.valorPrevisto.toFixed(2)}. Ainda não consolidado.`}
+                            >
+                              🟡 previsão
+                            </span>
+                          )}
                           {hasHiddenAdjust && (
                             <span
                               className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold"
@@ -826,8 +917,11 @@ export default function RelatorioMaoObraPage() {
                         <td className="py-2.5 px-3 text-right font-mono">
                           {r.qtdDiarias % 1 === 0 ? r.qtdDiarias : r.qtdDiarias.toFixed(1)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-600 dark:text-blue-400">
-                          R$ {r.valorBasePresenca.toFixed(2)}
+                        <td className="py-2.5 px-3 text-right font-mono text-blue-600 dark:text-blue-400" title={`Confirmadas: ${r.qtdConfirmada.toFixed(1)} | Ajustadas: ${r.qtdAjustadaPresenca.toFixed(1)}`}>
+                          R$ {(r.valorConfirmado + r.valorAjustadoPresenca).toFixed(2)}
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-mono ${r.valorPrevisto > 0 ? "text-yellow-600 dark:text-yellow-400 font-bold" : "text-muted-foreground/40"}`} title={r.valorPrevisto > 0 ? `${r.qtdPrevista.toFixed(1)} dia(s) futuro(s) assumido(s)` : "Sem previsões"}>
+                          {r.valorPrevisto > 0 ? `R$ ${r.valorPrevisto.toFixed(2)}` : "—"}
                         </td>
                         <td className={`py-2.5 px-3 text-right font-mono ${r.valorAjuste !== 0 ? "text-orange-600 dark:text-orange-400 font-semibold" : "text-muted-foreground"}`}>
                           {r.valorAjuste !== 0 ? `R$ ${r.valorAjuste.toFixed(2)}` : "—"}
@@ -898,9 +992,12 @@ export default function RelatorioMaoObraPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30">
-                      <td colSpan={4} className="py-3 px-3 font-bold text-right">SUBTOTAL GERAL</td>
+                      <td colSpan={4} className="py-3 px-3 font-bold text-right">SUBTOTAL</td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
-                        R$ {reportRows.reduce((s, r) => s + r.valorBasePresenca, 0).toFixed(2)}
+                        R$ {reportRows.reduce((s, r) => s + r.valorConfirmado + r.valorAjustadoPresenca, 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-yellow-600 dark:text-yellow-400">
+                        {totalPrevisto > 0 ? `R$ ${totalPrevisto.toFixed(2)}` : "—"}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-orange-600 dark:text-orange-400">
                         R$ {reportRows.reduce((s, r) => s + r.valorAjuste, 0).toFixed(2)}
@@ -913,6 +1010,22 @@ export default function RelatorioMaoObraPage() {
                       </td>
                       <td colSpan={canInsert ? 3 : 2}></td>
                     </tr>
+                    {contemPrevisoes && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={4} className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">DOIS TOTAIS:</td>
+                        <td colSpan={4} className="py-2 px-3 text-xs">
+                          <div className="flex flex-wrap gap-3">
+                            <span className="px-2 py-1 rounded bg-green-500/10 border border-green-500/30">
+                              ✓ Consolidado (devido hoje): <strong className="text-green-700 dark:text-green-400">R$ {totalConsolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                            </span>
+                            <span className="px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/30">
+                              🟡 Projetado (com previsão): <strong className="text-yellow-700 dark:text-yellow-400">R$ {totalProjetado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                            </span>
+                          </div>
+                        </td>
+                        <td colSpan={canInsert ? 4 : 3}></td>
+                      </tr>
+                    )}
                   </tfoot>
                 </table>
               </div>

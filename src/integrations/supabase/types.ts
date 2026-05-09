@@ -1310,6 +1310,7 @@ export type Database = {
           obra_id: string
           observacao: string | null
           servico_especial: string | null
+          status_contabil: string
           tenant_id: string
           tipo: string
           updated_at: string
@@ -1327,6 +1328,7 @@ export type Database = {
           obra_id: string
           observacao?: string | null
           servico_especial?: string | null
+          status_contabil?: string
           tenant_id: string
           tipo?: string
           updated_at?: string
@@ -1344,6 +1346,7 @@ export type Database = {
           obra_id?: string
           observacao?: string | null
           servico_especial?: string | null
+          status_contabil?: string
           tenant_id?: string
           tipo?: string
           updated_at?: string
@@ -1788,6 +1791,7 @@ export type Database = {
           registros: number
         }[]
       }
+      promover_previsoes: { Args: never; Returns: number }
       setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
       user_has_obra_access: {
         Args: { _obra_id: string; _user_id: string }
