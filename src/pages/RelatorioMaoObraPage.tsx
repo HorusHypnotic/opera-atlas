@@ -62,6 +62,7 @@ interface RegistroPresenca {
   valor_diaria_especial: number | null;
   servico_especial: string | null;
   observacao: string | null;
+  status_contabil?: "prevista" | "confirmada" | "ajustada";
 }
 
 interface ColaboradorObra {
