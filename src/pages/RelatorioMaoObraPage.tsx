@@ -251,10 +251,15 @@ export default function RelatorioMaoObraPage() {
       if (a.observacao) row.observacao = a.observacao;
     }
 
-    // ── 3) Consolidação: total = base + ajuste + legado ──
+    // ── 3) Consolidação: total, consolidado (sem previsão) e projetado (com previsão) ──
     for (const row of Object.values(rows)) {
       row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
       row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      // Consolidado = realmente devido HOJE (sem previsões futuras)
+      row.valorConsolidado = row.valorConfirmado + row.valorAjustadoPresenca + row.valorAjuste + row.valorLegado;
+      // Projetado = consolidado + previsões (estimativa se sexta acontecer)
+      row.valorProjetado = row.valorConsolidado + row.valorPrevisto;
+      row.temPrevisao = row.valorPrevisto > 0 || row.qtdPrevista > 0;
 
       const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
       const hasAjuste = row.valorAjuste !== 0;
