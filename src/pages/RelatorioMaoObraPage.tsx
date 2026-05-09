@@ -86,6 +86,16 @@ interface ReportRow {
   valorLegado: number;
   qtdBasePresenca: number;
   qtdAjuste: number;
+  // Estado contábil — separa previsão de confirmado
+  valorConfirmado: number;     // presença real (status_contabil = confirmada)
+  qtdConfirmada: number;
+  valorAjustadoPresenca: number; // presença alterada após o dia (status = ajustada)
+  qtdAjustadaPresenca: number;
+  valorPrevisto: number;       // dias futuros assumidos (status = prevista)
+  qtdPrevista: number;
+  valorConsolidado: number;    // confirmado + ajustado_presenca + ajuste manual + legado
+  valorProjetado: number;      // consolidado + previsto
+  temPrevisao: boolean;
   pixChave: string;
   pixTipo: string;
   observacao: string;
