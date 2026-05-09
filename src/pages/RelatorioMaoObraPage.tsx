@@ -820,14 +820,38 @@ export default function RelatorioMaoObraPage() {
               </p>
             </div>
 
+            {/* 🔴 Banner CRÍTICO: contém previsões (dias futuros) */}
+            {contemPrevisoes && (
+              <div className="mb-4 p-4 rounded-md border-2 border-red-500/60 bg-red-500/10 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+                <div className="text-sm leading-relaxed">
+                  <strong className="text-red-600 dark:text-red-400 block mb-1">⚠ PRÉVIA OPERACIONAL — NÃO PAGAR ANTES DE CONFIRMAR</strong>
+                  Este relatório contém <strong>R$ {totalPrevisto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong> em{" "}
+                  <strong>{qtdPrevistaTotal.toFixed(1)} diárias previstas</strong> (dias futuros assumidos como presentes) de{" "}
+                  <strong>{colabsComPrevisao}</strong> colaborador(es). Esses valores <strong>não são consolidados</strong> — só viram pagamento real após o dia ocorrer.
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="px-3 py-1.5 rounded bg-green-500/10 border border-green-500/30">
+                      <span className="text-muted-foreground">CONSOLIDADO (devido hoje):</span>{" "}
+                      <strong className="text-green-700 dark:text-green-400">R$ {totalConsolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div className="px-3 py-1.5 rounded bg-yellow-500/10 border border-yellow-500/30">
+                      <span className="text-muted-foreground">PROJETADO (com previsões):</span>{" "}
+                      <strong className="text-yellow-700 dark:text-yellow-400">R$ {totalProjetado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ⚠ Banner anti-prejuízo: composição do total */}
             <div className="mb-4 p-3 rounded-md border border-orange-500/40 bg-orange-500/10 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
               <div className="text-xs leading-relaxed">
                 <strong className="text-orange-600 dark:text-orange-400">ATENÇÃO antes de pagar:</strong>{" "}
                 O <strong>TOTAL</strong> não é simplesmente <em>diária × qtd</em>. Ele é a soma de{" "}
-                <strong>Base Presença + Ajuste + Legado</strong>. Sempre confira as colunas de breakdown.
+                <strong>Confirmadas + Previstas + Ajuste + Legado</strong>. Sempre confira o breakdown.
                 Linhas marcadas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold">⚠ ajuste</span> indicam que o total difere de <code>diária × qtd</code>.
+                Linhas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 font-bold">🟡 previsão</span> incluem dias que ainda não ocorreram.
               </div>
             </div>
 
