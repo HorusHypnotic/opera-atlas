@@ -201,13 +201,25 @@ export default function RelatorioMaoObraPage() {
         ?? Number(colab.valor_diaria);
       row.valorDiaria = valorBase;
 
+      // Estado contábil: prevista (futuro) | confirmada (real) | ajustada (alterada após data)
+      // Fallback: se coluna ainda não veio, infere por data (compatibilidade)
+      const status = (p.status_contabil
+        ?? (p.data > new Date().toISOString().split("T")[0] ? "prevista" : "confirmada")) as "prevista" | "confirmada" | "ajustada";
+
       if (fracao > 0 && p.tipo !== "hora_extra") {
         row.qtdBasePresenca += fracao;
         row.valorBasePresenca += valorBase * fracao;
+        if (status === "prevista")       { row.qtdPrevista += fracao;          row.valorPrevisto += valorBase * fracao; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += fracao;  row.valorAjustadoPresenca += valorBase * fracao; }
+        else                             { row.qtdConfirmada += fracao;        row.valorConfirmado += valorBase * fracao; }
       } else if (p.tipo === "hora_extra") {
         const extraValue = (Number(p.horas_extra || 0) / 8) * valorBase;
-        row.qtdBasePresenca += Number(p.horas_extra || 0) / 8;
+        const extraQtd = Number(p.horas_extra || 0) / 8;
+        row.qtdBasePresenca += extraQtd;
         row.valorBasePresenca += extraValue;
+        if (status === "prevista")       { row.qtdPrevista += extraQtd;         row.valorPrevisto += extraValue; }
+        else if (status === "ajustada")  { row.qtdAjustadaPresenca += extraQtd; row.valorAjustadoPresenca += extraValue; }
+        else                             { row.qtdConfirmada += extraQtd;       row.valorConfirmado += extraValue; }
       }
     }
 
