@@ -992,9 +992,12 @@ export default function RelatorioMaoObraPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30">
-                      <td colSpan={4} className="py-3 px-3 font-bold text-right">SUBTOTAL GERAL</td>
+                      <td colSpan={4} className="py-3 px-3 font-bold text-right">SUBTOTAL</td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
-                        R$ {reportRows.reduce((s, r) => s + r.valorBasePresenca, 0).toFixed(2)}
+                        R$ {reportRows.reduce((s, r) => s + r.valorConfirmado + r.valorAjustadoPresenca, 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-yellow-600 dark:text-yellow-400">
+                        {totalPrevisto > 0 ? `R$ ${totalPrevisto.toFixed(2)}` : "—"}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-orange-600 dark:text-orange-400">
                         R$ {reportRows.reduce((s, r) => s + r.valorAjuste, 0).toFixed(2)}
@@ -1007,6 +1010,22 @@ export default function RelatorioMaoObraPage() {
                       </td>
                       <td colSpan={canInsert ? 3 : 2}></td>
                     </tr>
+                    {contemPrevisoes && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={4} className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">DOIS TOTAIS:</td>
+                        <td colSpan={4} className="py-2 px-3 text-xs">
+                          <div className="flex flex-wrap gap-3">
+                            <span className="px-2 py-1 rounded bg-green-500/10 border border-green-500/30">
+                              ✓ Consolidado (devido hoje): <strong className="text-green-700 dark:text-green-400">R$ {totalConsolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                            </span>
+                            <span className="px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/30">
+                              🟡 Projetado (com previsão): <strong className="text-yellow-700 dark:text-yellow-400">R$ {totalProjetado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>
+                            </span>
+                          </div>
+                        </td>
+                        <td colSpan={canInsert ? 4 : 3}></td>
+                      </tr>
+                    )}
                   </tfoot>
                 </table>
               </div>
