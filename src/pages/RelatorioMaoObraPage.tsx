@@ -890,9 +890,17 @@ export default function RelatorioMaoObraPage() {
                       const delta = r.valorTotal - expected;
                       const hasHiddenAdjust = Math.abs(delta) > 0.01;
                       return (
-                      <tr key={r.colaboradorId} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${hasHiddenAdjust ? "bg-orange-500/5" : ""}`}>
+                      <tr key={r.colaboradorId} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${r.temPrevisao ? "bg-yellow-500/5" : hasHiddenAdjust ? "bg-orange-500/5" : ""}`}>
                         <td className="py-2.5 px-3 font-medium">
                           {r.nome}
+                          {r.temPrevisao && (
+                            <span
+                              className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 font-bold"
+                              title={`Inclui ${r.qtdPrevista.toFixed(1)} diária(s) PREVISTA(S) — R$ ${r.valorPrevisto.toFixed(2)}. Ainda não consolidado.`}
+                            >
+                              🟡 previsão
+                            </span>
+                          )}
                           {hasHiddenAdjust && (
                             <span
                               className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold"
@@ -909,8 +917,11 @@ export default function RelatorioMaoObraPage() {
                         <td className="py-2.5 px-3 text-right font-mono">
                           {r.qtdDiarias % 1 === 0 ? r.qtdDiarias : r.qtdDiarias.toFixed(1)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-600 dark:text-blue-400">
-                          R$ {r.valorBasePresenca.toFixed(2)}
+                        <td className="py-2.5 px-3 text-right font-mono text-blue-600 dark:text-blue-400" title={`Confirmadas: ${r.qtdConfirmada.toFixed(1)} | Ajustadas: ${r.qtdAjustadaPresenca.toFixed(1)}`}>
+                          R$ {(r.valorConfirmado + r.valorAjustadoPresenca).toFixed(2)}
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-mono ${r.valorPrevisto > 0 ? "text-yellow-600 dark:text-yellow-400 font-bold" : "text-muted-foreground/40"}`} title={r.valorPrevisto > 0 ? `${r.qtdPrevista.toFixed(1)} dia(s) futuro(s) assumido(s)` : "Sem previsões"}>
+                          {r.valorPrevisto > 0 ? `R$ ${r.valorPrevisto.toFixed(2)}` : "—"}
                         </td>
                         <td className={`py-2.5 px-3 text-right font-mono ${r.valorAjuste !== 0 ? "text-orange-600 dark:text-orange-400 font-semibold" : "text-muted-foreground"}`}>
                           {r.valorAjuste !== 0 ? `R$ ${r.valorAjuste.toFixed(2)}` : "—"}
