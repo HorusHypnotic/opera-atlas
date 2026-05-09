@@ -868,7 +868,8 @@ export default function RelatorioMaoObraPage() {
                       <th className="text-left py-2 px-3">Função</th>
                       <th className="text-right py-2 px-3">Diária</th>
                       <th className="text-right py-2 px-3">Qtd</th>
-                      <th className="text-right py-2 px-3 text-blue-600 dark:text-blue-400" title="Valor calculado a partir das presenças registradas">Base Presença</th>
+                      <th className="text-right py-2 px-3 text-blue-600 dark:text-blue-400" title="Valor de presenças JÁ CONFIRMADAS (dia ocorreu)">Confirmadas</th>
+                      <th className="text-right py-2 px-3 text-yellow-600 dark:text-yellow-400" title="Dias FUTUROS assumidos como presentes — não consolidado">🟡 Previstas</th>
                       <th className="text-right py-2 px-3 text-orange-600 dark:text-orange-400" title="Ajustes/complementos/correções manuais">Ajuste</th>
                       <th className="text-right py-2 px-3 text-muted-foreground" title="Valores históricos importados (somente leitura)">Legado</th>
                       <th className="text-right py-2 px-3 font-bold">TOTAL</th>
