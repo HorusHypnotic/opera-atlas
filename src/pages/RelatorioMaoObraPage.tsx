@@ -310,6 +310,14 @@ export default function RelatorioMaoObraPage() {
   const subtotalGeral = reportRows.reduce((s, r) => s + r.valorTotal, 0);
   const totalDiarias = reportRows.reduce((s, r) => s + r.qtdDiarias, 0);
   const totalTrabalhadores = reportRows.length;
+  // Estado contábil agregado
+  const totalConsolidado = reportRows.reduce((s, r) => s + r.valorConsolidado, 0);
+  const totalProjetado   = reportRows.reduce((s, r) => s + r.valorProjetado, 0);
+  const totalPrevisto    = reportRows.reduce((s, r) => s + r.valorPrevisto, 0);
+  const qtdPrevistaTotal = reportRows.reduce((s, r) => s + r.qtdPrevista, 0);
+  const qtdConfirmadaTotal = reportRows.reduce((s, r) => s + r.qtdConfirmada, 0);
+  const contemPrevisoes  = totalPrevisto > 0;
+  const colabsComPrevisao = reportRows.filter((r) => r.temPrevisao).length;
 
   // ─── Apontamentos for current period ───
   const apontamentosPeriodo = useMemo(() => {
