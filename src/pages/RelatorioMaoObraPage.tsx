@@ -529,6 +529,9 @@ export default function RelatorioMaoObraPage() {
     for (const row of Object.values(rows)) {
       row.qtdDiarias = row.qtdBasePresenca + row.qtdAjuste;
       row.valorTotal = row.valorBasePresenca + row.valorAjuste + row.valorLegado;
+      row.valorConsolidado = row.valorConfirmado + row.valorAjustadoPresenca + row.valorAjuste + row.valorLegado;
+      row.valorProjetado = row.valorConsolidado + row.valorPrevisto;
+      row.temPrevisao = row.valorPrevisto > 0 || row.qtdPrevista > 0;
       const hasBase = row.valorBasePresenca > 0 || row.qtdBasePresenca > 0;
       const hasAjuste = row.valorAjuste !== 0;
       const hasLegado = row.valorLegado > 0;
