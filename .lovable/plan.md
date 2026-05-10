@@ -1,112 +1,108 @@
-## Contexto
+## Diagnóstico de Segurança — Atlas O.P.E.R.A.
 
-Hoje o sistema trata `previsto`, `confirmado`, `ajustado` e `fechado` como a mesma entidade. O operador olha o total e age como se fosse líquido — mas pode haver dias futuros assumidos como presentes. Isso causou prejuízo real (pagamento sobre previsão).
-
-A correção não é visual. É **estado contábil explícito** em cada registro de presença, propagado até o PDF e o hash de fechamento.
-
----
-
-## Modelo de estados (núcleo)
-
-Adicionar coluna `status_contabil` em `registro_presencas`:
-
-```text
-prevista    🟡  Dia futuro assumido (ex: lançado na quinta para sexta)
-confirmada  🔵  Dia já ocorreu, presença registrada
-ajustada    🟠  Houve alteração manual após a data
-fechada     🟢  Pertence a período em periodos_fechados (derivado, não armazenado)
-```
-
-Regra de transição automática (via trigger):
-- INSERT com `data > CURRENT_DATE` → `prevista`
-- INSERT com `data <= CURRENT_DATE` → `confirmada`
-- UPDATE em registro com `data < CURRENT_DATE` (exceto auto-promoção prevista→confirmada) → `ajustada`
-- Job/trigger diário: `prevista` cuja `data <= CURRENT_DATE` → `confirmada` (mantendo valor)
-- Bloqueio: registros em `periodos_fechados` não admitem mudança (já existe via RLS)
+### Estado geral
+Backend operacional. RLS ativo em 34 tabelas. 147 políticas. Porém existem **falhas estruturais de isolamento** que tornam o multi-tenancy permeável.
 
 ---
 
-## Bloco 1 — Schema + lógica (DB)
+### Falhas CRÍTICAS (bloqueantes para piloto com dados reais)
 
-1. **Migration**:
-   - `ALTER TABLE registro_presencas ADD COLUMN status_contabil text NOT NULL DEFAULT 'confirmada'`
-   - CHECK constraint via trigger (não CHECK, conforme mem://): valores válidos `prevista|confirmada|ajustada`
-   - Backfill: registros com `data > CURRENT_DATE` → `prevista`; resto → `confirmada`
-   - Índice em `(obra_id, data, status_contabil)`
+#### 1. `session_transfers` — Zero políticas RLS
+- **Impacto:** Qualquer usuário autenticado pode ler todos os refresh tokens de todos os usuários do sistema. Account takeover em massa.
+- **Causa:** A tabela foi criada mas nenhuma política foi adicionada.
+- **Fix:** Adicionar SELECT/INSERT/UPDATE/DELETE com scoping por `user_id = auth.uid()`.
 
-2. **Trigger `fn_set_status_contabil`** (BEFORE INSERT/UPDATE):
-   - INSERT: define com base em `data vs CURRENT_DATE`
-   - UPDATE em campo material (`fracao_diaria`, `valor_diaria_usado`, `tipo`) após `data` → `ajustada`
-   - Promoção `prevista` → `confirmada` quando `data` chega: feita via RPC `promover_previsoes()` agendável (ou no próprio `folha_pagamento` ao consultar)
+#### 2. `generate-reset-link` Edge Function — Cross-tenant privilege escalation
+- **Impacto:** Admin de qualquer tenant pode gerar link de recuperação de senha para QUALQUER email do sistema, incluindo super admins. Account takeover total.
+- **Causa:** A função verifica `isAdmin` mas não cruza `tenant_id` do chamador com `tenant_id` do alvo.
+- **Fix:** Restringir a `is_super_admin` OU verificar `tenant_id` do alvo antes de gerar link.
 
-3. **Atualizar `folha_pagamento` RPC**:
-   - Agregados separados: `qtd_confirmada`, `valor_confirmado`, `qtd_prevista`, `valor_previsto`, `qtd_ajustada`, `valor_ajustado`
-   - `valor_consolidado` = confirmada + ajustada + legado
-   - `valor_projetado` = consolidado + prevista
-   - Hash inclui breakdown por estado (mantém determinismo, `rule_version: 'v2'`)
-   - Flag `contem_previsoes: boolean` no payload raiz
+#### 3. `has_role` / `has_any_role` — Sem scoping de tenant
+- **Impacto:** Usuário com role "admin" no tenant A satisfaz checagens de admin no tenant B. Escalada de privilégio cross-tenant em TODAS as políticas RLS que usam essas funções.
+- **Causa:** As funções verificam apenas `user_id + role`, ignorando `tenant_id`.
+- **Fix:** Atualizar funções para exigir `tenant_id = get_user_tenant_id(_user_id)`. Isso afeta ~40 políticas RLS.
 
-4. **`validar_fechamento`**: adicionar erro bloqueante se houver `prevista` no período → não pode fechar mês com previsão pendente.
+#### 4. `obra-fotos` Storage — DELETE/UPDATE sem owner check
+- **Impacto:** Qualquer usuário autenticado pode deletar ou sobrescrever fotos de QUALQUER obra de QUALQUER tenant.
+- **Causa:** Políticas de DELETE/UPDATE em `storage.objects` verificam apenas `bucket_id = 'obra-fotos'`.
+- **Fix:** Restaurar scoping por `storage.foldername(name))[1] = auth.uid()::text` ou por tenant.
 
----
-
-## Bloco 2 — UI Relatório de Mão-de-Obra
-
-Em `src/pages/RelatorioMaoObraPage.tsx`:
-
-1. **Banner crítico vermelho** no topo quando `contem_previsoes === true`:
-   > ⚠️ PRÉVIA OPERACIONAL — Este relatório contém R$ X em diárias **previstas** (ainda não ocorreram). Não use como base de pagamento final.
-
-2. **Novas colunas** na tabela financeira:
-   - `Confirmadas (qtd / R$)` 🔵
-   - `Previstas (qtd / R$)` 🟡 — destaque amarelo
-   - `Ajustes` 🟠 (já existe)
-   - `Legado` (já existe)
-   - `Consolidado` (sem prevista)
-   - `Projetado` (com prevista)
-
-3. **Badge por linha** quando colaborador tiver prevista: `🟡 inclui dias futuros`
-
-4. **Footer**: dois totais lado a lado, "Consolidado" em verde, "Projetado" em amarelo.
-
-5. **Toggle**: "Ocultar previsões" — recalcula visual sem dias futuros.
+#### 5. `invites` — Convidado não pode verificar próprio convite
+- **Impacto:** Fluxo de aceite de convite pode quebrar ou exigir workarounds que exponham tokens.
+- **Causa:** Apenas admins do tenant têm acesso à tabela. Sem política para o convidado ler seu próprio invite por email/token.
+- **Fix:** Adicionar SELECT para `email = auth.jwt() ->> 'email'` com token não expirado.
 
 ---
 
-## Bloco 3 — PDF
+### Falhas ALTO (risco operacional/financeiro)
 
-1. Marca d'água diagonal "PRÉVIA OPERACIONAL — NÃO CONSOLIDADA" quando houver previsão.
-2. Cabeçalho com dois totais: Consolidado vs Projetado.
-3. Coluna "Estado" por linha quando houver mistura.
-4. Rodapé: data/hora geração + aviso explícito.
+#### 6. `beta_waitlist` — INSERT público sem validação
+- **Impacto:** Spam, data poisoning, enumeration. Qualquer bot pode encher a tabela.
+- **Fix:** Restringir INSERT a um Edge Function com rate limiting, ou adicionar validação mínima.
+
+#### 7. `mobile_debug_logs` — INSERT público
+- **Impacto:** Storage exhaustion, log injection, potencial exfiltração de dados via logs.
+- **Fix:** Restringir INSERT a authenticated, ou mover para Edge Function.
+
+#### 8. `beta_waitlist` / `beta_config` SELECT — Sem tenant scoping
+- **Impacto:** Admin de tenant A vê waitlist de tenant B (dados de concorrentes).
+- **Fix:** Adicionar `tenant_id` ou escopar por tenant do admin.
+
+#### 9. `user_has_obra_access` — Permite acesso baseado em role global
+- **Impacto:** Gestor de tenant A pode ter acesso visual a obra de tenant B se houver vazamento de IDs.
+- **Causa:** A função verifica roles mas não verifica se o usuário pertence ao tenant da obra.
+- **Fix:** Adicionar verificação de `tenant_id` da obra contra `get_user_tenant_id(_user_id)`.
+
+#### 10. Funções SECURITY DEFINER — Permissões EXECUTE amplas
+- **Impacto:** ~26 funções SECURITY DEFINER (incluindo `has_role`, `is_super_admin`, `folha_pagamento`) podem ser chamadas por usuários autenticados ou anônimos sem controle de acesso adequado.
+- **Fix:** Revogar EXECUTE de public/anon em funções sensíveis; manter apenas para authenticated com necessidade real.
 
 ---
 
-## Bloco 4 — Lançamento de presença (preventivo)
+### Falhas MÉDIO (higiene)
 
-Onde o operador lança presença em massa para data futura, mostrar warning inline:
-> Você está registrando presença para uma data futura. Estes lançamentos serão marcados como **PREVISÃO** e devem ser confirmados após o dia ocorrer.
+#### 11. Public bucket `obra-fotos` permite listagem
+- Qualquer um pode listar todos os arquivos do bucket. Fotos de obra não devem ser listáveis publicamente.
 
-(Localizar no fluxo de presenças — ainda não toco até confirmar arquivos.)
+#### 12. Leaked Password Protection desabilitado
+- Sem proteção contra senhas vazadas em breaches conhecidos.
+
+#### 13. Políticas `USING (true)` / `WITH CHECK (true)` em INSERT/UPDATE/DELETE
+- Detectado pelo linter: políticas excessivamente permissivas em operações de escrita.
+
+---
+
+## Plano de Correção (5 blocos)
+
+### Bloco 1 — RLS em `session_transfers`
+- Adicionar: SELECT (user_id = auth.uid()), INSERT (user_id = auth.uid()), UPDATE (user_id = auth.uid()), DELETE (user_id = auth.uid() OR is_super_admin)
+
+### Bloco 2 — Edge Function `generate-reset-link`
+- Adicionar verificação cross-tenant: consultar `profiles` do alvo e validar `tenant_id == caller.tenant_id`
+- OU restringir a `is_super_admin`
+
+### Bloco 3 — Tenant scoping em funções de role
+- Alterar `has_role`, `has_any_role`, `user_has_obra_access` para filtrar por `tenant_id`
+- Backward compatibility: criar versões v2 das funções e migrar políticas gradualmente
+
+### Bloco 4 — Storage `obra-fotos`
+- Restaurar owner-scoped DELETE/UPDATE em `storage.objects`
+- Remover listagem pública do bucket
+
+### Bloco 5 — Higiene (beta_waitlist, mobile_debug_logs, invites, auth config)
+- Restringir INSERTs públicos
+- Adicionar SELECT para convidado em `invites`
+- Habilitar leaked password protection
+- Limpar políticas USING(true) para INSERT/UPDATE/DELETE
 
 ---
 
 ## Ordem de execução
 
-1. Migration (schema + trigger + backfill)
-2. Atualizar `folha_pagamento` (rule_version v2) e `validar_fechamento`
-3. UI `RelatorioMaoObraPage` (colunas + banner + badges)
-4. PDF (marca d'água + duplo total)
-5. Aviso no formulário de presença futura
+1. Bloco 1 (session_transfers) — Impacto imediato, alteração isolada
+2. Bloco 2 (generate-reset-link) — Correção de código, sem risco ao DB
+3. Bloco 3 (funções de role) — Alteração profunda, afeta todas as políticas; testar em ambiente seguro
+4. Bloco 4 (storage) — Correção rápida
+5. Bloco 5 (higiene) — Finalização
 
-Cada bloco testável isoladamente. Após Bloco 1+2 a engine já é correta — UI só revela.
-
----
-
-## Riscos e mitigações
-
-- **Hash retroativo**: ao mudar para `rule_version v2`, fechamentos antigos (`v1`) continuam verificáveis com lógica antiga? → Sim, manter ramo no `verificar_hash_periodo` baseado em `rule_version` armazenado.
-- **Backfill incorreto**: registros antigos com `data > today` por erro de digitação viram "previstos" indevidamente. Mitigação: backfill só marca prevista se `data > CURRENT_DATE AND created_at >= CURRENT_DATE - 7 days`.
-- **Promoção automática**: sem job agendado, depende de `folha_pagamento` ser chamada. Aceitável: a RPC promove em runtime ao consultar.
-
-Confirma que sigo com o **Bloco 1** (migration + RPC) primeiro?
+Cada bloco testável isoladamente. Bloco 3 requer validação cruzada exaustiva pois toca no coração do isolamento multi-tenant.
