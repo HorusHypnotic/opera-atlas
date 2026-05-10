@@ -48,19 +48,25 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: profile } = await adminClient
+    const { data: callerProfile } = await adminClient
       .from("profiles")
-      .select("is_super_admin")
+      .select("is_super_admin, tenant_id")
       .eq("id", caller.id)
       .single();
 
     const { data: roles } = await adminClient
       .from("user_roles")
-      .select("role")
+      .select("role, tenant_id")
       .eq("user_id", caller.id);
 
-    const isAdmin = profile?.is_super_admin || roles?.some((r: any) => r.role === "admin");
-    if (!isAdmin) {
+    const isSuperAdmin = callerProfile?.is_super_admin === true;
+    const isTenantAdmin =
+      !!callerProfile?.tenant_id &&
+      (roles ?? []).some(
+        (r: any) => r.role === "admin" && r.tenant_id === callerProfile?.tenant_id
+      );
+
+    if (!isSuperAdmin && !isTenantAdmin) {
       return new Response(JSON.stringify({ error: "Apenas admins podem gerar links" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -68,11 +74,42 @@ Deno.serve(async (req) => {
     }
 
     const { email, redirect_to } = await req.json();
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return new Response(JSON.stringify({ error: "Email obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Cross-tenant guard: tenant admin só pode gerar reset para usuário do PRÓPRIO tenant
+    if (!isSuperAdmin) {
+      const { data: targetProfile } = await adminClient
+        .from("profiles")
+        .select("tenant_id, is_super_admin")
+        .ilike("email", email)
+        .maybeSingle();
+
+      if (!targetProfile) {
+        // Não revela se o email existe ou não — retorna 403 genérico
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (targetProfile.is_super_admin === true) {
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (targetProfile.tenant_id !== callerProfile?.tenant_id) {
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Generate recovery link using admin API
