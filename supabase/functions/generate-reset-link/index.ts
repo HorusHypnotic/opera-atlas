@@ -1,9 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createEdgeObservability, correlationResponseHeaders } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-correlation-id, x-causation-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-correlation-id",
 };
 
 Deno.serve(async (req) => {
@@ -11,23 +13,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const obs = createEdgeObservability(req, "edge.generate-reset-link");
+  const baseHeaders = { ...corsHeaders, ...correlationResponseHeaders(obs), "Content-Type": "application/json" };
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: baseHeaders });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await obs.log({ event_type: "auth.reset_link.denied", status: "denied", severity: "warning", payload: { reason: "no_auth_header" } });
+      return new Response(JSON.stringify({ error: "Não autorizado" }), { status: 401, headers: baseHeaders });
     }
 
-    // Verify caller is admin/super_admin
     const anonClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -36,13 +35,10 @@ Deno.serve(async (req) => {
 
     const { data: { user: caller } } = await anonClient.auth.getUser();
     if (!caller) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await obs.log({ event_type: "auth.reset_link.denied", status: "denied", severity: "warning", payload: { reason: "invalid_jwt" } });
+      return new Response(JSON.stringify({ error: "Não autorizado" }), { status: 401, headers: baseHeaders });
     }
 
-    // Check if caller is admin or super_admin
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -63,25 +59,24 @@ Deno.serve(async (req) => {
     const isTenantAdmin =
       !!callerProfile?.tenant_id &&
       (roles ?? []).some(
-        (r: any) => r.role === "admin" && r.tenant_id === callerProfile?.tenant_id
+        (r: { role: string; tenant_id: string | null }) => r.role === "admin" && r.tenant_id === callerProfile?.tenant_id
       );
 
     if (!isSuperAdmin && !isTenantAdmin) {
-      return new Response(JSON.stringify({ error: "Apenas admins podem gerar links" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await obs.log({
+        event_type: "auth.reset_link.denied",
+        status: "denied",
+        severity: "warning",
+        payload: { reason: "not_admin", caller_id: caller.id },
       });
+      return new Response(JSON.stringify({ error: "Apenas admins podem gerar links" }), { status: 403, headers: baseHeaders });
     }
 
     const { email, redirect_to } = await req.json();
     if (!email || typeof email !== "string") {
-      return new Response(JSON.stringify({ error: "Email obrigatório" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Email obrigatório" }), { status: 400, headers: baseHeaders });
     }
 
-    // Cross-tenant guard: tenant admin só pode gerar reset para usuário do PRÓPRIO tenant
     if (!isSuperAdmin) {
       const { data: targetProfile } = await adminClient
         .from("profiles")
@@ -89,57 +84,62 @@ Deno.serve(async (req) => {
         .ilike("email", email)
         .maybeSingle();
 
+      const denyCrossTenant = async (reason: string) => {
+        await obs.log({
+          event_type: "auth.reset_link.denied",
+          status: "denied",
+          severity: "warning",
+          payload: { reason, caller_id: caller.id, caller_tenant: callerProfile?.tenant_id },
+        });
+      };
+
       if (!targetProfile) {
-        // Não revela se o email existe ou não — retorna 403 genérico
-        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        await denyCrossTenant("target_not_found");
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), { status: 403, headers: baseHeaders });
       }
-
       if (targetProfile.is_super_admin === true) {
-        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        await denyCrossTenant("target_is_super_admin");
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), { status: 403, headers: baseHeaders });
       }
-
       if (targetProfile.tenant_id !== callerProfile?.tenant_id) {
-        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        await denyCrossTenant("cross_tenant_attempt");
+        return new Response(JSON.stringify({ error: "Não autorizado para este usuário" }), { status: 403, headers: baseHeaders });
       }
     }
 
-    // Generate recovery link using admin API
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: {
-        redirectTo: redirect_to || undefined,
-      },
+      options: { redirectTo: redirect_to || undefined },
     });
 
     if (error) {
-      return new Response(JSON.stringify({ error: "Erro ao gerar link: " + error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      await obs.log({
+        event_type: "auth.reset_link.failed",
+        status: "failure",
+        severity: "error",
+        error_message: error.message,
+        payload: { caller_id: caller.id },
       });
+      return new Response(JSON.stringify({ error: "Erro ao gerar link: " + error.message }), { status: 500, headers: baseHeaders });
     }
 
-    // Build the full recovery URL with the token hash
-    const properties = data?.properties;
-    const actionLink = properties?.action_link || "";
+    await obs.log({
+      event_type: "auth.reset_link.issued",
+      status: "success",
+      severity: "info",
+      payload: { caller_id: caller.id, by_super_admin: isSuperAdmin },
+    });
 
-    return new Response(
-      JSON.stringify({ link: actionLink }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const actionLink = data?.properties?.action_link || "";
+    return new Response(JSON.stringify({ link: actionLink }), { status: 200, headers: baseHeaders });
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: "Erro inesperado" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    await obs.log({
+      event_type: "auth.reset_link.exception",
+      status: "failure",
+      severity: "critical",
+      error_message: e instanceof Error ? e.message : String(e),
+    });
+    return new Response(JSON.stringify({ error: "Erro inesperado" }), { status: 500, headers: baseHeaders });
   }
 });
