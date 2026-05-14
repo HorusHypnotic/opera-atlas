@@ -249,6 +249,8 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
+          causation_id: string | null
+          correlation_id: string | null
           created_at: string
           id: string
           metadata: Json | null
@@ -259,6 +261,8 @@ export type Database = {
         }
         Insert: {
           action: string
+          causation_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -269,6 +273,8 @@ export type Database = {
         }
         Update: {
           action?: string
+          causation_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -289,6 +295,8 @@ export type Database = {
       }
       audit_logs_db: {
         Row: {
+          causation_id: string | null
+          correlation_id: string | null
           created_at: string
           id: string
           new_data: Json | null
@@ -300,6 +308,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          causation_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           new_data?: Json | null
@@ -311,6 +321,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          causation_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           id?: string
           new_data?: Json | null
@@ -1618,6 +1630,65 @@ export type Database = {
         }
         Relationships: []
       }
+      system_events: {
+        Row: {
+          actor_id: string | null
+          causation_id: string | null
+          correlation_id: string
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          event_type: string
+          id: string
+          obra_id: string | null
+          payload: Json
+          severity: string
+          source: string
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          causation_id?: string | null
+          correlation_id: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          obra_id?: string | null
+          payload?: Json
+          severity?: string
+          source: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          causation_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          obra_id?: string | null
+          payload?: Json
+          severity?: string
+          source?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           cnpj: string | null
@@ -1781,6 +1852,21 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       jsonb_object_keys_count: { Args: { _obj: Json }; Returns: number }
+      log_system_event: {
+        Args: {
+          _causation_id?: string
+          _correlation_id: string
+          _duration_ms?: number
+          _error_message?: string
+          _event_type: string
+          _obra_id?: string
+          _payload?: Json
+          _severity?: string
+          _source: string
+          _status?: string
+        }
+        Returns: string
+      }
       produtividade_por_equipe: {
         Args: { _end?: string; _obra_id: string; _start?: string }
         Returns: {

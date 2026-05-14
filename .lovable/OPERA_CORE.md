@@ -4,7 +4,7 @@
 > Este documento não descreve o que o sistema faz.
 > Descreve o que o sistema **jamais pode violar**.
 >
-> Versão: 1.0 — 2026-05-14
+> Versão: 1.1 — 2026-05-14
 > Status: vinculante. Toda decisão de arquitetura, RLS, schema, UI ou IA
 > deve ser checada contra este documento antes de ser aceita.
 
@@ -183,8 +183,8 @@ pertence ao núcleo — pode virar plugin, extensão ou nada.
 | Banco (Postgres) | Supabase | Lock-in médio (Postgres é portável; RLS específico) | Migrations versionadas em git permitem rebuild |
 | Storage (`obra-fotos`) | Supabase, bucket público de leitura | Evidência exposta por URL adivinhável | Mover para signed URLs ou bucket privado |
 | Edge Functions | Lovable/Supabase | Acoplamento Deno + ambiente proprietário | Manter funções pequenas e portáveis |
-| Logs aplicacionais | Parcial (`audit_logs`, console) | Observabilidade baixa, sem correlation_id | Próximo passo: structured logging |
-| Logs DB | `audit_logs_db` via triggers | Ok para auditoria, fraco para tracing | Suficiente para compliance |
+| Logs aplicacionais | `system_events` + `audit_logs` com `correlation_id`/`causation_id`; libs `src/lib/observability.ts` e `supabase/functions/_shared/observability.ts` | Adoção parcial — ainda falta retrofit em todas edge functions e fluxos críticos | Próximo: instrumentar `accept-invite`, `beta-signup`, `data-retention`, `session-transfer` e mutações financeiras no cliente |
+| Logs DB | `audit_logs_db` via triggers (agora com `correlation_id` opcional) | Triggers ainda não recebem correlation do contexto da sessão | Avaliar `set_config('opera.correlation_id', …)` por transação |
 | Backups | Supabase automático | Sem teste de restore | Testar restore trimestral |
 | Deploy | Lovable | Lock-in de pipeline | Aceitável nesta fase |
 | Domínio | `opera-atlas.lovable.app` | Sem domínio próprio | Migrar para domínio próprio antes do piloto pago |
@@ -214,3 +214,4 @@ Antes de aceitar qualquer PR, migration ou feature, responder:
 ### Histórico
 
 - **1.0 — 2026-05-14** — Versão inicial. Codifica estado pós-hardening de segurança e introdução de `periodos_fechados` + `status_contabil`.
+- **1.1 — 2026-05-14** — Observabilidade causal introduzida: `system_events`, `correlation_id`/`causation_id` em `audit_logs*`, RPC `log_system_event`, libs cliente/edge. Atualiza §8 (sistema nervoso observável passa a existir).

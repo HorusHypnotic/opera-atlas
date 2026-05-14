@@ -5,6 +5,10 @@ interface AuditEntry {
   target_type?: string;
   target_id?: string;
   metadata?: Record<string, unknown>;
+  /** Cadeia causal (ver src/lib/observability.ts). Opcional — preferir passar quando disponível. */
+  correlation_id?: string;
+  /** Evento pai direto (ver src/lib/observability.ts). */
+  causation_id?: string;
 }
 
 export async function logAudit(entry: AuditEntry) {
@@ -25,7 +29,9 @@ export async function logAudit(entry: AuditEntry) {
       target_type: entry.target_type || null,
       target_id: entry.target_id || null,
       metadata: entry.metadata || {},
-    } as any);
+      correlation_id: entry.correlation_id || null,
+      causation_id: entry.causation_id || null,
+    } as never);
   } catch (err) {
     console.warn("[AuditLog] Erro ao gravar log:", err);
   }

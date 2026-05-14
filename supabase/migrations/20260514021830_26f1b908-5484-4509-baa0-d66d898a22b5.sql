@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.log_system_event(uuid,text,text,uuid,uuid,text,text,jsonb,text,integer) FROM anon, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.log_system_event(uuid,text,text,uuid,uuid,text,text,jsonb,text,integer) TO authenticated, service_role;
