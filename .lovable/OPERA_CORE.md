@@ -214,3 +214,4 @@ Antes de aceitar qualquer PR, migration ou feature, responder:
 ### Histórico
 
 - **1.0 — 2026-05-14** — Versão inicial. Codifica estado pós-hardening de segurança e introdução de `periodos_fechados` + `status_contabil`.
+- **1.1 — 2026-05-14** — Observabilidade causal introduzida: `system_events`, `correlation_id`/`causation_id` em `audit_logs*`, RPC `log_system_event`, libs cliente/edge. Atualiza §8 (sistema nervoso observável passa a existir).
