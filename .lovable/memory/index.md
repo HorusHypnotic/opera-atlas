@@ -4,6 +4,7 @@ Updated: now
 # Project Memory
 
 ## Core
+- **CONSTITUIÇÃO**: `.lovable/OPERA_CORE.md` é vinculante. Checar invariantes antes de qualquer mudança arquitetural, RLS, schema ou feature.
 - SaaS O.P.E.R.A Method Dashboard. Dark theme, orange (#F97316) accents. Status: green/yellow/red.
 - Supabase native Auth only. NO IndexedDB/localforage for sessions (prevents mobile refresh loops).
 - Mobile boot: 1.5s lock (`sessionStable`) ignoring initial null sessions to prevent crashes.
