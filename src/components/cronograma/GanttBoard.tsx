@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Lock, RefreshCw, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { startCausalContext, causalHeaders, logEvent, type CausalContext } from "@/lib/observability";
+import { startCausalContext, causalHeaders, logEvent } from "@/lib/observability";
 
 interface ApiTask {
   id: string;
