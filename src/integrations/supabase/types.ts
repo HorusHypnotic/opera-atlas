@@ -198,6 +198,119 @@ export type Database = {
           },
         ]
       }
+      atividade_dependencias: {
+        Row: {
+          created_at: string
+          id: string
+          lag_dias: number
+          obra_id: string
+          predecessora_id: string
+          sucessora_id: string
+          tenant_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lag_dias?: number
+          obra_id: string
+          predecessora_id: string
+          sucessora_id: string
+          tenant_id: string
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lag_dias?: number
+          obra_id?: string
+          predecessora_id?: string
+          sucessora_id?: string
+          tenant_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividade_dependencias_predecessora_id_fkey"
+            columns: ["predecessora_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividade_dependencias_sucessora_id_fkey"
+            columns: ["sucessora_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades: {
+        Row: {
+          cor: string | null
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          deleted_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          obra_id: string
+          ordem: number
+          parent_id: string | null
+          progresso: number
+          responsavel: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          obra_id: string
+          ordem?: number
+          parent_id?: string | null
+          progresso?: number
+          responsavel?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          obra_id?: string
+          ordem?: number
+          parent_id?: string | null
+          progresso?: number
+          responsavel?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ativos: {
         Row: {
           created_at: string
@@ -712,6 +825,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cronograma_baseline: {
+        Row: {
+          congelado_em: string
+          congelado_por: string
+          hash: string
+          id: string
+          motivo: string | null
+          obra_id: string
+          snapshot_json: Json
+          tenant_id: string
+          versao: number
+        }
+        Insert: {
+          congelado_em?: string
+          congelado_por: string
+          hash: string
+          id?: string
+          motivo?: string | null
+          obra_id: string
+          snapshot_json: Json
+          tenant_id: string
+          versao?: number
+        }
+        Update: {
+          congelado_em?: string
+          congelado_por?: string
+          hash?: string
+          id?: string
+          motivo?: string | null
+          obra_id?: string
+          snapshot_json?: Json
+          tenant_id?: string
+          versao?: number
+        }
+        Relationships: []
       }
       incidentes_seguranca: {
         Row: {
