@@ -130,7 +130,7 @@ export function GanttBoard({ obraId, tenantId }: Props) {
     }
 
     setSaving(task.id);
-    const ctx: CausalContext = startCausalContext("client.GanttBoard.update", { obraId, tenantId });
+    const ctx = startCausalContext("client.GanttBoard.update", { obraId, tenantId });
 
     try {
       const payload: Record<string, unknown> = { task_id: task.id };
