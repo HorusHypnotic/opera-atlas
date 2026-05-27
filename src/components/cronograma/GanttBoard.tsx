@@ -57,11 +57,6 @@ export function GanttBoard({ obraId, tenantId }: Props) {
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("gantt-list", {
-        method: "GET" as never,
-        // workaround: invoke não suporta GET query — usamos URL direta
-      } as never);
-      // fallback manual via fetch:
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gantt-list?obra_id=${obraId}`;
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(url, {
@@ -75,7 +70,6 @@ export function GanttBoard({ obraId, tenantId }: Props) {
       setTasks(json.tasks ?? []);
       setDeps(json.dependencies ?? []);
       setCanEdit(!!json.can_edit);
-      void data; void error;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao carregar");
     } finally {
