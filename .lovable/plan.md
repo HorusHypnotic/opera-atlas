@@ -1,119 +1,141 @@
+# Plano — Consolidação Causal do OPERA
 
-# Gantt como Evidência — Plano de implementação
-
-Objetivo: um Gantt que não é desenho, é **janela para a verdade operacional**. Toda barra é estado autoritativo no servidor; todo arrasto é evento causal auditado; períodos fechados são imutáveis; baseline é contrato.
-
-Será entregue em **3 fases incrementais**. Fase 1 é o MVP funcional (suficiente para piloto). Fases 2 e 3 são camadas de rigor.
+Reinterpretação aceita: **Frente 1 não é observabilidade — é a conclusão da camada causal.** O objetivo da iteração é fechar o "DNA transacional" do sistema antes de qualquer expansão. Ordem: **F1 → F3 → F2**, terminando com **Congelamento Arquitetural de Piloto**.
 
 ---
 
-## Fase 1 — Núcleo (fonte única + mutação auditada + readonly)
+## Frente 1 — Conclusão da Camada Causal (1–2 dias)
 
-### 1.1 Modelo de dados (migração)
+Objetivo: qualquer alteração relevante carrega linhagem completa (`correlation_id` + `causation_id`) end-to-end, do clique do usuário ao trigger no banco. Sem investigação manual depois.
 
-Novas tabelas no schema `public`, com GRANTs + RLS no padrão dos demais módulos (tenant_select, operational_insert, gestor_update, admin_delete, super_admin_all):
+**Edge functions a instrumentar** (herdar correlation via header `x-opera-correlation-id` usando `_shared/observability.ts`):
+- `accept-invite`
+- `beta-signup`
+- `data-retention`
+- `session-transfer`
+- `generate-reset-link`
+- `gantt-update-task` (já parcialmente; auditar)
+- `gantt-list`
 
-- `atividades` — fonte única do cronograma
-  - `id`, `tenant_id`, `obra_id`, `nome`, `descricao`
-  - `data_inicio date`, `data_fim date`
-  - `progresso numeric(5,2) default 0` (0–100, **read-only** no Gantt)
-  - `ordem int`, `parent_id uuid null` (hierarquia opcional)
-  - `responsavel text null`, `cor text null`
-  - `created_at`, `updated_at`, `updated_by`, `deleted_at` (soft delete)
-  - Validação por **trigger** (não CHECK): `data_fim >= data_inicio`
+Padrão por função: extrair/gerar correlation no boundary HTTP → propagar em todo `log_system_event` e `audit_logs` da requisição → retornar no header da resposta.
 
-- `atividade_dependencias` — dependências FS (finish-to-start) por padrão
-  - `id`, `tenant_id`, `obra_id`, `predecessora_id`, `sucessora_id`, `tipo text default 'FS'`, `lag_dias int default 0`
-  - UNIQUE (predecessora_id, sucessora_id)
+**Cliente — mutações financeiras e operacionais críticas** (envolver com `withCorrelation()` de `src/lib/observability.ts` e propagar para `logAudit({ correlation_id, causation_id })`):
+- Confirmar/registrar presença (`registro_presencas`)
+- Apontar diária (`apontamento_diarias`)
+- Fechar/validar período (RPC `folha_pagamento`, `validar_fechamento`)
+- Criar/editar/excluir atividade Gantt
+- Criar/editar dependência Gantt
+- Soft delete de obras e colaboradores
 
-- `cronograma_baseline` — snapshot imutável do plano original
-  - `id`, `tenant_id`, `obra_id`, `versao int`, `congelado_em`, `congelado_por`, `snapshot_json jsonb`, `hash text`
-  - Apenas admin pode criar; nunca update/delete.
+**Banco — herança em triggers:**
+- Estabelecer convenção: cliente/edge faz `select set_config('opera.correlation_id', $1, true)` no início da transação.
+- Atualizar função genérica de audit trigger para ler `current_setting('opera.correlation_id', true)` e gravar em `audit_logs_db.correlation_id` quando presente.
+- Sem fallback silencioso: se não houver correlation, registrar `NULL` (não inventar).
 
-Reaproveita as funções `get_user_tenant_id`, `has_role`, `user_has_obra_access`, `is_super_admin`, e o bloqueio por `periodos_fechados` (mesmo padrão de `apontamento_diarias`): trigger/policy que impede INSERT/UPDATE/DELETE em `atividades` cujo mês de `data_fim` esteja fechado (a menos que super admin).
+**Critério de aceitação:** dado qualquer `audit_logs.id` recente, é possível reconstruir a cadeia (quem → tenant → função → DB writes) com **uma única query** por `correlation_id`.
 
-### 1.2 Edge functions (Deno)
-
-Toda mutação passa por edge function. Nada de UPDATE direto do cliente.
-
-- `gantt-list` — `GET ?obra_id=...`
-  - Retorna tarefas + dependências + flag `readonly` por tarefa (true se mês fechado, sem permissão de edição, ou sem role gestor+).
-  - Usa `userClient` (RLS) para ler; obs propaga `correlation_id`.
-
-- `gantt-update-task` — `POST { task_id, data_inicio?, data_fim?, nome?, reason? }`
-  - Valida readonly server-side.
-  - Valida dependências (nova `data_inicio` >= max(`data_fim` das predecessoras) + lag). Se conflito → 409 com lista de conflitos.
-  - Atualiza `atividades` com `updated_by = auth.uid()`.
-  - Loga `system_events` com `event_type = 'gantt.task.update'`, payload `{ task_id, old, new, reason }`, herdando `correlation_id` via header.
-
-- `gantt-update-progress` (Fase 1.5, opcional) — exige `reason` obrigatório, loga `gantt.task.progress.adjusted`.
-
-Config: `verify_jwt = true` (padrão), CORS conforme funções existentes.
-
-### 1.3 Frontend
-
-- Página `src/pages/CronogramaPage.tsx` + rota em `App.tsx` + entrada no `AppSidebar`.
-- Biblioteca: **`frappe-gantt-react`** (leve, MIT). Alternativa: `gantt-task-react`. Decidir pela mais estável (frappe é mais simples e combina com a estética dark/glass).
-- Componente `src/components/cronograma/GanttBoard.tsx`:
-  - Carrega via `gantt-list` (TanStack Query).
-  - `onDateChange` → chama `gantt-update-task` com `causalHeaders(ctx)`; UI **não** atualiza otimisticamente — espera resposta e refaz fetch (ou aplica patch só após sucesso). Em erro, mostra toast com motivo (ex: "tarefa bloqueada por período fechado", "conflito de dependência com X").
-  - Barras `readonly` renderizadas com cinza + ícone de cadeado, drag desabilitado.
-  - Progresso exibido na barra, mas sem handler de drag em progresso (Fase 1).
-- Helpers já existentes em `src/lib/observability.ts` são usados para `startCausalContext`, `traced`, `causalHeaders`.
-
-### 1.4 Aceitação Fase 1
-
-- [ ] Gantt carrega tarefas de `atividades` via edge function.
-- [ ] Arrastar barra dispara request, e UI só persiste após resposta OK.
-- [ ] Tarefa em mês fechado vem com `readonly: true` e não pode ser arrastada.
-- [ ] Cada update gera linha em `system_events` com `event_type='gantt.task.update'` e `correlation_id`.
-- [ ] RLS testada: usuário do tenant A não vê atividades do tenant B.
+**Entrega documental:** bumpar OPERA_CORE para v1.2, atualizar §8 (sistema nervoso observável passa de "parcial" para "completo no núcleo financeiro/cronograma").
 
 ---
 
-## Fase 2 — Rigor (dependências + baseline)
+## Frente 3 — Reabertura Formal de Período (1 dia)
 
-- `gantt-list` passa a retornar `dependencies: ["id1", "id2"]`.
-- `gantt-update-task` aplica modo configurável por obra: `dependency_mode = 'block' | 'cascade'`.
-  - `block`: erro 409 com lista de sucessoras impactadas.
-  - `cascade`: recalcula sucessoras numa transação; emite **um** `gantt.task.update` por tarefa afetada, todos com mesmo `correlation_id` e `causation_id` apontando para o evento raiz (forma a árvore causal).
-- Borda vermelha em barras com conflito detectado pelo cliente (validação cosmética; backend é a verdade).
-- **Baseline**:
-  - Edge function `gantt-baseline-create` (admin only) — grava `snapshot_json` + `hash` de `atividades` ordenado.
-  - Toggle "Atual / Baseline" no Gantt; baseline desenhado como barra fantasma atrás da atual.
-  - Cálculo de desvio (dias) por tarefa via `data_inicio - baseline.data_inicio`, exibido como rótulo.
+Fecha a contradição: hoje existe fechamento formal, mas não correção formal. Sem caminho oficial, o usuário cria caminhos não oficiais — e invariantes apodrecem em silêncio.
 
----
+Princípio: **erro vira evento.** Reabertura é registrada, não escondida. O hash anterior fica preservado no histórico; ao re-fechar, novo hash + nova versão.
 
-## Fase 3 — Prova (exportação verificável)
+**Backend:**
+- RPC `reabrir_periodo(tenant_id, obra_id, mes, motivo)`:
+  - SECURITY DEFINER, exige `has_role('admin')` no tenant.
+  - Valida motivo não vazio (≥ 20 chars).
+  - Preserva linha anterior em `periodos_fechados` (não DELETE): grava `reaberto_em`, `reaberto_por`, `motivo_reabertura`.
+  - Emite `system_events` (`periodo.reaberto`) com `correlation_id` da requisição.
+  - Append em `audit_logs` com snapshot do hash anterior em `metadata`.
+- RLS de bloqueio já cobre (`pf.reaberto_em IS NULL`) — escrita volta a ser permitida automaticamente.
+- Ao re-fechar via fluxo existente: nova linha em `periodos_fechados` com `versao = anterior + 1`, novo hash, novo snapshot.
 
-- Edge function `gantt-export-proof` — retorna JSON canônico + SHA-256 + `proof_id` armazenado em nova tabela `cronograma_provas` (append-only).
-- Botão "Exportar como prova" gera PDF (jsPDF) com: snapshot do gráfico (imagem), tabela de tarefas, hash, data, link/QR para `/verificar-prova/:proof_id` (rota pública que recomputa o hash e exibe match/mismatch).
-- Loga `gantt.proof.issued`.
+**UI:**
+- Botão "Reabrir período" visível só para admin, em período fechado.
+- Modal de confirmação por palavra-chave (`REABRIR <mês/ano>`) + textarea de motivo obrigatória.
+- Banner persistente no relatório do mês: "Período reaberto em DD/MM por X. Motivo: …" enquanto não houver re-fechamento.
+- Histórico de versões (hash v1 → v2) visível no rodapé do relatório.
 
----
-
-## Conformidade com OPERA_CORE
-
-| Invariante | Como é cumprida |
-|---|---|
-| I1 (tenant boundary) | `tenant_id` derivado server-side via `get_user_tenant_id(auth.uid())`. RLS em todas as tabelas novas. |
-| I2 (server-side authority) | Cliente nunca faz UPDATE direto — só via edge function. `readonly` é decidido no backend. |
-| I3 (append-only history) | Todos os eventos vão para `system_events` (append-only). Baseline e provas são imutáveis. |
-| I4 (temporal irreversibility) | Períodos fechados bloqueiam edição de tarefas cujo `data_fim` cai no mês fechado. |
-| I5 (evidence lineage) | `correlation_id` herdado da sessão; cascata de dependências usa `causation_id` em árvore. |
-| I6 (contextual permissions) | `readonly` calculado por role + obra_membros + período fechado. |
-| I7 (state reproducibility) | Fonte única é a tabela; baseline reproduz o passado. |
-| I9 (deterministic finance) | N/A direta, mas progresso readonly impede inflação fantasma de avanço financeiro. |
-| I10 (certainty states) | Tarefa carrega estado: planejada / em andamento (progresso > 0) / concluída / atrasada (computado). |
+**Critério de aceitação:** ciclo completo fechar → reabrir → editar → re-fechar gera 2 linhas em `periodos_fechados`, 2 hashes distintos, e cadeia causal recuperável por `correlation_id`.
 
 ---
 
-## Decisões pendentes (precisam de resposta antes do build)
+## Frente 2 — Fechamento Temporal (Baseline como evidência) (3–4 dias)
 
-1. **Escopo desta iteração**: implementamos só a **Fase 1** agora, ou Fase 1+2 de uma vez? (Recomendo Fase 1 isolada — entrega valor em ~1 dia, e baseline/cascata pedem decisões finas que ficam melhores depois do primeiro uso real.)
-2. **Biblioteca de Gantt**: `frappe-gantt-react` (mais simples, visual mais limpo) ou `gantt-task-react` (mais features, mais peso)? Default: frappe.
-3. **Modo de dependência** (quando entrarmos na Fase 2): `block` ou `cascade` como default? Recomendo `block` (mais seguro, força decisão consciente).
-4. **Hierarquia/sub-tarefas** já na Fase 1 (parent_id) ou só lista plana? Recomendo já criar a coluna mas não expor na UI ainda.
+Reenquadrada: **não é feature de Gantt, é o equivalente temporal do fechamento financeiro.** Mesma mecânica de hash + snapshot, aplicada a prazo. A tabela `cronograma_baseline` já existe — só falta o fluxo.
 
-Se confirmar Fase 1 com defaults recomendados, sigo direto: 1 migração + 2 edge functions + 1 página + 1 componente Gantt.
+**Simetria:**
+
+```text
+Folha original     →  hash (periodos_fechados)
+Cronograma original →  hash (cronograma_baseline)
+```
+
+**Backend:**
+- RPC `congelar_baseline(obra_id, motivo)`:
+  - SECURITY DEFINER, exige `has_role('admin')`.
+  - Lê todas atividades + dependências ativas da obra, serializa em ordem determinística.
+  - Calcula SHA-256 (mesma função usada em `folha_pagamento`).
+  - Insere em `cronograma_baseline` com `versao = max(anterior) + 1`.
+  - Emite `system_events` (`baseline.congelada`) com correlation.
+- RPC `comparar_baseline(obra_id, versao?)`: retorna desvio por atividade (start/end/duração/progresso) entre baseline e estado atual.
+- Sem mutação destrutiva: nova baseline = nova versão; baselines anteriores permanecem.
+
+**UI (Gantt — refinamento, não nova página):**
+- Botão "Congelar baseline" no header do cronograma (admin only, confirmação por palavra-chave).
+- Toggle "Baseline vs Atual": renderiza barras fantasma da baseline sob barras atuais; deltas coloridos (verde/amarelo/vermelho).
+- Ícone de cadeado em atividades cujo `data_fim` cai em `periodos_fechados` (já bloqueado por RLS — só exibir).
+- Footer com hash + versão da baseline ativa.
+
+**Dependências em cascata** (já há tabela `atividade_dependencias`):
+- Validação server-side em `gantt-update-task`: ao mover predecessora, sugerir/aplicar shift em sucessoras respeitando `lag_dias` e `tipo` (FS/SS/FF).
+- Decisão UX: sugerir + confirmar (não aplicar silenciosamente — preserva I8 falha segura).
+
+**Critério de aceitação:** baseline congelada → atividade movida → relatório mostra desvio explícito + hash original imutável + correlation_id da edição na trilha.
+
+---
+
+## Congelamento Arquitetural de Piloto (após F2)
+
+Concordo em ser mais agressivo. Ao final das três frentes, declarar congelamento formal e registrá-lo no OPERA_CORE (§7 ou novo §11).
+
+**Congelado até primeiro piloto real produzir dados:**
+- Novas páginas
+- Novos dashboards
+- Novos indicadores / KPIs
+- Novos módulos
+- IA / automações "legais de ter"
+- Billing / Paddle (já era)
+
+**Permitido durante o piloto:**
+- Correções de bug
+- Observabilidade adicional (sempre dentro da camada causal)
+- Hardening de segurança reativo
+- Ajustes de UX que removem fricção real reportada
+
+**Critério de saída do congelamento:** evidência empírica (eventos + feedback de pelo menos uma construtora real) que contradiga premissa atual ou revele gargalo não antecipado. Sem isso, qualquer expansão é infraestrutura para problema imaginário.
+
+---
+
+## Notas técnicas
+
+- Toda RPC nova: `SECURITY DEFINER`, `SET search_path = public, extensions`, validação server-side de `tenant_id` e role.
+- Toda nova escrita: passa por RLS existente + grava em `audit_logs` e `system_events` com `correlation_id`.
+- Zero alteração em schema de negócio existente (apenas RPCs, triggers e UI).
+- Migrations: uma por frente (causal-propagation triggers; reabrir_periodo; congelar_baseline + comparar_baseline).
+- Atualizar memórias: `mem://architecture/causal-observability` (F1), nova `mem://features/reabertura-formal` (F3), nova `mem://features/baseline-cronograma` (F2).
+
+---
+
+## Sequência de execução
+
+1. **F1** — Causal end-to-end. Sem isso, F3 e F2 nascem cegas.
+2. **F3** — Reabertura formal. Remove pressão sobre I4 antes que o usuário invente workaround.
+3. **F2** — Baseline como fechamento temporal. Fecha simetria dinheiro ↔ tempo.
+4. **Congelamento** — Documentado em OPERA_CORE v1.3. Piloto inicia.
+
+Pronto para executar na ordem aprovada quando você liberar build mode.

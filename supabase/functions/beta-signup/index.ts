@@ -1,14 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createEdgeObservability, correlationResponseHeaders } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-correlation-id, x-causation-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-correlation-id",
 };
 
 // Simple in-memory rate limiter (per isolate lifetime)
 const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_MS = 15_000; // 15 seconds per IP
+const RATE_LIMIT_MS = 15_000;
 
 function isRateLimited(ip: string): boolean {
   const last = rateLimitMap.get(ip);
@@ -29,11 +31,11 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const obs = createEdgeObservability(req, "edge.beta-signup");
+  const baseHeaders = { ...corsHeaders, ...correlationResponseHeaders(obs), "Content-Type": "application/json" };
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: baseHeaders });
   }
 
   try {
@@ -43,9 +45,15 @@ Deno.serve(async (req) => {
       "unknown";
 
     if (isRateLimited(ip)) {
+      await obs.log({
+        event_type: "beta.signup.denied",
+        status: "denied",
+        severity: "warning",
+        payload: { reason: "rate_limited", ip },
+      });
       return new Response(
         JSON.stringify({ error: "Aguarde alguns segundos antes de tentar novamente." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: baseHeaders },
       );
     }
 
@@ -62,33 +70,29 @@ Deno.serve(async (req) => {
       });
       const verifyData = await verifyRes.json();
       if (!verifyData.success) {
+        await obs.log({
+          event_type: "beta.signup.denied",
+          status: "denied",
+          severity: "warning",
+          payload: { reason: "captcha_failed" },
+        });
         return new Response(
           JSON.stringify({ error: "Verificação CAPTCHA falhou. Tente novamente." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: baseHeaders },
         );
       }
     } else {
-      return new Response(
-        JSON.stringify({ error: "CAPTCHA obrigatório." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "CAPTCHA obrigatório." }), { status: 400, headers: baseHeaders });
     }
 
-    // Server-side validation
     if (!nome || typeof nome !== "string" || nome.trim().length < 2 || nome.trim().length > 100) {
-      return new Response(
-        JSON.stringify({ error: "Nome inválido (2-100 caracteres)." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Nome inválido (2-100 caracteres)." }), { status: 400, headers: baseHeaders });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanEmail = (email || "").trim().toLowerCase();
     if (!cleanEmail || !emailRegex.test(cleanEmail) || cleanEmail.length > 255) {
-      return new Response(
-        JSON.stringify({ error: "Email inválido." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Email inválido." }), { status: 400, headers: baseHeaders });
     }
 
     const cleanTelefone = telefone ? telefone.replace(/\D/g, "").slice(0, 11) : null;
@@ -97,10 +101,9 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Check duplicate
     const { data: existing } = await supabase
       .from("beta_waitlist")
       .select("id, status")
@@ -108,6 +111,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
+      await obs.log({
+        event_type: "beta.signup.duplicate",
+        status: "info",
+        payload: { email: cleanEmail, existing_status: existing.status },
+      });
       return new Response(
         JSON.stringify({
           status: existing.status,
@@ -116,25 +124,22 @@ Deno.serve(async (req) => {
               ? "Você já foi aprovado! Faça login para acessar."
               : "Este email já está cadastrado na lista.",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: baseHeaders },
       );
     }
 
-    // Check beta config
-    const { data: config } = await supabase
-      .from("beta_config")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+    const { data: config } = await supabase.from("beta_config").select("*").limit(1).maybeSingle();
 
     if (config && !config.beta_ativo) {
-      return new Response(
-        JSON.stringify({ error: "O programa beta não está ativo no momento." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      await obs.log({
+        event_type: "beta.signup.denied",
+        status: "denied",
+        severity: "warning",
+        payload: { reason: "beta_inactive" },
+      });
+      return new Response(JSON.stringify({ error: "O programa beta não está ativo no momento." }), { status: 403, headers: baseHeaders });
     }
 
-    // Count current slots
     const { count } = await supabase
       .from("beta_waitlist")
       .select("id", { count: "exact", head: true })
@@ -143,14 +148,12 @@ Deno.serve(async (req) => {
     const limite = config?.limite_vagas ?? 5;
     const hasSlot = (count ?? 0) < limite;
 
-    // If has influencer code AND has slot AND password provided → auto-approve + create account
     const hasInfluencer = !!cleanCode;
     const hasPassword = password && typeof password === "string" && password.length >= 6;
     const autoApprove = hasInfluencer && hasSlot && hasPassword;
-    
-    const newStatus = autoApprove ? "aprovado" : (hasSlot ? "aguardando_aprovacao" : "lista_de_espera");
 
-    // Track influencer code
+    const newStatus = autoApprove ? "aprovado" : hasSlot ? "aguardando_aprovacao" : "lista_de_espera";
+
     if (cleanCode) {
       const { data: codeData } = await supabase
         .from("influencer_codes")
@@ -167,7 +170,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert waitlist entry
     const { error } = await supabase.from("beta_waitlist").insert({
       nome: nome.trim(),
       email: cleanEmail,
@@ -178,32 +180,42 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao cadastrar: " + error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      await obs.log({
+        event_type: "beta.signup.failed",
+        status: "failure",
+        severity: "error",
+        error_message: error.message,
+      });
+      return new Response(JSON.stringify({ error: "Erro ao cadastrar: " + error.message }), { status: 500, headers: baseHeaders });
     }
 
-    // If auto-approve, create auth user so they can login immediately
     if (autoApprove) {
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      const { error: authError } = await supabase.auth.admin.createUser({
         email: cleanEmail,
-        password: password,
+        password,
         email_confirm: true,
-        user_metadata: {
-          full_name: nome.trim(),
-        },
+        user_metadata: { full_name: nome.trim() },
       });
 
-      if (authError) {
-        // If user already exists in auth, that's ok - they can login
-        if (!authError.message.includes("already been registered")) {
-          return new Response(
-            JSON.stringify({ error: "Erro ao criar conta: " + authError.message }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      if (authError && !authError.message.includes("already been registered")) {
+        await obs.log({
+          event_type: "beta.signup.failed",
+          status: "failure",
+          severity: "error",
+          error_message: authError.message,
+          payload: { stage: "createUser", email: cleanEmail },
+        });
+        return new Response(
+          JSON.stringify({ error: "Erro ao criar conta: " + authError.message }),
+          { status: 500, headers: baseHeaders },
+        );
       }
+
+      await obs.log({
+        event_type: "beta.signup.approved",
+        status: "success",
+        payload: { email: cleanEmail, auto_login: true, influencer_code: cleanCode },
+      });
 
       return new Response(
         JSON.stringify({
@@ -212,9 +224,15 @@ Deno.serve(async (req) => {
           message: "Conta criada e aprovada! Fazendo login...",
           vagas_restantes: Math.max(0, limite - (count ?? 0) - 1),
         }),
-        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 201, headers: baseHeaders },
       );
     }
+
+    await obs.log({
+      event_type: "beta.signup.queued",
+      status: "success",
+      payload: { email: cleanEmail, status: newStatus, has_slot: hasSlot, influencer_code: cleanCode },
+    });
 
     return new Response(
       JSON.stringify({
@@ -224,12 +242,15 @@ Deno.serve(async (req) => {
           : "Vagas preenchidas. Você entrou na lista de espera.",
         vagas_restantes: Math.max(0, limite - (count ?? 0) - 1),
       }),
-      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 201, headers: baseHeaders },
     );
-  } catch {
-    return new Response(
-      JSON.stringify({ error: "Erro inesperado. Tente novamente." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  } catch (err) {
+    await obs.log({
+      event_type: "beta.signup.failed",
+      status: "failure",
+      severity: "error",
+      error_message: err instanceof Error ? err.message : String(err),
+    });
+    return new Response(JSON.stringify({ error: "Erro inesperado. Tente novamente." }), { status: 500, headers: baseHeaders });
   }
 });

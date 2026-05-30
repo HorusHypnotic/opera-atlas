@@ -4,7 +4,7 @@
 > Este documento não descreve o que o sistema faz.
 > Descreve o que o sistema **jamais pode violar**.
 >
-> Versão: 1.1 — 2026-05-14
+> Versão: 1.2 — 2026-05-30
 > Status: vinculante. Toda decisão de arquitetura, RLS, schema, UI ou IA
 > deve ser checada contra este documento antes de ser aceita.
 
@@ -183,8 +183,8 @@ pertence ao núcleo — pode virar plugin, extensão ou nada.
 | Banco (Postgres) | Supabase | Lock-in médio (Postgres é portável; RLS específico) | Migrations versionadas em git permitem rebuild |
 | Storage (`obra-fotos`) | Supabase, bucket público de leitura | Evidência exposta por URL adivinhável | Mover para signed URLs ou bucket privado |
 | Edge Functions | Lovable/Supabase | Acoplamento Deno + ambiente proprietário | Manter funções pequenas e portáveis |
-| Logs aplicacionais | `system_events` + `audit_logs` com `correlation_id`/`causation_id`; libs `src/lib/observability.ts` e `supabase/functions/_shared/observability.ts` | Adoção parcial — ainda falta retrofit em todas edge functions e fluxos críticos | Próximo: instrumentar `accept-invite`, `beta-signup`, `data-retention`, `session-transfer` e mutações financeiras no cliente |
-| Logs DB | `audit_logs_db` via triggers (agora com `correlation_id` opcional) | Triggers ainda não recebem correlation do contexto da sessão | Avaliar `set_config('opera.correlation_id', …)` por transação |
+| Logs aplicacionais | `system_events` + `audit_logs` com `correlation_id`/`causation_id`; libs `src/lib/observability.ts` e `supabase/functions/_shared/observability.ts`. Todas as edge functions (`accept-invite`, `beta-signup`, `data-retention`, `session-transfer`, `generate-reset-link`, `gantt-list`, `gantt-update-task`) propagam `x-correlation-id` e logam transições/denials/falhas. | Mutações financeiras feitas direto do cliente (`registro_presencas`, `apontamento_diarias`, atividades Gantt) ainda não estão sistematicamente envolvidas por `traced()` | Próximo: retrofit das chamadas cliente em F1.5 (junto com Frente 3) |
+| Logs DB | `audit_logs_db` via triggers, com `correlation_id`/`causation_id` lidos opportunisticamente de `current_setting('opera.correlation_id', true)`. Helper `set_correlation_context(uuid,uuid)` disponível para RPCs propagarem lineage. | Sem helper invocado, triggers gravam `NULL` — sem fallback inventado (preserva I8). | RPCs financeiras (`folha_pagamento`, futura `reabrir_periodo`, futura `congelar_baseline`) devem aceitar `_correlation_id` e chamar `set_correlation_context` no topo. |
 | Backups | Supabase automático | Sem teste de restore | Testar restore trimestral |
 | Deploy | Lovable | Lock-in de pipeline | Aceitável nesta fase |
 | Domínio | `opera-atlas.lovable.app` | Sem domínio próprio | Migrar para domínio próprio antes do piloto pago |
@@ -215,3 +215,5 @@ Antes de aceitar qualquer PR, migration ou feature, responder:
 
 - **1.0 — 2026-05-14** — Versão inicial. Codifica estado pós-hardening de segurança e introdução de `periodos_fechados` + `status_contabil`.
 - **1.1 — 2026-05-14** — Observabilidade causal introduzida: `system_events`, `correlation_id`/`causation_id` em `audit_logs*`, RPC `log_system_event`, libs cliente/edge. Atualiza §8 (sistema nervoso observável passa a existir).
+- **1.2 — 2026-05-30** — Conclusão da camada causal (Frente 1, parcial): todas as edge functions instrumentadas (entry, denials, falhas, sucessos); trigger `fn_audit_log_changes` agora lê `current_setting('opera.correlation_id', true)` opportunisticamente; helper `set_correlation_context(uuid, uuid)` disponível para RPCs herdarem lineage dentro da transação. Cliente ainda pendente — será amarrado em F1.5.
+

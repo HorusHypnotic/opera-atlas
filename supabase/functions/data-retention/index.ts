@@ -1,13 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createEdgeObservability, correlationResponseHeaders } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-correlation-id, x-causation-id, x-cron-secret",
+  "Access-Control-Expose-Headers": "x-correlation-id",
 };
 
-// Tables with operational data to clean up
-// Each entry: [table_name, date_column]
 const OPERATIONAL_TABLES: [string, string][] = [
   ["registros_diarios", "created_at"],
   ["consumo_materiais", "created_at"],
@@ -25,7 +25,6 @@ const OPERATIONAL_TABLES: [string, string][] = [
   ["acoes_corretivas", "created_at"],
 ];
 
-// Protected tables that should NEVER be cleaned
 const PROTECTED_TABLES = [
   "profiles",
   "tenants",
@@ -43,7 +42,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // 🔒 Auth: require either a valid cron secret OR a super_admin JWT
+  const obs = createEdgeObservability(req, "edge.data-retention");
+  const baseHeaders = { ...corsHeaders, ...correlationResponseHeaders(obs), "Content-Type": "application/json" };
+
   const cronSecret = Deno.env.get("CRON_SECRET");
   const providedSecret = req.headers.get("x-cron-secret");
   const authHeader = req.headers.get("Authorization");
@@ -53,13 +54,14 @@ Deno.serve(async (req) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
   let authorized = false;
+  let triggeredBy: "cron" | "super_admin" | "unknown" = "unknown";
+  let callerId: string | null = null;
 
-  // Path 1: cron secret match
   if (cronSecret && providedSecret && providedSecret === cronSecret) {
     authorized = true;
+    triggeredBy = "cron";
   }
 
-  // Path 2: super_admin JWT
   if (!authorized && authHeader?.startsWith("Bearer ")) {
     try {
       const userClient = createClient(supabaseUrl, anonKey, {
@@ -75,7 +77,11 @@ Deno.serve(async (req) => {
           .select("is_super_admin")
           .eq("id", userId)
           .maybeSingle();
-        if (prof?.is_super_admin) authorized = true;
+        if (prof?.is_super_admin) {
+          authorized = true;
+          triggeredBy = "super_admin";
+          callerId = userId as string;
+        }
       }
     } catch (e) {
       console.warn("[data-retention] auth check failed:", e);
@@ -83,27 +89,32 @@ Deno.serve(async (req) => {
   }
 
   if (!authorized) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    await obs.log({
+      event_type: "retention.run.denied",
+      status: "denied",
+      severity: "warning",
+      payload: { reason: "unauthorized" },
+    });
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: baseHeaders });
   }
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Default retention: 3 months. Can be configured per plan later.
     const retentionMonths = 3;
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - retentionMonths);
     const cutoffISO = cutoffDate.toISOString();
 
-    console.log(`[data-retention] Running cleanup. Cutoff: ${cutoffISO}`);
+    await obs.log({
+      event_type: "retention.run.started",
+      status: "info",
+      payload: { cutoff: cutoffISO, retention_months: retentionMonths, triggered_by: triggeredBy, caller_id: callerId },
+    });
 
     const results: Record<string, number> = {};
 
     for (const [table, dateColumn] of OPERATIONAL_TABLES) {
-      // Safety check
       if (PROTECTED_TABLES.includes(table)) {
         console.warn(`[data-retention] Skipping protected table: ${table}`);
         continue;
@@ -116,17 +127,26 @@ Deno.serve(async (req) => {
         .select("id");
 
       if (error) {
-        console.error(`[data-retention] Error cleaning ${table}:`, error.message);
+        await obs.log({
+          event_type: "retention.table.failed",
+          status: "failure",
+          severity: "error",
+          error_message: error.message,
+          payload: { table },
+        });
         results[table] = -1;
       } else {
         results[table] = deleted?.length ?? 0;
-        if ((deleted?.length ?? 0) > 0) {
-          console.log(`[data-retention] Deleted ${deleted!.length} rows from ${table}`);
-        }
       }
     }
 
     const totalDeleted = Object.values(results).filter((v) => v > 0).reduce((a, b) => a + b, 0);
+
+    await obs.log({
+      event_type: "retention.run.completed",
+      status: "success",
+      payload: { total_deleted: totalDeleted, details: results, cutoff: cutoffISO },
+    });
 
     return new Response(
       JSON.stringify({
@@ -136,13 +156,15 @@ Deno.serve(async (req) => {
         total_deleted: totalDeleted,
         details: results,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: baseHeaders },
     );
   } catch (err) {
-    console.error("[data-retention] Fatal error:", err);
-    return new Response(
-      JSON.stringify({ success: false, error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    await obs.log({
+      event_type: "retention.run.failed",
+      status: "failure",
+      severity: "critical",
+      error_message: err instanceof Error ? err.message : String(err),
+    });
+    return new Response(JSON.stringify({ success: false, error: String(err) }), { status: 500, headers: baseHeaders });
   }
 });
