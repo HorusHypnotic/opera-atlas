@@ -17,7 +17,7 @@ import {
   AlertTriangle, ChevronDown, ChevronRight, History, Lock, RefreshCw, Unlock, Copy, CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { startCausalContext, traced, newCorrelationId } from "@/lib/observability";
+import { startCausalContext, traced } from "@/lib/observability";
 
 interface PeriodoFechado {
   id: string;
