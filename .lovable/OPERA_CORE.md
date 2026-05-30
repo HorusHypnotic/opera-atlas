@@ -80,6 +80,16 @@ Toda informação operacional carrega seu **estado de certeza**:
 `prevista`, `confirmada`, `consolidada`, `fechada`. UI, exports e cálculos
 devem distinguir explicitamente esses estados. Misturar é proibido.
 
+### I11 — Reabertura é Evento, não Edição
+Hashes de fechamento são **imortais**. Corrigir um período fechado nunca
+pode ser uma edição silenciosa do hash anterior. Toda reabertura grava:
+(a) cópia imutável do snapshot e hash anteriores em `periodos_reaberturas`,
+(b) motivo textual obrigatório (≥ 20 caracteres), (c) autor, timestamp e
+`correlation_id`. O refechamento gera **nova versão** (`versao = anterior + 1`)
+e novo hash, encadeado via `causation_id` ao evento de reabertura. Apenas
+uma versão pode estar ativa por (tenant, obra, mês); reabrir sem refechar
+deixa o período em estado pendente, exibido como tal na UI.
+
 ---
 
 ## 3. Entidades Fundamentais
