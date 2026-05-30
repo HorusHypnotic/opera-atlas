@@ -267,6 +267,10 @@ export default function AdminPage() {
           <UserPermissionsEditor />
         </TabsContent>
 
+        <TabsContent value="periodos" className="space-y-4">
+          <PeriodosFechadosTab />
+        </TabsContent>
+
         <TabsContent value="audit-log" className="space-y-4">
           <AuditLogTab />
         </TabsContent>
