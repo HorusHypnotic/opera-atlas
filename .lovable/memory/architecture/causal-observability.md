@@ -83,13 +83,43 @@ Logging excessivo destrói sinal. Falha de logging NUNCA derruba fluxo de negóc
 
 Colunas adicionadas em `audit_logs` e `audit_logs_db`: `correlation_id`, `causation_id` (amarra trilha existente à nova narrativa).
 
+## Propagação para triggers de DB
+
+O trigger `fn_audit_log_changes` lê `current_setting('opera.correlation_id', true)` e `opera.causation_id` opportunisticamente. Sem setting presente, grava `NULL` (sem fallback inventado — preserva I8).
+
+Para propagar lineage dentro de uma RPC SECURITY DEFINER:
+
+```sql
+CREATE OR REPLACE FUNCTION public.minha_rpc(_correlation_id uuid, ...)
+RETURNS ... AS $$
+BEGIN
+  PERFORM public.set_correlation_context(_correlation_id, NULL);
+  -- toda mutação subsequente nesta transação propaga para audit_logs_db
+  UPDATE ...;
+END;
+$$ ...;
+```
+
+O helper `set_correlation_context(_corr uuid, _caus uuid DEFAULT NULL)` usa `set_config(..., is_local=true)`, então o valor vive só dentro da transação corrente.
+
+## Status de adoção (2026-05-30, OPERA_CORE v1.2)
+
+- ✅ Todas as edge functions instrumentadas: `accept-invite`, `beta-signup`, `data-retention`, `session-transfer`, `generate-reset-link`, `gantt-list`, `gantt-update-task`.
+- ✅ Trigger DB lê correlation opportunisticamente.
+- ⏳ Cliente: mutações financeiras (presença, apontamento, fechamento, atividades Gantt) ainda não envolvidas sistematicamente por `traced()`. Próxima passada (F1.5).
+- ⏳ RPCs financeiras (`folha_pagamento`, etc.) devem aceitar `_correlation_id` e chamar `set_correlation_context` — a fazer quando forem tocadas.
+
 ## Referência rápida — convenções de event_type
 
 Padrão: `<dominio>.<acao>[.<resultado>]`
 
 - `auth.reset_link.issued` / `.denied` / `.failed`
-- `auth.invite.created` / `.accepted`
+- `auth.invite.accepted` / `.denied` / `.failed`
+- `beta.signup.queued` / `.approved` / `.denied` / `.failed` / `.duplicate`
+- `session.transfer.issued` / `.consumed` / `.denied` / `.failed`
+- `retention.run.started` / `.completed` / `.failed` / `retention.table.failed`
 - `presenca.confirmar` / `presenca.ajustar`
 - `periodo.fechar` / `periodo.reabrir`
 - `obra.criar` / `obra.excluir` / `obra.restaurar`
 - `tenant.setup` / `tenant.invite_member`
+- `gantt.task.update` / `.denied` / `.failed`
