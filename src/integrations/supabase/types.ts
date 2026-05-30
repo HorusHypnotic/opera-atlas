@@ -2027,6 +2027,10 @@ export type Database = {
         }[]
       }
       promover_previsoes: { Args: never; Returns: number }
+      set_correlation_context: {
+        Args: { _causation_id?: string; _correlation_id: string }
+        Returns: undefined
+      }
       setup_tenant: { Args: { _cnpj?: string; _nome: string }; Returns: string }
       user_has_obra_access: {
         Args: { _obra_id: string; _user_id: string }
