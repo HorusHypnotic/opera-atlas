@@ -1,141 +1,119 @@
-# Plano — Consolidação Causal do OPERA
 
-Reinterpretação aceita: **Frente 1 não é observabilidade — é a conclusão da camada causal.** O objetivo da iteração é fechar o "DNA transacional" do sistema antes de qualquer expansão. Ordem: **F1 → F3 → F2**, terminando com **Congelamento Arquitetural de Piloto**.
+# Frente 3 — Reabertura Formal + Fechamento F1.5
 
----
+Avançar direto para a Frente 3 incorporando a cobertura residual de observabilidade (F1.5) dentro das próprias RPCs de reabertura/refechamento. Resultado: ciclo completo **Registrar → Fechar → Rastrear → Corrigir → Refechar**, com cadeia causal end-to-end.
 
-## Frente 1 — Conclusão da Camada Causal (1–2 dias)
+## Princípios invioláveis
 
-Objetivo: qualquer alteração relevante carrega linhagem completa (`correlation_id` + `causation_id`) end-to-end, do clique do usuário ao trigger no banco. Sem investigação manual depois.
-
-**Edge functions a instrumentar** (herdar correlation via header `x-opera-correlation-id` usando `_shared/observability.ts`):
-- `accept-invite`
-- `beta-signup`
-- `data-retention`
-- `session-transfer`
-- `generate-reset-link`
-- `gantt-update-task` (já parcialmente; auditar)
-- `gantt-list`
-
-Padrão por função: extrair/gerar correlation no boundary HTTP → propagar em todo `log_system_event` e `audit_logs` da requisição → retornar no header da resposta.
-
-**Cliente — mutações financeiras e operacionais críticas** (envolver com `withCorrelation()` de `src/lib/observability.ts` e propagar para `logAudit({ correlation_id, causation_id })`):
-- Confirmar/registrar presença (`registro_presencas`)
-- Apontar diária (`apontamento_diarias`)
-- Fechar/validar período (RPC `folha_pagamento`, `validar_fechamento`)
-- Criar/editar/excluir atividade Gantt
-- Criar/editar dependência Gantt
-- Soft delete de obras e colaboradores
-
-**Banco — herança em triggers:**
-- Estabelecer convenção: cliente/edge faz `select set_config('opera.correlation_id', $1, true)` no início da transação.
-- Atualizar função genérica de audit trigger para ler `current_setting('opera.correlation_id', true)` e gravar em `audit_logs_db.correlation_id` quando presente.
-- Sem fallback silencioso: se não houver correlation, registrar `NULL` (não inventar).
-
-**Critério de aceitação:** dado qualquer `audit_logs.id` recente, é possível reconstruir a cadeia (quem → tenant → função → DB writes) com **uma única query** por `correlation_id`.
-
-**Entrega documental:** bumpar OPERA_CORE para v1.2, atualizar §8 (sistema nervoso observável passa de "parcial" para "completo no núcleo financeiro/cronograma").
+1. **Hash anterior nunca é apagado.** Reabertura cria uma nova versão; o hash original permanece como evidência histórica.
+2. **Toda reabertura exige justificativa + autorização explícita** (role `admin`, motivo textual obrigatório, confirmação por keyword).
+3. **Reabertura é um evento auditável**, não uma edição silenciosa. Vai para `system_events` + `audit_logs` com `correlation_id` próprio.
+4. **Refechamento é obrigatório** após reabertura: período reaberto não pode permanecer "em aberto" indefinidamente sem novo hash.
 
 ---
 
-## Frente 3 — Reabertura Formal de Período (1 dia)
+## Bloco 1 — Schema: versionamento de fechamento
 
-Fecha a contradição: hoje existe fechamento formal, mas não correção formal. Sem caminho oficial, o usuário cria caminhos não oficiais — e invariantes apodrecem em silêncio.
+Migration em `periodos_fechados`:
 
-Princípio: **erro vira evento.** Reabertura é registrada, não escondida. O hash anterior fica preservado no histórico; ao re-fechar, novo hash + nova versão.
+- `versao INT NOT NULL DEFAULT 1` — incrementa a cada refechamento.
+- `reaberto_em TIMESTAMPTZ NULL` — já existe nas policies, formalizar.
+- `reaberto_por UUID NULL`
+- `motivo_reabertura TEXT NULL`
+- Índice único: `(tenant_id, obra_id, mes, versao)` em vez do atual `(tenant_id, obra_id, mes)`.
+- Constraint: apenas **uma** versão ativa por (tenant, obra, mes) — versão ativa = `reaberto_em IS NULL`.
 
-**Backend:**
-- RPC `reabrir_periodo(tenant_id, obra_id, mes, motivo)`:
-  - SECURITY DEFINER, exige `has_role('admin')` no tenant.
-  - Valida motivo não vazio (≥ 20 chars).
-  - Preserva linha anterior em `periodos_fechados` (não DELETE): grava `reaberto_em`, `reaberto_por`, `motivo_reabertura`.
-  - Emite `system_events` (`periodo.reaberto`) com `correlation_id` da requisição.
-  - Append em `audit_logs` com snapshot do hash anterior em `metadata`.
-- RLS de bloqueio já cobre (`pf.reaberto_em IS NULL`) — escrita volta a ser permitida automaticamente.
-- Ao re-fechar via fluxo existente: nova linha em `periodos_fechados` com `versao = anterior + 1`, novo hash, novo snapshot.
+Nova tabela `periodos_reaberturas` (append-only, imutável):
 
-**UI:**
-- Botão "Reabrir período" visível só para admin, em período fechado.
-- Modal de confirmação por palavra-chave (`REABRIR <mês/ano>`) + textarea de motivo obrigatória.
-- Banner persistente no relatório do mês: "Período reaberto em DD/MM por X. Motivo: …" enquanto não houver re-fechamento.
-- Histórico de versões (hash v1 → v2) visível no rodapé do relatório.
-
-**Critério de aceitação:** ciclo completo fechar → reabrir → editar → re-fechar gera 2 linhas em `periodos_fechados`, 2 hashes distintos, e cadeia causal recuperável por `correlation_id`.
-
----
-
-## Frente 2 — Fechamento Temporal (Baseline como evidência) (3–4 dias)
-
-Reenquadrada: **não é feature de Gantt, é o equivalente temporal do fechamento financeiro.** Mesma mecânica de hash + snapshot, aplicada a prazo. A tabela `cronograma_baseline` já existe — só falta o fluxo.
-
-**Simetria:**
-
-```text
-Folha original     →  hash (periodos_fechados)
-Cronograma original →  hash (cronograma_baseline)
+```
+id, tenant_id, obra_id, mes,
+versao_anterior, hash_anterior, snapshot_anterior_json,
+reaberto_por, reaberto_em, motivo,
+correlation_id, causation_id,
+refechado_em NULL, refechado_por NULL,
+versao_nova NULL, hash_novo NULL
 ```
 
-**Backend:**
-- RPC `congelar_baseline(obra_id, motivo)`:
-  - SECURITY DEFINER, exige `has_role('admin')`.
-  - Lê todas atividades + dependências ativas da obra, serializa em ordem determinística.
-  - Calcula SHA-256 (mesma função usada em `folha_pagamento`).
-  - Insere em `cronograma_baseline` com `versao = max(anterior) + 1`.
-  - Emite `system_events` (`baseline.congelada`) com correlation.
-- RPC `comparar_baseline(obra_id, versao?)`: retorna desvio por atividade (start/end/duração/progresso) entre baseline e estado atual.
-- Sem mutação destrutiva: nova baseline = nova versão; baselines anteriores permanecem.
+RLS: SELECT por admin do tenant + super_admin; INSERT/UPDATE apenas via RPC (`SECURITY DEFINER`); DELETE bloqueado para todos.
 
-**UI (Gantt — refinamento, não nova página):**
-- Botão "Congelar baseline" no header do cronograma (admin only, confirmação por palavra-chave).
-- Toggle "Baseline vs Atual": renderiza barras fantasma da baseline sob barras atuais; deltas coloridos (verde/amarelo/vermelho).
-- Ícone de cadeado em atividades cujo `data_fim` cai em `periodos_fechados` (já bloqueado por RLS — só exibir).
-- Footer com hash + versão da baseline ativa.
+## Bloco 2 — RPCs
 
-**Dependências em cascata** (já há tabela `atividade_dependencias`):
-- Validação server-side em `gantt-update-task`: ao mover predecessora, sugerir/aplicar shift em sucessoras respeitando `lag_dias` e `tipo` (FS/SS/FF).
-- Decisão UX: sugerir + confirmar (não aplicar silenciosamente — preserva I8 falha segura).
+Três RPCs novas, todas `SECURITY DEFINER` com `set_correlation_context` no topo:
 
-**Critério de aceitação:** baseline congelada → atividade movida → relatório mostra desvio explícito + hash original imutável + correlation_id da edição na trilha.
+1. **`reabrir_periodo(p_obra_id, p_mes, p_motivo, p_correlation_id)`**
+   - Valida: admin + tenant match + período existe e está ativo + motivo ≥ 20 chars.
+   - Copia versão atual para `periodos_reaberturas` (snapshot + hash preservados).
+   - Marca versão atual com `reaberto_em = now()`, `reaberto_por`, `motivo_reabertura`.
+   - Libera RLS de `apontamento_diarias` / `registro_presencas` / `atividades` (policies já checam `reaberto_em IS NULL`).
+   - Loga `system_events` (`periodo.reaberto`) + `audit_logs`.
+   - Retorna `reabertura_id` para encadear `causation_id`.
+
+2. **`refechar_periodo(p_obra_id, p_mes, p_reabertura_id, p_correlation_id)`**
+   - Valida: existe reabertura ativa + admin + `validar_fechamento` passa.
+   - Recalcula folha + hash via lógica determinística existente.
+   - Cria nova linha em `periodos_fechados` com `versao = anterior + 1`.
+   - Atualiza `periodos_reaberturas`: `refechado_em`, `refechado_por`, `versao_nova`, `hash_novo`.
+   - Loga `periodo.refechado` com `causation_id = reabertura_id`.
+
+3. **`listar_historico_periodo(p_obra_id, p_mes)`**
+   - Retorna timeline de versões: fechamento original → reaberturas → refechamentos, com hashes e motivos.
+
+## Bloco 3 — Frontend
+
+Dois componentes novos em `src/components/folha/`:
+
+- **`ReaberturaPeriodoDialog.tsx`** — gatilho no card de período fechado. Exige:
+  - Motivo textual (mín. 20 chars, validação client + server).
+  - Confirmação por keyword (`REABRIR <MES>`).
+  - Aviso explícito: "Esta ação invalida o hash atual e fica registrada permanentemente."
+  - Propaga `correlation_id` via `observability.ts`.
+
+- **`HistoricoPeriodoTimeline.tsx`** — exibido em modo expandido do período:
+  - Linha do tempo com fechamento → reaberturas → refechamentos.
+  - Cada nó mostra: versão, hash (truncado + copy), autor, motivo, timestamp.
+  - Badge visual para versão ativa.
+
+Banner permanente em `FolhaPagamento.tsx` quando o período está reaberto: laranja com texto "Período em reabertura — refechamento pendente".
+
+## Bloco 4 — F1.5 absorvida
+
+Durante a implementação acima, adicionar (sem PR separado):
+
+- Wrapper `traced()` em `src/lib/observability.ts` para envolver mutações cliente (fechamento, reabertura, refechamento, ajuste financeiro).
+- Parâmetro `_correlation_id` opcional nas RPCs financeiras restantes (`folha_pagamento`, `validar_fechamento`, `gerar_fechamento`) — quando ausente, gera UUID no servidor e devolve no retorno.
+- Atualização do hook `useFolhaPagamento` para propagar correlation ID.
+
+## Bloco 5 — OPERA_CORE v1.3
+
+Atualizar `.lovable/OPERA_CORE.md`:
+
+- Bump v1.2 → v1.3.
+- Nova invariante: **"Reabertura é evento, não edição. Hashes anteriores são imortais."**
+- Documentar ciclo das 5 etapas e o contrato append-only de `periodos_reaberturas`.
+- Atualizar `mem://architecture/causal-observability.md` com padrão de `causation_id` em cadeias de reabertura.
 
 ---
 
-## Congelamento Arquitetural de Piloto (após F2)
+## Ordem de execução
 
-Concordo em ser mais agressivo. Ao final das três frentes, declarar congelamento formal e registrá-lo no OPERA_CORE (§7 ou novo §11).
+```text
+1. Migration (schema + RLS + índice único por versão)
+2. RPCs reabrir / refechar / listar_historico
+3. Wrapper traced() + retrofit correlation_id nas RPCs financeiras (F1.5)
+4. UI: ReaberturaDialog + HistoricoTimeline + banner
+5. OPERA_CORE v1.3 + memória de arquitetura
+6. Validação forense: simular fechamento → reabertura → ajuste → refechamento → conferir 2 hashes distintos e timeline completa
+```
 
-**Congelado até primeiro piloto real produzir dados:**
-- Novas páginas
-- Novos dashboards
-- Novos indicadores / KPIs
-- Novos módulos
-- IA / automações "legais de ter"
-- Billing / Paddle (já era)
+## Riscos cobertos
 
-**Permitido durante o piloto:**
-- Correções de bug
-- Observabilidade adicional (sempre dentro da camada causal)
-- Hardening de segurança reativo
-- Ajustes de UX que removem fricção real reportada
+- **Reabertura silenciosa** → bloqueada (RPC exige motivo + keyword).
+- **Perda de evidência histórica** → `periodos_reaberturas` append-only + snapshot original preservado.
+- **Loop de reaberturas** → constraint permite só uma versão ativa; refechamento obrigatório antes de nova reabertura.
+- **Quebra de cadeia causal** → `causation_id` encadeia reabertura → refechamento; `system_events` registra ambos.
 
-**Critério de saída do congelamento:** evidência empírica (eventos + feedback de pelo menos uma construtora real) que contradiga premissa atual ou revele gargalo não antecipado. Sem isso, qualquer expansão é infraestrutura para problema imaginário.
+## Fora de escopo (próximas frentes)
 
----
-
-## Notas técnicas
-
-- Toda RPC nova: `SECURITY DEFINER`, `SET search_path = public, extensions`, validação server-side de `tenant_id` e role.
-- Toda nova escrita: passa por RLS existente + grava em `audit_logs` e `system_events` com `correlation_id`.
-- Zero alteração em schema de negócio existente (apenas RPCs, triggers e UI).
-- Migrations: uma por frente (causal-propagation triggers; reabrir_periodo; congelar_baseline + comparar_baseline).
-- Atualizar memórias: `mem://architecture/causal-observability` (F1), nova `mem://features/reabertura-formal` (F3), nova `mem://features/baseline-cronograma` (F2).
-
----
-
-## Sequência de execução
-
-1. **F1** — Causal end-to-end. Sem isso, F3 e F2 nascem cegas.
-2. **F3** — Reabertura formal. Remove pressão sobre I4 antes que o usuário invente workaround.
-3. **F2** — Baseline como fechamento temporal. Fecha simetria dinheiro ↔ tempo.
-4. **Congelamento** — Documentado em OPERA_CORE v1.3. Piloto inicia.
-
-Pronto para executar na ordem aprovada quando você liberar build mode.
+- Frente 2 (Baseline de cronograma como evidência de prazo).
+- Notificação automática a stakeholders quando período é reaberto (pode entrar depois via Edge Function).
+- Política de retenção / arquivamento de versões muito antigas.
