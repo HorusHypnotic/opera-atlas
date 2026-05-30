@@ -345,7 +345,7 @@ export function PeriodosFechadosTab() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </TableBody>
