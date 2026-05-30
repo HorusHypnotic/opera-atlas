@@ -21,6 +21,7 @@ Updated: now
 ## Memories
 - [OPERA_CORE Constitution](mem://architecture/opera-core-constitution) — 10 invariantes absolutas, modelo de confiança, limites arquiteturais, soberania atual
 - [Causal Observability](mem://architecture/causal-observability) — correlation_id/causation_id, structured logging, tabela system_events, RPC log_system_event, libs cliente/edge
+- [Reabertura Formal de Períodos](mem://architecture/period-reopening) — versionamento periodos_fechados, tabela append-only periodos_reaberturas, RPCs reabrir/refechar/listar_historico, invariante I11
 - [O.P.E.R.A. Method](mem://features/opera-score) — Dashboard structure, 5 pillars, KPI logic, checklist, intelligence layer
 - [Capacidade & Planejamento](mem://features/capacidade-planejamento) — RPCs eficiencia_presenca + produtividade_por_equipe, producao_valor, equipe_normalizada, uniq_presenca
 - [Auth & RBAC](mem://auth/access-control) — 5 roles, read-only logic, global transparency, QR session sync
