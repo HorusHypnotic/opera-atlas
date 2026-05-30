@@ -4,7 +4,7 @@
 > Este documento não descreve o que o sistema faz.
 > Descreve o que o sistema **jamais pode violar**.
 >
-> Versão: 1.2 — 2026-05-30
+> Versão: 1.3 — 2026-05-30
 > Status: vinculante. Toda decisão de arquitetura, RLS, schema, UI ou IA
 > deve ser checada contra este documento antes de ser aceita.
 
