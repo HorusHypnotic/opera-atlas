@@ -1377,6 +1377,7 @@ export type Database = {
           reaberto_por: string | null
           snapshot_json: Json | null
           tenant_id: string
+          versao: number
         }
         Insert: {
           fechado_em?: string
@@ -1392,6 +1393,7 @@ export type Database = {
           reaberto_por?: string | null
           snapshot_json?: Json | null
           tenant_id: string
+          versao?: number
         }
         Update: {
           fechado_em?: string
@@ -1407,6 +1409,64 @@ export type Database = {
           reaberto_por?: string | null
           snapshot_json?: Json | null
           tenant_id?: string
+          versao?: number
+        }
+        Relationships: []
+      }
+      periodos_reaberturas: {
+        Row: {
+          causation_id: string | null
+          correlation_id: string | null
+          hash_anterior: string
+          hash_novo: string | null
+          id: string
+          mes: string
+          motivo: string
+          obra_id: string
+          reaberto_em: string
+          reaberto_por: string
+          refechado_em: string | null
+          refechado_por: string | null
+          snapshot_anterior_json: Json | null
+          tenant_id: string
+          versao_anterior: number
+          versao_nova: number | null
+        }
+        Insert: {
+          causation_id?: string | null
+          correlation_id?: string | null
+          hash_anterior: string
+          hash_novo?: string | null
+          id?: string
+          mes: string
+          motivo: string
+          obra_id: string
+          reaberto_em?: string
+          reaberto_por: string
+          refechado_em?: string | null
+          refechado_por?: string | null
+          snapshot_anterior_json?: Json | null
+          tenant_id: string
+          versao_anterior: number
+          versao_nova?: number | null
+        }
+        Update: {
+          causation_id?: string | null
+          correlation_id?: string | null
+          hash_anterior?: string
+          hash_novo?: string | null
+          id?: string
+          mes?: string
+          motivo?: string
+          obra_id?: string
+          reaberto_em?: string
+          reaberto_por?: string
+          refechado_em?: string | null
+          refechado_por?: string | null
+          snapshot_anterior_json?: Json | null
+          tenant_id?: string
+          versao_anterior?: number
+          versao_nova?: number | null
         }
         Relationships: []
       }
@@ -2001,6 +2061,10 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       jsonb_object_keys_count: { Args: { _obj: Json }; Returns: number }
+      listar_historico_periodo: {
+        Args: { _mes: string; _obra_id: string }
+        Returns: Json
+      }
       log_system_event: {
         Args: {
           _causation_id?: string
@@ -2027,6 +2091,24 @@ export type Database = {
         }[]
       }
       promover_previsoes: { Args: never; Returns: number }
+      reabrir_periodo: {
+        Args: {
+          _correlation_id?: string
+          _mes: string
+          _motivo: string
+          _obra_id: string
+        }
+        Returns: Json
+      }
+      refechar_periodo: {
+        Args: {
+          _correlation_id?: string
+          _mes: string
+          _obra_id: string
+          _reabertura_id: string
+        }
+        Returns: Json
+      }
       set_correlation_context: {
         Args: { _causation_id?: string; _correlation_id: string }
         Returns: undefined

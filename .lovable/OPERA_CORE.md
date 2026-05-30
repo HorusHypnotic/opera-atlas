@@ -4,7 +4,7 @@
 > Este documento não descreve o que o sistema faz.
 > Descreve o que o sistema **jamais pode violar**.
 >
-> Versão: 1.2 — 2026-05-30
+> Versão: 1.3 — 2026-05-30
 > Status: vinculante. Toda decisão de arquitetura, RLS, schema, UI ou IA
 > deve ser checada contra este documento antes de ser aceita.
 
@@ -79,6 +79,16 @@ afetar o número final.
 Toda informação operacional carrega seu **estado de certeza**:
 `prevista`, `confirmada`, `consolidada`, `fechada`. UI, exports e cálculos
 devem distinguir explicitamente esses estados. Misturar é proibido.
+
+### I11 — Reabertura é Evento, não Edição
+Hashes de fechamento são **imortais**. Corrigir um período fechado nunca
+pode ser uma edição silenciosa do hash anterior. Toda reabertura grava:
+(a) cópia imutável do snapshot e hash anteriores em `periodos_reaberturas`,
+(b) motivo textual obrigatório (≥ 20 caracteres), (c) autor, timestamp e
+`correlation_id`. O refechamento gera **nova versão** (`versao = anterior + 1`)
+e novo hash, encadeado via `causation_id` ao evento de reabertura. Apenas
+uma versão pode estar ativa por (tenant, obra, mês); reabrir sem refechar
+deixa o período em estado pendente, exibido como tal na UI.
 
 ---
 
@@ -217,3 +227,4 @@ Antes de aceitar qualquer PR, migration ou feature, responder:
 - **1.1 — 2026-05-14** — Observabilidade causal introduzida: `system_events`, `correlation_id`/`causation_id` em `audit_logs*`, RPC `log_system_event`, libs cliente/edge. Atualiza §8 (sistema nervoso observável passa a existir).
 - **1.2 — 2026-05-30** — Conclusão da camada causal (Frente 1, parcial): todas as edge functions instrumentadas (entry, denials, falhas, sucessos); trigger `fn_audit_log_changes` agora lê `current_setting('opera.correlation_id', true)` opportunisticamente; helper `set_correlation_context(uuid, uuid)` disponível para RPCs herdarem lineage dentro da transação. Cliente ainda pendente — será amarrado em F1.5.
 
+- **1.3 — 2026-05-30** — Frente 3 (Reabertura Formal). Nova invariante I11: hashes imortais e versionamento de `periodos_fechados` (`versao` + índice único parcial em `reaberto_em IS NULL`). Tabela append-only `periodos_reaberturas` (somente admin lê, mutação só via RPCs SECURITY DEFINER). RPCs `reabrir_periodo`, `refechar_periodo`, `listar_historico_periodo` com `_correlation_id` opcional, exigindo motivo ≥ 20 chars + role admin + acesso à obra; eventos `periodo.reaberto` e `periodo.refechado` em `system_events`+`audit_logs` com causation chaining. UI admin: tab "Períodos" com banner de pendência, dialog com keyword `REABRIR <MES>`, timeline de versões.
