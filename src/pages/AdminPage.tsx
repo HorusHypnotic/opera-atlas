@@ -26,6 +26,7 @@ import { InvitesTab } from "@/components/admin/InvitesTab";
 import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
+import { PeriodosFechadosTab } from "@/components/admin/PeriodosFechadosTab";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
