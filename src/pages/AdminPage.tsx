@@ -150,6 +150,9 @@ export default function AdminPage() {
           <TabsTrigger value="permissoes" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <KeyRound className="h-3.5 w-3.5" /> Permissões
           </TabsTrigger>
+          <TabsTrigger value="periodos" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Lock className="h-3.5 w-3.5" /> Períodos
+          </TabsTrigger>
           <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <ClipboardList className="h-3.5 w-3.5" /> Logs
           </TabsTrigger>
