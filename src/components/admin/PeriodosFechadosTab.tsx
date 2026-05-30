@@ -299,7 +299,7 @@ export function PeriodosFechadosTab() {
               const hist = historicos[histKey];
               const reabPendente = hist?.reaberturas?.find((r) => r.pendente_refechamento);
               return (
-                <>
+                <Fragment key={p.id}>
                   <TableRow key={p.id} className={isAtivo ? "" : "opacity-60"}>
                     <TableCell>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleExpand(p)}>
