@@ -1,99 +1,54 @@
-# Handover Técnico Atlas/OPERA — PDF para Migração de Backend
+# Plano: PDF "OPERA Atlas – Mapeamento Funcional para Migração"
 
-## Objetivo
-Produzir um **PDF único, navegável e auto-suficiente** que permita a uma equipe de desenvolvimento externa assumir a operação do sistema — inclusive em cenário de migração de backend (sair de Lovable Cloud / Supabase para outra stack) sem perder as invariantes do OPERA_CORE.
+## Entrega
+Arquivo único: `/mnt/documents/OPERA_Atlas_Mapeamento_Migracao_v1.pdf`
+Auto-contido, ~10–14 páginas, gerado via ReportLab (Platypus), capa preto/laranja alinhada à identidade Atlas, com QA visual (`pdftoppm -r 150`) em todas as páginas antes da entrega.
 
-Entrega: `/mnt/documents/Atlas_OPERA_Handover_v1.pdf` (mais artefato Mermaid de arquitetura como anexo visual).
+## Estrutura do documento
 
-## Conteúdo do PDF (estrutura)
+**Capa** — título, subtítulo "Escopo restrito: Atlas + QFD-OS + Direcione", versão, data, aviso de confidencialidade técnica.
 
-**1. Sumário Executivo**
-- O que é o Atlas (1 parágrafo técnico, sem marketing).
-- Stack atual: React 18 + Vite + Tailwind + Supabase (Postgres + Auth + Edge Functions Deno + Storage).
-- Estado de maturidade: OPERA_CORE v1.3, Frentes 1 e 3 concluídas, Frente 2 pendente.
+**Sumário Executivo** (1 pág) — o que está e o que NÃO está no escopo desta migração (exclui Smart Cotações, Vaga Quente, Stockflow), e as 11 invariantes OPERA_CORE como contrato não-negociável.
 
-**2. Constituição OPERA_CORE (resumo das 11 Invariantes)**
-- Lista das invariantes I1–I11 com 1 linha cada + arquivo de origem (`.lovable/OPERA_CORE.md`).
-- Destaque para as não-negociáveis em qualquer migração: Isolamento de Tenant, Irreversibilidade Temporal, Hashes Imortais, Autoridade Server-Side.
+**Parte I — Mapeamento dos 3 Motores**
 
-**3. Arquitetura Macro**
-- Diagrama Mermaid (Frontend → Edge Functions → RPCs → Postgres + RLS).
-- Camadas: UI, Observabilidade Causal, Domínio Financeiro, Domínio Temporal (Gantt), Auditoria.
-- Mapa de pastas relevante (`src/`, `supabase/migrations`, `supabase/functions`, `.lovable/`).
+Para cada motor (Atlas, QFD-OS, Direcione), uma ficha padronizada de ~2 páginas:
+- Problema que resolve (1 frase)
+- Informações que consome (tabela: fonte → tipo de dado)
+- Informações que produz (tabela: saída → consumidor)
+- Regras de negócio críticas com **invariantes I1/I2/I4/I9/I11 em negrito** quando aplicáveis
+- Dependência do OPERA Core (Alta/Média/Baixa) com justificativa
+- Risco de impacto na migração (cenário "se este motor cair")
+- Domínio de UI relacionado (mapeando às abas Organização, Padronização, Eficiência, Redução de Perdas, Análise Contínua, Segurança & Qualidade, Ações Corretivas)
 
-**4. Modelo de Dados (núcleo)**
-- Tabelas críticas com PK/FK/colunas-chave: `tenants`, `profiles`, `user_roles`, `obras`, `colaboradores`, `registro_presencas`, `apontamento_diarias`, `periodos_fechados`, `periodos_reaberturas`, `atividades`, `atividade_dependencias`, `cronograma_baseline`, `system_events`, `audit_logs`.
-- Estratégias: soft delete (`deleted_at`), `snapshot_valor`, `status_contabil`, versionamento de períodos.
+**Parte II — Síntese de Migração**
+- Tabela-resumo: Motor × Dependência × Risco × Ordem sugerida × Pré-requisitos técnicos
+- **Recomendação de ordem**: Atlas (core) → QFD-OS (consumidor de baseline) → Direcione (orquestrador, integração futura preservada)
+- Justificativa por acoplamento: Atlas é fonte de verdade; QFD-OS depende do baseline; Direcione hoje é independente mas a interface de marcos/alertas deve ser preservada.
 
-**5. RLS e Autorização**
-- Modelo de roles (`app_role` enum) + função `has_role` SECURITY DEFINER.
-- Padrão de política por tenant (`tenant_id = current_tenant()`).
-- Bloqueio por `periodos_fechados` em INSERT/UPDATE/DELETE de presença e apontamento.
+**Parte III — Análise Sistêmica (resposta à segunda parte do prompt)**
 
-**6. RPCs Críticas (contrato funcional)**
-Para cada uma: assinatura, propósito, side-effects, hash gerado.
-- `folha_pagamento`, `validar_fechamento`, `fechar_periodo`
-- `reabrir_periodo`, `refechar_periodo`, `listar_historico_periodo`
-- `log_system_event`, `set_correlation_context`
-- `has_role`, `has_any_role`
+Bloco único intitulado "OPERA Atlas como Estrutura Empresarial":
+1. **Conceito e proposta de valor** — livro-razão imutável da operação física; transforma execução de obra em evidência auditável.
+2. **Direção estratégica** — camada de verdade do ecossistema Canteiro de Obras Digital; condição para qualquer motor downstream (BI, IA, cotações inteligentes) ter dado confiável.
+3. **Objetivos mensuráveis** — KPIs: % de períodos fechados sem reabertura, tempo médio entre evento e auditoria, taxa de divergência QFD-OS, determinismo financeiro (hash estável).
+4. **Processos operacionais** — ciclo Registrar → Fechar → Rastrear → Corrigir → Refechar.
+5. **Critérios de decisão** — as 11 invariantes como filtros de aceitação de qualquer feature.
+6. **Pontos de integração** — header `x-correlation-id`, RPCs SECURITY DEFINER, eventos `system_events` como contrato com motores externos.
+7. **Potencial de escala, automação e monetização** — multi-tenant nativo, eventos causais habilitam IA preditiva, fechamentos imutáveis viabilizam produto B2B de evidência jurídica/seguros.
 
-**7. Observabilidade Causal (v1.2)**
-- Tabela `system_events` (append-only, `correlation_id` + `causation_id`).
-- Propagação via header `x-correlation-id` em Edge Functions.
-- Helpers: `src/lib/observability.ts`, `createEdgeObservability` (Deno).
-- Como reproduzir um incidente a partir de um correlation_id.
+**Apêndices**
+- A. Glossário (invariantes, snapshot, hash imortal, correlation/causation)
+- B. Checklist de migração mínima por motor
 
-**8. Domínios Funcionais**
-- **Folha de Pagamento**: estados `prevista | confirmada | ajustada | fechada`, breakdown obrigatório (base, ajuste, legado), detector de ajuste oculto.
-- **Cronograma (Gantt como Evidência)**: baseline, congelamento por mês fechado, edges `gantt-list` / `gantt-update-task`.
-- **Multi-tenant**: setup RPC, convites, trial 30d, retenção.
+## Detalhes técnicos
+- Script Python isolado em `/tmp/build_mapeamento.py`, ReportLab Platypus.
+- Tipografia: Helvetica; títulos em laranja `#F97316`, corpo preto.
+- Tabelas com `colWidths` explícitos para evitar overflow; quebras de linha controladas em `Paragraph`.
+- QA: converter cada página em JPG, inspecionar e iterar até zero defeitos visuais (overflow, sobreposição, cortes).
+- Sem alterações de código da aplicação. Sem segredos. Sem dependência de assets externos.
 
-**9. Edge Functions (inventário)**
-Lista por função: rota, autenticação, secrets necessários, dependências externas. Inclui `accept-invite`, `beta-signup`, `data-retention`, `session-transfer`, `gantt-*`.
-
-**10. Guia de Migração de Backend**
-- **Requisitos mínimos** do novo backend para manter OPERA_CORE: Postgres-compatible (ou DB com triggers + SHA-256 determinístico), RLS-equivalente, JWT auth, append-only logs, storage com policies por tenant.
-- **Ordem de migração sugerida**: (1) schema + grants, (2) RLS, (3) RPCs financeiras com hash, (4) triggers de snapshot e status_contabil, (5) Edge Functions, (6) frontend `client.ts`.
-- **Pontos de risco** ao migrar: determinismo do hash (ordering, locale, encoding), `SECURITY DEFINER` equivalente, `current_setting('app.correlation_id', true)` para contexto causal.
-- **Testes de aceitação**: simulação forense de adulteração de R$ 0,01; tentativa de UPDATE em período fechado; tentativa de cross-tenant read.
-
-**11. Operação Diária**
-- Fluxo de fechamento mensal.
-- Fluxo de reabertura formal (justificativa ≥ 20 chars + keyword).
-- Como ler `system_events` e `audit_logs`.
-
-**12. Riscos Conhecidos e Débitos Técnicos**
-- Frente 2 (baseline temporal) ainda não concluída.
-- Retrofit cliente de mutações críticas pendente.
-- Recomendações de hardening adicional.
-
-**13. Apêndices**
-- A. Índice de arquivos-chave (`.lovable/OPERA_CORE.md`, `mem://index.md`, migrations relevantes).
-- B. Glossário (snapshot, hash imortal, status contábil, correlation/causation).
-- C. Checklist de handover (DevOps, Segurança, Dados, Frontend).
-
-## Como será produzido (técnico)
-
-1. **Exploração** (read-only nesta fase do plano; execução só em build mode):
-   - `code--view .lovable/OPERA_CORE.md`, `.lovable/memory/index.md`, `.lovable/plan.md`.
-   - Listagem de `supabase/migrations/` e `supabase/functions/`.
-   - Leitura de `src/integrations/supabase/types.ts` para inventário de tabelas/RPCs.
-   - Inspeção de componentes-chave (`PeriodosFechadosTab`, `GanttBoard`, `observability.ts`).
-
-2. **Geração**:
-   - Script Python com **ReportLab** (Platypus) para layout profissional com sumário, headings, tabelas e numeração de página.
-   - Fonte: Helvetica/Arial. Capa minimalista preto/laranja (alinhado à identidade do Atlas).
-   - Diagrama Mermaid exportado como `.mmd` em `/mnt/documents/` e referenciado também como artefato separado para visualização interativa.
-
-3. **QA obrigatório**:
-   - `pdftoppm -jpeg -r 150` em todas as páginas + inspeção visual (sem overflow, sem caixas pretas, tabelas alinhadas).
-   - Iterar até zero defeitos.
-
-4. **Entrega**:
-   - `<presentation-artifact path="Atlas_OPERA_Handover_v1.pdf" mime_type="application/pdf">`
-   - `<lov-artifact url="/__l5e/documents/Atlas_Architecture.mmd" mime_type="text/vnd.mermaid">`
-
-## Escopo explícito
-- **Não** altera código da aplicação.
-- **Não** publica nem expõe segredos.
-- **Não** inclui a folha de marketing — tom é técnico, operacional e jurídico-defensável.
+## Fora de escopo
+- Não gera versões para os motores não listados (Smart Cotações, Vaga Quente, Stockflow).
+- Não modifica nenhum arquivo do projeto.
+- Não publica nem expõe URLs internas ou IDs de backend.
