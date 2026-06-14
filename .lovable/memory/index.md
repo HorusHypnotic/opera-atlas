@@ -31,3 +31,4 @@ Updated: now
 - [Reporting](mem://features/reporting) — jsPDF/xlsx exports, dual-mode workforce reports, guest mode
 - [Commercial](mem://features/commercial-landing) — Landing page, packages, contact info (Eduardo Martins)
 - [Security & Audit](mem://security/rls-access-validation) — RLS policies, access expiration, audit_logs
+- [CSV Export](mem://features/csv-export) — Edge export-csv: zip por tabela, RLS via userClient, signed URL 15min, eventos exportacao_csv.*

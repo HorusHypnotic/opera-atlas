@@ -1,54 +1,85 @@
-# Plano: PDF "OPERA Atlas – Mapeamento Funcional para Migração"
+# Exportação Universal CSV — Plano de Implementação
 
-## Entrega
-Arquivo único: `/mnt/documents/OPERA_Atlas_Mapeamento_Migracao_v1.pdf`
-Auto-contido, ~10–14 páginas, gerado via ReportLab (Platypus), capa preto/laranja alinhada à identidade Atlas, com QA visual (`pdftoppm -r 150`) em todas as páginas antes da entrega.
+## Objetivo
+Entregar exportação completa de dados do tenant em CSV (zip), respeitando RLS, rastreável via `system_events`, sem lock-in. Conforme pedido E1–E7 / OPERA_CORE v1.3.
 
-## Estrutura do documento
+## Arquitetura
 
-**Capa** — título, subtítulo "Escopo restrito: Atlas + QFD-OS + Direcione", versão, data, aviso de confidencialidade técnica.
+```text
+[Admin UI] → invoke('export-csv', {scope}) → [Edge Function]
+                                                  ├─ valida JWT + role (admin)
+                                                  ├─ deriva tenant_id server-side (I2)
+                                                  ├─ usa userClient (RLS ativo) p/ ler tabelas
+                                                  ├─ monta CSVs (UTF-8 BOM, vírgula, aspas)
+                                                  ├─ zipa em memória
+                                                  ├─ upload em Storage (bucket privado, signed URL 15min)
+                                                  ├─ log_system_event('exportacao_csv.*')
+                                                  └─ retorna { url, expires_at, manifest }
+```
 
-**Sumário Executivo** (1 pág) — o que está e o que NÃO está no escopo desta migração (exclui Smart Cotações, Vaga Quente, Stockflow), e as 11 invariantes OPERA_CORE como contrato não-negociável.
+Storage: novo bucket privado `exports` (signed URLs, sem leitura pública).
 
-**Parte I — Mapeamento dos 3 Motores**
+## Escopos suportados (E1–E3)
+- **`tenant_full`**: todas tabelas do tenant.
+- **`periodo`**: `{obra_id, mes}` — exporta `periodos_fechados` (versão ativa), `periodos_reaberturas`, `registro_presencas`, `apontamento_diarias`, `audit_logs`, `audit_logs_db`, `system_events` filtrados.
+- **`obra`**: todos dados de uma obra.
 
-Para cada motor (Atlas, QFD-OS, Direcione), uma ficha padronizada de ~2 páginas:
-- Problema que resolve (1 frase)
-- Informações que consome (tabela: fonte → tipo de dado)
-- Informações que produz (tabela: saída → consumidor)
-- Regras de negócio críticas com **invariantes I1/I2/I4/I9/I11 em negrito** quando aplicáveis
-- Dependência do OPERA Core (Alta/Média/Baixa) com justificativa
-- Risco de impacto na migração (cenário "se este motor cair")
-- Domínio de UI relacionado (mapeando às abas Organização, Padronização, Eficiência, Redução de Perdas, Análise Contínua, Segurança & Qualidade, Ações Corretivas)
+## Tabelas incluídas
+Todas as 39 tabelas públicas onde o usuário tem visibilidade via RLS. Lista pré-definida server-side (allowlist) — exclui `mobile_debug_logs` e dados sensíveis (`invites.token`, `session_transfers.token`, `profiles.account_status` mantido mas sem PII extra). LGPD: nenhuma senha/token exportado.
 
-**Parte II — Síntese de Migração**
-- Tabela-resumo: Motor × Dependência × Risco × Ordem sugerida × Pré-requisitos técnicos
-- **Recomendação de ordem**: Atlas (core) → QFD-OS (consumidor de baseline) → Direcione (orquestrador, integração futura preservada)
-- Justificativa por acoplamento: Atlas é fonte de verdade; QFD-OS depende do baseline; Direcione hoje é independente mas a interface de marcos/alertas deve ser preservada.
+## Componentes a entregar
 
-**Parte III — Análise Sistêmica (resposta à segunda parte do prompt)**
+### 1. Backend
+- **Edge Function `export-csv`** (`supabase/functions/export-csv/index.ts`)
+  - Auth: exige JWT válido + `has_role(uid, 'admin')`.
+  - Usa `userClient` (com Authorization header) → RLS aplicada automaticamente (E5).
+  - Para cada tabela na allowlist:
+    - `SELECT * FROM <t> WHERE tenant_id = $1 ORDER BY id` (ordenação determinística — E7).
+    - Para folha: chama RPC `folha_pagamento` e serializa com mesma ordem do hash.
+    - Pagina em chunks de 5k linhas (evita memória estourar).
+  - Serializa CSV: UTF-8 BOM, `,` delimiter, escape `"` duplicando, CRLF.
+  - Adiciona colunas finais `exportado_em`, `exportado_por` em cada linha (E4).
+  - Compacta com `JSZip` (npm em Deno).
+  - Upload em `exports/{tenant_id}/{timestamp}-{scope}.zip`.
+  - Signed URL 15min.
+  - `obs.log({ event_type: 'exportacao_csv.completed', payload: { scope, tables, rows_total, file_bytes } })` com correlation_id (E6).
+  - Em falha parcial: `exportacao_csv.failed` + erro.
 
-Bloco único intitulado "OPERA Atlas como Estrutura Empresarial":
-1. **Conceito e proposta de valor** — livro-razão imutável da operação física; transforma execução de obra em evidência auditável.
-2. **Direção estratégica** — camada de verdade do ecossistema Canteiro de Obras Digital; condição para qualquer motor downstream (BI, IA, cotações inteligentes) ter dado confiável.
-3. **Objetivos mensuráveis** — KPIs: % de períodos fechados sem reabertura, tempo médio entre evento e auditoria, taxa de divergência QFD-OS, determinismo financeiro (hash estável).
-4. **Processos operacionais** — ciclo Registrar → Fechar → Rastrear → Corrigir → Refechar.
-5. **Critérios de decisão** — as 11 invariantes como filtros de aceitação de qualquer feature.
-6. **Pontos de integração** — header `x-correlation-id`, RPCs SECURITY DEFINER, eventos `system_events` como contrato com motores externos.
-7. **Potencial de escala, automação e monetização** — multi-tenant nativo, eventos causais habilitam IA preditiva, fechamentos imutáveis viabilizam produto B2B de evidência jurídica/seguros.
+- **Migration**: criar bucket `exports` privado + policy "admins do tenant podem ler signed URL próprio caminho".
 
-**Apêndices**
-- A. Glossário (invariantes, snapshot, hash imortal, correlation/causation)
-- B. Checklist de migração mínima por motor
+### 2. Frontend
+- **Nova aba `Admin → Dados`** (`PeriodosFechadosTab` vizinha) — `src/components/admin/ExportarDadosTab.tsx`:
+  - 3 cards: "Exportar tenant inteiro" / "Exportar obra" / "Exportar período fechado".
+  - Seletor de obra/mês quando aplicável.
+  - Aviso destacado quando período está aberto: "dados podem mudar — para prova jurídica, exporte um período fechado".
+  - Botão → spinner → link de download (abre em nova aba).
+  - Usa `traced()` de `src/lib/observability.ts` para propagar `correlation_id` via `causalHeaders`.
+- Registrar tab em `src/pages/AdminPage.tsx` (`<Database/>` icon, `value="exportar"`).
 
-## Detalhes técnicos
-- Script Python isolado em `/tmp/build_mapeamento.py`, ReportLab Platypus.
-- Tipografia: Helvetica; títulos em laranja `#F97316`, corpo preto.
-- Tabelas com `colWidths` explícitos para evitar overflow; quebras de linha controladas em `Paragraph`.
-- QA: converter cada página em JPG, inspecionar e iterar até zero defeitos visuais (overflow, sobreposição, cortes).
-- Sem alterações de código da aplicação. Sem segredos. Sem dependência de assets externos.
+### 3. Documentação
+- `MANUAL_SISTEMA.md`: seção "Exportação CSV" com escopos, formato, limites, aviso de hash.
+- `.lovable/memory/features/csv-export.md`: nova memory file.
+- Atualizar `.lovable/memory/index.md`.
 
-## Fora de escopo
-- Não gera versões para os motores não listados (Smart Cotações, Vaga Quente, Stockflow).
-- Não modifica nenhum arquivo do projeto.
-- Não publica nem expõe URLs internas ou IDs de backend.
+## Conformidade com invariantes
+- **I1/I2**: tenant derivado server-side; RLS via userClient.
+- **I5/I6**: log em `system_events` com correlation_id; cada CSV carrega `exportado_em/por`.
+- **I9**: folha usa ordenação do hash; documentado que CSV evidencia mas não substitui hash.
+- **I11**: `periodos_reaberturas` incluído por padrão.
+
+## Critérios de aceitação (espelham seção 6)
+- Admin exporta tenant em ≤3 cliques.
+- ZIP contém 1 CSV por tabela visível.
+- FKs exportadas como UUIDs literais.
+- Dois admins do mesmo tenant geram conteúdo idêntico para o mesmo instante (ordenação determinística + mesma allowlist).
+- Evento `exportacao_csv.completed` aparece em `system_events` com correlation_id da ação UI.
+- Performance: 100k linhas < 30s (pagination + stream zip).
+
+## Fora de escopo (desta sprint)
+- Reimportação CSV → banco.
+- Agendamento periódico para storage externo (S3/GCS) — fica para v2.
+- Exportação Parquet/JSON.
+
+## Riscos
+- **Memória edge function**: zipar em memória pode estourar com tenants grandes. Mitigação: chunk + `JSZip` streaming; se necessário, escrever direto em Storage por arquivo e zipar via segunda função.
+- **Timeout edge (150s)**: cobre 100k linhas, mas tenants futuros podem precisar de job assíncrono — ficar atento.

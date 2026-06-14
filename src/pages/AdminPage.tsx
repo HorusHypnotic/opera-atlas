@@ -27,6 +27,8 @@ import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PeriodosFechadosTab } from "@/components/admin/PeriodosFechadosTab";
+import { ExportarDadosTab } from "@/components/admin/ExportarDadosTab";
+import { Database } from "lucide-react";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
@@ -153,6 +155,9 @@ export default function AdminPage() {
           <TabsTrigger value="periodos" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Lock className="h-3.5 w-3.5" /> Períodos
           </TabsTrigger>
+          <TabsTrigger value="exportar" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Database className="h-3.5 w-3.5" /> Dados
+          </TabsTrigger>
           <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <ClipboardList className="h-3.5 w-3.5" /> Logs
           </TabsTrigger>
@@ -269,6 +274,10 @@ export default function AdminPage() {
 
         <TabsContent value="periodos" className="space-y-4">
           <PeriodosFechadosTab />
+        </TabsContent>
+
+        <TabsContent value="exportar" className="space-y-4">
+          <ExportarDadosTab />
         </TabsContent>
 
         <TabsContent value="audit-log" className="space-y-4">
