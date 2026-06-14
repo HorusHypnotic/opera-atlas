@@ -155,6 +155,9 @@ export default function AdminPage() {
           <TabsTrigger value="periodos" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <Lock className="h-3.5 w-3.5" /> Períodos
           </TabsTrigger>
+          <TabsTrigger value="exportar" className="gap-1.5 shrink-0 text-xs sm:text-sm">
+            <Database className="h-3.5 w-3.5" /> Dados
+          </TabsTrigger>
           <TabsTrigger value="audit-log" className="gap-1.5 shrink-0 text-xs sm:text-sm">
             <ClipboardList className="h-3.5 w-3.5" /> Logs
           </TabsTrigger>
