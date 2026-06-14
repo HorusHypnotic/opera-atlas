@@ -27,6 +27,8 @@ import { TenantProfileTab } from "@/components/admin/TenantProfileTab";
 import { AuditLogTab } from "@/components/admin/AuditLogTab";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PeriodosFechadosTab } from "@/components/admin/PeriodosFechadosTab";
+import { ExportarDadosTab } from "@/components/admin/ExportarDadosTab";
+import { Database } from "lucide-react";
 
 type AppRole = "admin" | "gestor" | "operacional" | "visualizador";
 
