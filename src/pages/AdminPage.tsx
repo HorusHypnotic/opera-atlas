@@ -276,6 +276,10 @@ export default function AdminPage() {
           <PeriodosFechadosTab />
         </TabsContent>
 
+        <TabsContent value="exportar" className="space-y-4">
+          <ExportarDadosTab />
+        </TabsContent>
+
         <TabsContent value="audit-log" className="space-y-4">
           <AuditLogTab />
         </TabsContent>
