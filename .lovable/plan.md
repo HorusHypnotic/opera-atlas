@@ -1,85 +1,128 @@
-# Exportação Universal CSV — Plano de Implementação
+# PDF v2 — OPERA Atlas: Modelo Empresarial, Governança LGPD e Ecossistema
 
-## Objetivo
-Entregar exportação completa de dados do tenant em CSV (zip), respeitando RLS, rastreável via `system_events`, sem lock-in. Conforme pedido E1–E7 / OPERA_CORE v1.3.
+Manter o PDF v1 (técnico/migração) e gerar um **novo documento complementar** que cobre as 8 lacunas apontadas. Sem mudanças no código do app — apenas script Python + ReportLab gravando em `/mnt/documents/`.
 
-## Arquitetura
+## Entregável
 
-```text
-[Admin UI] → invoke('export-csv', {scope}) → [Edge Function]
-                                                  ├─ valida JWT + role (admin)
-                                                  ├─ deriva tenant_id server-side (I2)
-                                                  ├─ usa userClient (RLS ativo) p/ ler tabelas
-                                                  ├─ monta CSVs (UTF-8 BOM, vírgula, aspas)
-                                                  ├─ zipa em memória
-                                                  ├─ upload em Storage (bucket privado, signed URL 15min)
-                                                  ├─ log_system_event('exportacao_csv.*')
-                                                  └─ retorna { url, expires_at, manifest }
+`OPERA_Atlas_Modelo_Empresarial_v2.pdf` (~14–18 páginas), estruturado para 4 audiências: arquiteto, investidor, jurídico/DPO, cliente corporativo.
+
+## Estrutura do documento
+
+**1. Sumário Executivo (1 pág)**
+Para quem é cada seção; relação com o v1 (Mapeamento de Migração).
+
+**2. Modelo Canônico de Stakeholders (2 pág)**
+Árvore Tenant → (Cliente Final, Construtora, Empreiteira, Fornecedor, Prestador, Equipe OPERA).
+Árvore Obra → (Contratos, Equipes, Colaboradores, Terceirizados, Fornecedores, Equipamentos, Insumos, Evidências).
+Diagrama ASCII + tabela com cardinalidade, dono do dado, e impacto em RLS.
+
+**3. Hierarquia Organizacional (1 pág)**
+Dois cenários canônicos:
+- Grupo → Construtora → Filial → Obra
+- Cliente → Empreiteira → Obra
+
+Mapeamento para o conceito atual de `tenant` + plano de evolução (sub-tenants / hierarquia em fase futura).
+
+**4. Modelo de Entidades Empresariais (2 pág)**
+Modelo canônico compartilhável entre Atlas, Control, Stockflow, Smart Cotações, PDIC:
+Organização, Contrato, Cliente, Obra, Etapa, Equipe, Colaborador, Fornecedor, Equipamento.
+Tabela: entidade × produto que consome × produto que produz.
+
+**5. Matriz Formal de Permissões (2 pág)**
+Expandir I6 em matriz explícita:
+
+```
+Papel          | Ver           | Editar | Aprovar | Fechar | Reabrir
+Operador       | Próprios      | Não    | Não     | Não    | Não
+Encarregado    | Equipe        | Sim    | Não     | Não    | Não
+Engenheiro    | Obra          | Sim    | Sim     | Não    | Não
+Gestor         | Múlt. obras   | Sim    | Sim     | Sim    | Sim
+Admin Tenant   | Tudo (tenant) | Sim    | Sim     | Sim    | Sim
+Admin OPERA    | Suporte       | Restr. | Restr.  | Não    | Não
 ```
 
-Storage: novo bucket privado `exports` (signed URLs, sem leitura pública).
+Cruzamento com roles atuais (admin/gestor/operacional/visualizador/super_admin) + gap a fechar.
 
-## Escopos suportados (E1–E3)
-- **`tenant_full`**: todas tabelas do tenant.
-- **`periodo`**: `{obra_id, mes}` — exporta `periodos_fechados` (versão ativa), `periodos_reaberturas`, `registro_presencas`, `apontamento_diarias`, `audit_logs`, `audit_logs_db`, `system_events` filtrados.
-- **`obra`**: todos dados de uma obra.
+**6. Governança LGPD (3 pág)**
+Mapa de papéis LGPD:
+- Titular (colaborador, gestor, etc.)
+- Controlador (Construtora/Tenant)
+- Operador (OPERA Atlas Ltda)
+- Suboperador (Lovable Cloud, Supabase)
+- Encarregado/DPO
+- Base legal por finalidade (execução de contrato, obrigação legal trabalhista, legítimo interesse, consentimento)
 
-## Tabelas incluídas
-Todas as 39 tabelas públicas onde o usuário tem visibilidade via RLS. Lista pré-definida server-side (allowlist) — exclui `mobile_debug_logs` e dados sensíveis (`invites.token`, `session_transfers.token`, `profiles.account_status` mantido mas sem PII extra). LGPD: nenhuma senha/token exportado.
+Tabela RoPA mínima (Registro de Operações de Tratamento) com finalidade, base legal, retenção, transferência.
+Direitos do titular: como o sistema atende (export CSV, soft delete, audit_logs).
+Plano de DPA (Data Processing Agreement) entre OPERA e tenants.
 
-## Componentes a entregar
+**7. Classificação de Dados (1 pág)**
+Tabela canônica por tabela/coluna:
 
-### 1. Backend
-- **Edge Function `export-csv`** (`supabase/functions/export-csv/index.ts`)
-  - Auth: exige JWT válido + `has_role(uid, 'admin')`.
-  - Usa `userClient` (com Authorization header) → RLS aplicada automaticamente (E5).
-  - Para cada tabela na allowlist:
-    - `SELECT * FROM <t> WHERE tenant_id = $1 ORDER BY id` (ordenação determinística — E7).
-    - Para folha: chama RPC `folha_pagamento` e serializa com mesma ordem do hash.
-    - Pagina em chunks de 5k linhas (evita memória estourar).
-  - Serializa CSV: UTF-8 BOM, `,` delimiter, escape `"` duplicando, CRLF.
-  - Adiciona colunas finais `exportado_em`, `exportado_por` em cada linha (E4).
-  - Compacta com `JSZip` (npm em Deno).
-  - Upload em `exports/{tenant_id}/{timestamp}-{scope}.zip`.
-  - Signed URL 15min.
-  - `obs.log({ event_type: 'exportacao_csv.completed', payload: { scope, tables, rows_total, file_bytes } })` com correlation_id (E6).
-  - Em falha parcial: `exportacao_csv.failed` + erro.
+```
+Dado                | Classe        | Tabela
+Nome colaborador    | Confidencial  | colaboradores.nome
+CPF                 | Sensível/PII  | colaboradores.cpf
+Salário/diária      | Sensível      | colaboradores.valor_diaria
+Cronograma          | Interno       | atividades
+Fotos da obra       | Interno       | obra-fotos
+Logs de auditoria   | Confidencial  | audit_logs
+Eventos sistema     | Interno       | system_events
+```
 
-- **Migration**: criar bucket `exports` privado + policy "admins do tenant podem ler signed URL próprio caminho".
+Mapa para DLP/Purview futuro + regras de mascaramento sugeridas.
 
-### 2. Frontend
-- **Nova aba `Admin → Dados`** (`PeriodosFechadosTab` vizinha) — `src/components/admin/ExportarDadosTab.tsx`:
-  - 3 cards: "Exportar tenant inteiro" / "Exportar obra" / "Exportar período fechado".
-  - Seletor de obra/mês quando aplicável.
-  - Aviso destacado quando período está aberto: "dados podem mudar — para prova jurídica, exporte um período fechado".
-  - Botão → spinner → link de download (abre em nova aba).
-  - Usa `traced()` de `src/lib/observability.ts` para propagar `correlation_id` via `causalHeaders`.
-- Registrar tab em `src/pages/AdminPage.tsx` (`<Database/>` icon, `value="exportar"`).
+**8. Modelo de Eventos Humanos (1 pág)**
+Cadeia Pessoa → Ação → Evento → Consequência, mapeada para `system_events` + `causation_id`. Exemplos: confirmação de presença → folha; reabertura de período → nova versão de hash.
+Como isso vira **trilha explicável** em auditoria.
 
-### 3. Documentação
-- `MANUAL_SISTEMA.md`: seção "Exportação CSV" com escopos, formato, limites, aviso de hash.
-- `.lovable/memory/features/csv-export.md`: nova memory file.
-- Atualizar `.lovable/memory/index.md`.
+**9. Mapa do Ecossistema OPERA (2 pág)**
+Diagrama empresarial dos produtos e seus fluxos:
 
-## Conformidade com invariantes
-- **I1/I2**: tenant derivado server-side; RLS via userClient.
-- **I5/I6**: log em `system_events` com correlation_id; cada CSV carrega `exportado_em/por`.
-- **I9**: folha usa ordenação do hash; documentado que CSV evidencia mas não substitui hash.
-- **I11**: `periodos_reaberturas` incluído por padrão.
+```
+                 PDIC (BI Estratégico)
+                       ↑
+              ┌────────┴────────┐
+              │   Power BI       │
+              └────────┬────────┘
+                       ↑
+   ┌──────────┬────────┴────────┬──────────┐
+   │  Atlas   │   QFD-OS         │ Direcione │
+   │ (verdade)│   (qualidade)    │ (decisão) │
+   └─────┬────┴────────┬─────────┴─────┬────┘
+         ↑             ↑               ↑
+     Stockflow    Smart Cotações   Vaga Quente
+         ↑             ↑               ↑
+              Control + Mobile (captura)
+```
 
-## Critérios de aceitação (espelham seção 6)
-- Admin exporta tenant em ≤3 cliques.
-- ZIP contém 1 CSV por tabela visível.
-- FKs exportadas como UUIDs literais.
-- Dois admins do mesmo tenant geram conteúdo idêntico para o mesmo instante (ordenação determinística + mesma allowlist).
-- Evento `exportacao_csv.completed` aparece em `system_events` com correlation_id da ação UI.
-- Performance: 100k linhas < 30s (pagination + stream zip).
+Para cada produto: papel, entrada esperada do Atlas, saída devolvida, contrato de evento.
 
-## Fora de escopo (desta sprint)
-- Reimportação CSV → banco.
-- Agendamento periódico para storage externo (S3/GCS) — fica para v2.
-- Exportação Parquet/JSON.
+**10. Roadmap de Maturidade Empresarial (1 pág)**
+Onde estamos × onde precisamos chegar antes de: investidor, cliente enterprise, ISO 27001, certificação LGPD. Checklist priorizado.
 
-## Riscos
-- **Memória edge function**: zipar em memória pode estourar com tenants grandes. Mitigação: chunk + `JSZip` streaming; se necessário, escrever direto em Storage por arquivo e zipar via segunda função.
-- **Timeout edge (150s)**: cobre 100k linhas, mas tenants futuros podem precisar de job assíncrono — ficar atento.
+**11. Anexos (1 pág)**
+- Glossário (tenant, obra, controlador, operador, RoPA, DPA, RLS, hash imortal).
+- Referência cruzada para v1 e para `OPERA_CORE.md`.
+
+## Implementação técnica
+
+- Script Python `/tmp/build_modelo_empresarial.py` usando ReportLab (mesma stack do v1).
+- Tabelas com `LongTable`, quebras controladas, KeepTogether nos diagramas ASCII (fonte Courier).
+- Paleta consistente com v1 (laranja `#F97316` para títulos, cinza neutro para corpo).
+- QA visual: converter cada página para PNG e inspecionar antes de entregar.
+- Output: `/mnt/documents/OPERA_Atlas_Modelo_Empresarial_v2.pdf` + `<presentation-artifact>`.
+
+## Fora do escopo
+
+- Alterações em código, schema ou RLS do app.
+- Implementação real de sub-tenants / hierarquia organizacional.
+- Geração de RoPA dinâmica a partir do banco (fica como sugestão de feature futura).
+- Tradução para inglês.
+
+## Pergunta antes de implementar
+
+Algum dos pontos abaixo precisa de ajuste antes de eu gerar o PDF?
+1. Manter foco nas **8 lacunas que você listou** ou quer adicionar/remover seções?
+2. Documento deve assumir **OPERA como Operador LGPD** e Tenants (construtoras) como Controladores — confirma esse enquadramento?
+3. Incluir os produtos **Stockflow, Smart Cotações, Vaga Quente, PDIC, Control** no mapa do ecossistema mesmo que ainda não existam no código, tratando-os como visão de produto?
