@@ -332,7 +332,7 @@ export default function RelatorioMaoObraPage() {
   const openNewDialog = () => {
     setEditingId(null);
     setFormColaboradorId("");
-    setFormQtdDiarias("");
+    setFormQtdDiarias("0");
     setFormValorDiaria("");
     setFormObs("");
     setDialogOpen(true);
@@ -359,8 +359,18 @@ export default function RelatorioMaoObraPage() {
   };
 
   const handleSave = async () => {
-    if (!formColaboradorId || !formQtdDiarias || !formValorDiaria) {
-      toast.error("Preencha trabalhador, quantidade e valor da diária");
+    const qtdNum = parseFloat(formQtdDiarias);
+    const valorNum = parseFloat(formValorDiaria);
+    if (!formColaboradorId) {
+      toast.error("Selecione o trabalhador");
+      return;
+    }
+    if (!Number.isFinite(qtdNum) || qtdNum <= 0) {
+      toast.error("Informe uma quantidade de diárias maior que zero");
+      return;
+    }
+    if (!Number.isFinite(valorNum) || valorNum <= 0) {
+      toast.error("Informe um valor da diária maior que zero");
       return;
     }
     const payload = {

@@ -5,12 +5,14 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useTableData } from "@/hooks/useTableData";
 import { useObra } from "@/hooks/useObra";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -79,6 +81,37 @@ export default function ColaboradoresPage() {
   const { data: colaboradores = [], insert: insertColab, update: updateColab, remove: removeColab } = useTableData<Colaborador>("colaboradores");
   const { data: vinculos = [], insert: insertVinculo, update: updateVinculo, remove: removeVinculo } = useTableData<ColaboradorObra>("colaborador_obras");
   const { data: presencas = [], insert: insertPresenca, remove: removePresenca } = useTableData<RegistroPresenca>("registro_presencas");
+
+  // Bulk delete state — aba Presenças & Faltas
+  const [selectedPresencas, setSelectedPresencas] = useState<Set<string>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const togglePresenca = (id: string) => {
+    setSelectedPresencas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAllPresencas = (checked: boolean) => {
+    if (checked) setSelectedPresencas(new Set(presencas.map((p) => p.id)));
+    else setSelectedPresencas(new Set());
+  };
+  const clearPresencaSelection = () => setSelectedPresencas(new Set());
+  const handleBulkDeletePresencas = async () => {
+    const ids = Array.from(selectedPresencas);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try { await removePresenca(id); ok++; } catch { fail++; }
+    }
+    setBulkDeleting(false);
+    clearPresencaSelection();
+    if (fail === 0) toast.success(`${ok} registro(s) excluído(s)`);
+    else toast.error(`${ok} excluído(s), ${fail} falharam`);
+  };
 
   // KPIs
   const ativos = colaboradores.filter((c) => c.ativo).length;
@@ -257,12 +290,34 @@ export default function ColaboradoresPage() {
         {/* ─── TAB: Presenças & Faltas ─── */}
         <TabsContent value="presencas">
           <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <h3 className="text-sm font-semibold">Registro de Presenças, Faltas e Horas Extras</h3>
               {canInsert && colaboradores.length > 0 && (
                 <PresencaFormDialog colaboradores={colaboradores} obras={obras} onSubmit={insertPresenca} />
               )}
             </div>
+
+            {canDelete && selectedPresencas.size > 0 && (
+              <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-md border border-destructive/40 bg-destructive/5">
+                <span className="text-sm font-medium">{selectedPresencas.size} selecionado(s)</span>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={clearPresencaSelection} disabled={bulkDeleting}>
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkConfirmOpen(true)}
+                    disabled={bulkDeleting}
+                    className="gap-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Excluir selecionados
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {presencas.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Nenhum registro de presença. Comece a registrar!</p>
             ) : (
@@ -270,6 +325,15 @@ export default function ColaboradoresPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
+                      {canDelete && (
+                        <th className="py-2 px-3 w-8">
+                          <Checkbox
+                            checked={presencas.length > 0 && selectedPresencas.size === presencas.length}
+                            onCheckedChange={(c) => toggleAllPresencas(!!c)}
+                            aria-label="Selecionar todos"
+                          />
+                        </th>
+                      )}
                       <th className="text-left py-2 px-3">Colaborador</th>
                       <th className="text-left py-2 px-3">Obra</th>
                       <th className="text-left py-2 px-3">Data</th>
@@ -296,8 +360,18 @@ export default function ColaboradoresPage() {
                         falta_injustificada: "critical",
                         hora_extra: "ok",
                       };
+                      const isSelected = selectedPresencas.has(p.id);
                       return (
-                        <tr key={p.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
+                        <tr key={p.id} className={`border-b border-border/50 hover:bg-secondary/50 transition-colors ${isSelected ? "bg-destructive/5" : ""}`}>
+                          {canDelete && (
+                            <td className="py-2.5 px-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => togglePresenca(p.id)}
+                                aria-label={`Selecionar registro de ${colab?.nome || "colaborador"}`}
+                              />
+                            </td>
+                          )}
                           <td className="py-2.5 px-3 font-medium">{colab?.nome || "—"}</td>
                           <td className="py-2.5 px-3">{obra?.nome || "—"}</td>
                           <td className="py-2.5 px-3 text-xs font-mono">{p.data}</td>
@@ -324,6 +398,16 @@ export default function ColaboradoresPage() {
               </div>
             )}
           </div>
+
+          <ConfirmDialog
+            open={bulkConfirmOpen}
+            onOpenChange={setBulkConfirmOpen}
+            title="Excluir registros selecionados"
+            description={`Você está prestes a excluir ${selectedPresencas.size} registro(s) de presença/falta. Esta ação é irreversível.`}
+            confirmText="EXCLUIR"
+            onConfirm={handleBulkDeletePresencas}
+            variant="destructive"
+          />
         </TabsContent>
       </Tabs>
     </div>
