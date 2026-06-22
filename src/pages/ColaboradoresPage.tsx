@@ -82,6 +82,37 @@ export default function ColaboradoresPage() {
   const { data: vinculos = [], insert: insertVinculo, update: updateVinculo, remove: removeVinculo } = useTableData<ColaboradorObra>("colaborador_obras");
   const { data: presencas = [], insert: insertPresenca, remove: removePresenca } = useTableData<RegistroPresenca>("registro_presencas");
 
+  // Bulk delete state — aba Presenças & Faltas
+  const [selectedPresencas, setSelectedPresencas] = useState<Set<string>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const togglePresenca = (id: string) => {
+    setSelectedPresencas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAllPresencas = (checked: boolean) => {
+    if (checked) setSelectedPresencas(new Set(presencas.map((p) => p.id)));
+    else setSelectedPresencas(new Set());
+  };
+  const clearPresencaSelection = () => setSelectedPresencas(new Set());
+  const handleBulkDeletePresencas = async () => {
+    const ids = Array.from(selectedPresencas);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try { await removePresenca(id); ok++; } catch { fail++; }
+    }
+    setBulkDeleting(false);
+    clearPresencaSelection();
+    if (fail === 0) toast.success(`${ok} registro(s) excluído(s)`);
+    else toast.error(`${ok} excluído(s), ${fail} falharam`);
+  };
+
   // KPIs
   const ativos = colaboradores.filter((c) => c.ativo).length;
   const inativos = colaboradores.filter((c) => !c.ativo).length;
