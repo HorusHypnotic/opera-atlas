@@ -332,7 +332,7 @@ export default function RelatorioMaoObraPage() {
   const openNewDialog = () => {
     setEditingId(null);
     setFormColaboradorId("");
-    setFormQtdDiarias("");
+    setFormQtdDiarias("0");
     setFormValorDiaria("");
     setFormObs("");
     setDialogOpen(true);
