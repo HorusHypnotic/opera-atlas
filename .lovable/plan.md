@@ -1,49 +1,94 @@
-# Plano: PDF "Diagnóstico Objetivo OPERA Atlas"
+# Plano: PDF "Roadmap de Maturidade Empresarial — OPERA Atlas"
 
-Gerar um único PDF estilo documentação técnica respondendo às 6 seções do prompt, **baseado apenas no que existe no código/migrations/memórias** (não em promessas). Salvar em `/mnt/documents/OPERA_Atlas_Diagnostico_Objetivo.pdf`.
+Gerar um novo PDF empresarial (`/mnt/documents/OPERA_Atlas_Roadmap_Maturidade.pdf`) que substitui o cronograma anterior por marcos de maturidade, mantendo o mesmo padrão visual do Diagnóstico Objetivo. **Escopo restrito ao Atlas** (não ao ecossistema Copiloto/Compass/etc.). Sem alteração de código da aplicação.
 
 ## Fonte da verdade (verificável no repo)
 
-- `.lovable/OPERA_CORE.md` + `.lovable/memory/architecture/*` (invariantes, período, causalidade)
-- `.lovable/memory/features/csv-export.md` → export-csv edge function existe
-- `.lovable/memory/security/rls-access-validation.md` → RLS hardening aplicado
-- `supabase/functions/export-csv/index.ts` → exportação implementada
-- Tabelas `periodos_fechados`, `periodos_reaberturas`, `cronograma_baseline`, `system_events`, `audit_logs_db` existem
-- Ausência de: integração Copiloto (nenhum arquivo/edge function referenciando), testes de hash em cenário real, provas jurídicas.
+- `.lovable/OPERA_CORE.md` v1.3 — invariantes I1–I11, §8 Soberania Atual, §9 Critérios de Aceitação
+- `.lovable/memory/architecture/*` — período, causalidade, multi-tenancy
+- `.lovable/memory/security/rls-access-validation.md` — estado atual RLS
+- `.lovable/memory/features/csv-export.md`, `supabase/functions/export-csv/index.ts`
+- Migrations existentes: `periodos_fechados`, `periodos_reaberturas`, `cronograma_baseline`, `system_events`, `audit_logs_db`
+- Diagnóstico Objetivo (`/mnt/documents/OPERA_Atlas_Diagnostico_Objetivo.pdf`) como baseline de status
 
-## Estrutura do PDF
+## Estrutura do PDF (8–10 páginas)
 
-1. **Capa** — Título, data (06/07/2026), versão OPERA_CORE v1.3, tag "Diagnóstico Objetivo — evidence-based"
-2. **Legenda de status** — ✅ Implementado e verificável | 🟡 Parcial / não testado em produção | ❌ Não iniciado
-3. **§1 O que já está construído** — tabela item × status × evidência (arquivo/migration/memória)
-   - Baseline `cronograma_baseline` → 🟡 tabela existe, sem prova de uso em obra real
-   - Fechamento SHA-256 (`periodos_fechados.hash_snapshot`) → 🟡 estrutura pronta, não validado
-   - Exportação CSV → ✅ edge `export-csv` + UI `ExportarDadosTab`
-   - Integração Copiloto → ❌ nenhum artefato encontrado
-   - RLS multi-tenant → ✅ ativo (memória rls-access-validation), 🟡 sem teste cross-tenant automatizado
-   - Invariantes I1/I2/I4/I9/I11 → ✅ codificadas em RLS + funções SECURITY DEFINER + append-only em system_events
-4. **§2 Em construção** — apontamento de diárias, bulk delete presenças (recém-feitos), capacidade/planejamento (memória), Gantt
-5. **§3 Faltando para MVP** — bullets curtos por área (Copiloto, hash, CSV completo, prova jurídica, docs)
-6. **§4 Riscos & débito técnico** — bundle sem lazy-loading, 15 queries no dashboard, hash não testado, ausência de testes automatizados de tenant isolation, sem monitoramento de erros
-7. **§5 Próximo passo (7 dias)** — sequência crítica: (a) rodar 1 fechamento real com hash, (b) validar CSV em tenant piloto, (c) definir contrato de dados Copiloto→Atlas
-8. **§6 Critério de prontidão para venda** — veredicto: **Não vendável autônomo hoje**. Estimativa: 4–6 semanas condicionado a Copiloto + fechamento validado + 1 caso jurídico simulado.
-9. **Anexo A — Matriz-resumo** (igual ao "exemplo de resposta esperada" do usuário, atualizado com evidência real)
-10. **Anexo B — Referências no repositório** (lista de arquivos citados)
+### 1. Capa
+Título "Roadmap de Maturidade Empresarial — OPERA Atlas", data 06/07/2026, versão OPERA_CORE v1.3, tag "Cronograma por marcos, não por features".
+
+### 2. Sumário executivo (½ página)
+Uma frase por marco + posição atual (seta visual apontando entre M0 e M1).
+
+### 3. Modelo de maturidade — 5 marcos
+```text
+M0 Fundação Técnica ──► M1 Pré-piloto Pago ──► M2 Cliente Enterprise ──► M3 Due Diligence Investidor ──► M4 Certificações (LGPD / ISO 27001)
+```
+Cada marco = uma seção de 1 página com quatro blocos fixos:
+- **Definição** (o que significa esse marco em uma frase)
+- **Critérios objetivos de prontidão** (checklist verificável)
+- **Evidência atual** (o que já existe no repo)
+- **Gaps para atingir o marco** (o que falta, com referência a arquivo/tabela)
+
+### 4. Conteúdo de cada marco
+
+**M0 — Fundação Técnica (atual)**
+Critérios: OPERA_CORE v1.3 codificado; RLS ativo em todas as tabelas públicas; append-only para eventos; fechamento com hash SHA-256 estruturado; observabilidade causal (system_events, correlation_id).
+Status: ✅ Atingido estruturalmente (evidência: migrations + `.lovable/memory/architecture/*`).
+Gap residual: fechamento nunca rodou em obra real, hash não reproduzido por terceiro.
+
+**M1 — Pré-piloto Pago**
+Critérios: 1 fechamento mensal real com hash reproduzido; CSV exportado e conferido por cliente; 1 obra piloto em produção com dados reais por 30+ dias; contrato de piloto assinado; SLA mínimo (uptime, RPO/RTO declarados); domínio próprio; onboarding documentado.
+Evidência atual: edge `export-csv` funcional, estrutura `periodos_fechados` pronta, domínio ainda em `.lovable.app`.
+Gap: rodar fechamento real, migrar domínio, escrever contrato + SLA + runbook onboarding.
+
+**M2 — Cliente Enterprise**
+Critérios: teste automatizado de isolamento cross-tenant; monitoramento de erros (Sentry ou equivalente); backup com restore testado trimestralmente; segregação de funções (admin ≠ operador ≠ auditor) validada; export CSV incremental/delta; trilha de auditoria consultável por role auditor; SLA formal com penalidade; DPA (Data Processing Agreement) padrão.
+Gap: sem testes automatizados de RLS, sem monitoramento, sem restore validado, sem role auditor dedicada.
+
+**M3 — Due Diligence para Investidor**
+Critérios: code review externo; teste de penetração (pentest) com relatório; documentação de arquitetura completa e versionada; roadmap de produto público; métricas de negócio auditáveis (MRR, churn, NPS) rastreáveis ao sistema; contratos com fornecedores críticos (Supabase, Lovable) formalizados; plano de contingência de lock-in (§8 do OPERA_CORE).
+Gap: nenhum pentest, sem métricas de negócio, sem plano formal de exit de lock-in.
+
+**M4 — Certificações (LGPD / ISO 27001)**
+Critérios LGPD: RIPD (Relatório de Impacto), DPO nomeado, base legal por tratamento documentada, canal do titular funcional, política de retenção implementada e auditada (edge `data-retention` existe → precisa ser exercitada e certificada), termo de uso + política de privacidade revisados por jurídico.
+Critérios ISO 27001: SGSI implantado, análise de riscos formal, controles Anexo A mapeados, auditoria interna, auditoria externa de certificação.
+Gap: LGPD operacional inexistente hoje (PDF v2 apenas conceitual); ISO 27001 exige 6–12 meses de operação com evidências.
+
+### 5. Cronograma temporal (tabela consolidada)
+Colunas: Marco | Status atual | Pré-requisitos | Estimativa (semanas) | Riscos bloqueantes.
+Linhas: M0 (✅ concluído) · M1 (4–6 sem) · M2 (8–12 sem após M1) · M3 (12–16 sem após M2) · M4 (24–36 sem após M2, paralelo a M3).
+
+### 6. Matriz de riscos e débitos técnicos (revisada)
+Formato: Risco | Severidade | Marco impactado | Mitigação | Evidência.
+Ex.: hash não testado (ALTO, M1), sem testes RLS (ALTO, M2), 15 queries no dashboard (MÉDIO, M2), LGPD inexistente (ALTO, M4), lock-in Supabase (MÉDIO, M3).
+
+### 7. Próximos passos (7/30/90 dias)
+- **7 dias**: rodar 1 fechamento real e reproduzir hash com terceiro; migrar domínio próprio.
+- **30 dias**: piloto pago em obra real; contrato + SLA + onboarding documentados → fecha M1.
+- **90 dias**: testes automatizados de RLS, monitoramento, role auditor → avança M2.
+
+### 8. Anexo A — Rastreabilidade
+Tabela: cada critério de prontidão → arquivo/tabela/migration que comprova (ou lacuna explícita "não implementado").
+
+### 9. Anexo B — Diferença vs. Diagnóstico Objetivo
+Uma tabela curta mostrando o que mudou de "status por feature" para "status por marco de maturidade" e por que essa reorganização é fiel ao OPERA_CORE.
 
 ## Detalhes técnicos de geração
 
-- Python + `reportlab` (Platypus): `SimpleDocTemplate` A4, margens 2cm.
-- Estilo: cabeçalho laranja (#F97316) coerente com tema Atlas; corpo Helvetica 10pt; tabelas com `Paragraph` em cada célula (wrap automático) e cabeçalho cinza-escuro texto branco.
-- Sem caracteres Unicode subscript/superscript.
-- Diagramas: nenhum necessário nesta versão (documento é textual/tabular).
-- QA obrigatório: `pdftoppm -jpeg -r 150` → `code--view` de cada página, corrigir overflow/alinhamento antes de finalizar.
+- Python + `reportlab` Platypus, `SimpleDocTemplate` A4, margens 2 cm.
+- Reaproveitar paleta do Diagnóstico Objetivo: header laranja `#F97316`, corpo Helvetica 10 pt, tabelas com cabeçalho cinza-escuro + `Paragraph` em cada célula (wrap automático).
+- Status: ✅ verde `#16A34A`, 🟡 âmbar `#F59E0B`, ❌ vermelho `#DC2626`.
+- Diagrama linear dos 5 marcos: `Table` de uma linha com setas ASCII entre cells (sem imagens externas).
+- Sem Unicode sub/superscript (usar `<sub>`/`<super>` do Platypus se necessário).
+- QA obrigatório: `pdftoppm -jpeg -r 150` → `code--view` de cada página; corrigir overflow/alinhamento antes de finalizar. Reportar issues encontrados e como foram corrigidos.
 
 ## Fora de escopo
 
-- Não alterar código de aplicação.
-- Não implementar Copiloto/fechamento/testes — apenas relatar status.
-- Não gerar versão executiva/comercial separada (só o diagnóstico técnico pedido).
+- Não alterar código da aplicação, migrations ou memórias.
+- Não incluir Copiloto/Compass/ecossistema — apenas Atlas.
+- Não regenerar o Diagnóstico Objetivo (permanece como está).
+- Não gerar versão comercial/pitch — este PDF é para apresentação empresarial e auditoria.
 
 ## Entregável
 
-Um arquivo: `/mnt/documents/OPERA_Atlas_Diagnostico_Objetivo.pdf` (~6–10 páginas).
+Um arquivo: `/mnt/documents/OPERA_Atlas_Roadmap_Maturidade.pdf` (~8–10 páginas).
