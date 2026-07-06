@@ -1,124 +1,285 @@
-# Plano: PDF "Governança de Maturidade Empresarial — OPERA Atlas v1.1"
+# Plano: PDF "OPERA Atlas — Constituição Arquitetural v1.0"
 
-Gerar um novo PDF (`/mnt/documents/OPERA_Atlas_Governanca_Maturidade_v1.1.pdf`) que evolui o Roadmap de documento estático para **instrumento de governança executiva**. Mantém os marcos M0–M4 do v1.0 e adiciona as 8 camadas pedidas. **Sem alteração de código da aplicação.**
+Gerar `/mnt/documents/OPERA_Atlas_Constituicao_Arquitetural_v1.0.pdf`. Quarto documento da trilogia + 1, no nível acima da maturidade: define **leis permanentes** da arquitetura do Atlas, separando o que pode evoluir do que não pode ser quebrado.
 
-## Escopo
+**Sem alteração de código, schema, RLS, memórias ou edge functions.** Apenas geração de PDF.
 
-Evolução direta do `OPERA_Atlas_Roadmap_Maturidade.pdf` (v1.0). Não substitui o Diagnóstico Objetivo nem o Roadmap v1.0 — soma-se a eles como camada de governança.
+## Posicionamento na hierarquia documental
 
-## Fonte da verdade (verificável no repo)
-
-- `.lovable/OPERA_CORE.md` v1.3 — invariantes
-- Migrations existentes: `periodos_fechados`, `periodos_reaberturas`, `cronograma_baseline`, `system_events`, `audit_logs_db`, `registro_presencas` (com `status_contabil`)
-- Funções: `folha_pagamento` (retorna `hash` SHA-256), `verificar_hash_periodo`, `reabrir_periodo`, `refechar_periodo`, `validar_fechamento`
-- Edge: `supabase/functions/export-csv/index.ts`, `data-retention/index.ts`
-- Memórias em `.lovable/memory/*`
-- Roadmap v1.0 já entregue em `/mnt/documents/`
-
-## Estrutura do PDF (~10–12 páginas)
-
-### 1. Capa + Metadados
-Título "OPERA Atlas — Governança de Maturidade Empresarial", subtítulo "Evolução do Roadmap v1.0 → v1.1", data 06/07/2026, tag "Instrumento de governança contínua, evidence-based".
-
-### 2. Painel Executivo (§8 — vem primeiro, é a leitura de 30 segundos)
-Card único no topo com:
-- Posição atual: **M0 concluído · M1 em curso**
-- Percentual global de maturidade: **~32%** (M0 100% + M1 ~60%, ponderado)
-- Próximo marco: **M1 — Pré-piloto Pago**
-- Bloqueador principal: **Hash de fechamento nunca reproduzido em obra real**
-- Previsão de conclusão de M1: **4–6 semanas**
-- Risco geral: **MÉDIO-ALTO**
-- Tendência: **↑** (invariantes I11 e função `verificar_hash_periodo` já entregues após v1.0)
-
-### 3. Índice de Maturidade por Marco (§1)
-Uma tabela por marco (M0–M4) com: % conclusão, critérios ✔/△/✖, bloqueadores, nível de risco, evidência-chave. Barra de progresso visual (Table cell com fill proporcional).
-
-Valores derivados dos critérios de v1.0:
-- **M0**: 100% (5/5 critérios). Baixo risco.
-- **M1**: ~60% (3/6 concluídos, 1 parcial, 2 abertos). Risco médio-alto.
-- **M2**: 5% (só CSV parcial). Risco alto.
-- **M3**: 10% (só §8 OPERA_CORE). Risco alto.
-- **M4**: 0%. Risco alto.
-
-### 4. Critérios Mensuráveis (§2)
-Tabela mestra com **um ID por critério** (M0-01 … M4-XX), coluna: ID · Critério · Prioridade · Responsável · Validação objetiva · Dependências · Status. ~25–30 linhas.
-
-Exemplos:
-- **M1-01** Fechamento real executado — Alta — Backend + Cliente piloto — Registro em `periodos_fechados.hash_snapshot` para 1 obra real — Depende de M0-04 — Aberto
-- **M1-02** Hash reproduzido por terceiro — Alta — Backend + Auditor externo — `verificar_hash_periodo(id)` retorna `integro=true` executado por 2 sessões distintas — Depende de M1-01 — Aberto
-- **M1-03** CSV conferido pelo cliente — Média — Produto — Assinatura do cliente piloto no CSV exportado por `export-csv` — Independente — Pronto para execução
-- **M1-04** Domínio próprio — Média — DevOps — DNS apontando + certificado ativo — Independente — Aberto
-- **M2-01** Testes RLS cross-tenant em CI — Alta — Backend — `bun vitest run` verde com fixture de 2 tenants — Depende de M1 concluído — Aberto
-- (…demais critérios completos no documento)
-
-### 5. Mapa de Dependências (§3)
-Dois diagramas ASCII/table:
-- **Linear entre marcos**: M0 → M1 → M2 → M3 → M4
-- **Crítico de destravamento** (o que realmente bloqueia):
 ```text
-Hash reproduzido (M1-02) ─► Piloto Pago (M1) ─► Cliente Enterprise (M2) ─► Due Diligence (M3)
-Retenção auditada ────────────────────────────────────────────────────► Certificações (M4)
-Testes RLS cross-tenant ────────────────► Cliente Enterprise (M2)
+Constituição Arquitetural (v1.0)  ← este documento (nível meta, permanente)
+        │
+        ├── OPERA_CORE.md v1.3         (invariantes de domínio)
+        ├── Modelo Empresarial          (o que o Atlas é)
+        ├── Diagnóstico Objetivo        (onde está)
+        └── Governança de Maturidade    (como medir evolução)
 ```
 
-### 6. Evidências Normalizadas (§4)
-Tabela padronizada. Colunas: ID evidência · Tipo (Migration/Função/Edge/Memória/Documento) · Origem · Localização · Comprova critério(s) · Data · Validade (perene / expira em / a auditar).
+A Constituição rege como esses quatro documentos podem mudar.
 
-Ex.:
-- **E-01** Migration · Supabase · `periodos_fechados` (schema com `hash_snapshot`, `versao`, `reaberto_em`) · Comprova M0-04, M1-01 · 2026-05 · Perene
-- **E-02** Função DB · Supabase · `folha_pagamento` retorna `hash` SHA-256 determinístico · Comprova M0-04 estrutural · 2026-05 · Perene
-- **E-03** Função DB · Supabase · `verificar_hash_periodo` reexecuta e compara · Comprova M1-02 (mecanismo, não execução real) · 2026-05 · A auditar
-- **E-04** Edge Function · Supabase · `supabase/functions/export-csv/index.ts` · Comprova M0-03, M1-03 · Ativa · Perene
-- **E-05** Constitucional · Repo · `.lovable/OPERA_CORE.md` v1.3 (I1–I11) · Comprova M0-01 · 2026-05-30 · Perene enquanto versão vigente
-- (…demais evidências)
+## Fonte da verdade (verificável)
 
-### 7. Indicadores Executivos (§5)
-Painel de KPIs em cards:
-- Marcos concluídos: **1/5**
-- Critérios concluídos / total: **~9 / ~28** (~32%)
-- Critérios bloqueados: **3** (dependências abertas)
-- Riscos críticos: **3** (Alto)
-- Débitos técnicos críticos: **2** (hash não reproduzido, sem testes RLS)
-- Evidências auditadas: **6** (estruturais no repo)
-- Evidências pendentes: **~12** (execução real, contratos, LGPD)
+- `.lovable/OPERA_CORE.md` v1.3 (invariantes I1–I11)
+- `.lovable/memory/architecture/*` (multi-tenancy, workforce-financial-logic)
+- `.lovable/memory/security/rls-access-validation.md`
+- Schema atual (tabelas, funções `folha_pagamento`, `verificar_hash_periodo`, `reabrir_periodo`, `refechar_periodo`, `dashboard_aggregates`, RPCs `has_role`, `user_has_obra_access`, `get_user_tenant_id`, `is_super_admin`)
+- Edge functions (`export-csv`, `data-retention`)
+- Padrão de tabelas: `tenant_id`, `deleted_at`, `created_at`, `updated_at`, `correlation_id`
+- Padrão de audit: `audit_logs`, `audit_logs_db`, `system_events`
+- Regras do stack: React 18 + Vite 5 + Tailwind + Supabase; sem PWA/Service Worker; auth Supabase nativa
 
-### 8. Critério Formal de Mudança de Marco (§7)
-Regra explícita (destaque em caixa laranja):
-> Um marco só muda para "atingido" quando **(a)** todos os critérios de prioridade **Alta** estão concluídos com evidência auditada, **(b)** nenhuma dependência crítica está aberta, **(c)** todas as evidências obrigatórias existem e são rastreáveis, **(d)** nenhum bloqueador classificado como **Alto** permanece. Critérios de prioridade Média/Baixa podem transitar para "débito técnico documentado" sem impedir a promoção do marco.
+## Estrutura do PDF (~14–16 páginas)
 
-### 9. Histórico de Evolução (§6)
-Log incremental (só mudanças). Formato compacto:
-- **v1.0 — 2026-07-06** — Roadmap inicial, M0 concluído, marcos M1–M4 definidos.
-- **v1.1 — 2026-07-06** — Governança contínua ativada: IDs de critério, evidências normalizadas, painel executivo, critério formal de mudança de marco.
-- (linhas futuras vazias reservadas: "+ Hash reproduzido", "+ Domínio próprio", "+ Piloto 30 dias", "+ Contrato piloto", "→ M1 atingido")
+### 1. Preâmbulo
+Meia página. Declara: escopo permanente, autoridade sobre demais documentos, quem pode emendar (apenas via RFC §16), quem interpreta em caso de conflito (ordem: Constituição → OPERA_CORE → Governança → Roadmap → Diagnóstico → Modelo Empresarial).
 
-### 10. Como Atualizar Este Documento
-Meia página final com regras operacionais:
-- Cada avanço = uma linha no histórico + atualização do critério + atualização do painel executivo.
-- Nenhuma mudança de marco sem passar pelo Critério Formal §7.
-- Novas evidências recebem próximo ID sequencial (E-XX).
-- O documento é regerado, não editado à mão — este PDF é a saída de um script Python versionado (`gen_gov.py`).
+### 2. Arquitetura em Camadas
+Diagrama ASCII em Table + explicação de cada camada.
 
-### 11. Anexo — Diferença v1.0 → v1.1
-Tabela curta: v1.0 = documento (marcos + gaps textuais); v1.1 = instrumento (critérios com ID, evidências rastreadas, painel executivo, histórico versionado, regra formal de promoção).
+```text
+┌─────────────────────────────────────────────────┐
+│ Interface   (React + Tailwind + shadcn)         │  ← apresentação
+├─────────────────────────────────────────────────┤
+│ Aplicação   (hooks, services, react-query)      │  ← orquestração
+├─────────────────────────────────────────────────┤
+│ Domínio     (invariantes, regras, tipos)        │  ← núcleo estável
+├─────────────────────────────────────────────────┤
+│ Infraestrutura (Supabase: DB, RLS, RPC, Edge)   │  ← execução
+└─────────────────────────────────────────────────┘
+```
+
+Regra: dependência aponta **para baixo**. Domínio não conhece Aplicação; Aplicação não conhece Interface; nenhuma camada superior pula direto para Infraestrutura sem passar pelo cliente Supabase encapsulado.
+
+### 3. Princípios Arquiteturais Obrigatórios
+Lista numerada P1–P10. Ex.:
+- **P1** Tenant-isolation por RLS. Nenhuma consulta client-side confia em filtros locais para separação de tenants.
+- **P2** Soft-delete padrão (`deleted_at`) para entidades de domínio.
+- **P3** Server-derived truth. `tenant_id`, `user_id`, `role` derivam de `auth.uid()` no server, nunca do payload cliente.
+- **P4** Hash determinístico para fatos financeiros (SHA-256 sobre payload canonicalizado).
+- **P5** Causalidade rastreável (`correlation_id`, `causation_id` em `system_events`).
+- **P6** Presenças/diárias como eventos imutáveis com `status_contabil` (prevista/confirmada/ajustada).
+- **P7** Nenhum estado de sessão em IndexedDB/localforage. Apenas Supabase Auth nativo.
+- **P8** Zero Service Worker/PWA (histórico de stale cache).
+- **P9** Roles em tabela `user_roles` separada, verificadas por SECURITY DEFINER.
+- **P10** Design tokens semânticos em `index.css`; sem cores hardcoded em componentes.
+
+### 4. Regras de Evolução do Banco de Dados
+- Toda mudança de schema via migration versionada.
+- `CREATE TABLE public.*` sempre acompanhado de `GRANT` + `ENABLE RLS` + policies (na mesma migration).
+- Colunas de auditoria (`created_at`, `updated_at`, `tenant_id`, opcional `deleted_at`) obrigatórias em tabelas de domínio.
+- Migrations **não removem colunas** sem passar por depreciação §12.
+- Renames de coluna passam por `add + backfill + dual-write + read-switch + drop`.
+- Nenhum `ALTER DATABASE postgres`.
+- Validações time-dependent via trigger, nunca CHECK constraint.
+
+### 5. Regras de Versionamento
+Adota **SemVer** para o produto Atlas e para contratos públicos:
+- **Major** — quebra de contrato público (RPC, edge, schema exposto ao cliente).
+- **Minor** — adição retrocompatível.
+- **Patch** — correção sem mudar contrato.
+
+Documentos governados pela Constituição versionam separadamente (`OPERA_CORE v1.x`, `Governança v1.x`) mas seguem a mesma classificação.
+
+### 6. Política de Breaking Changes
+Uma mudança é **breaking** quando:
+- Remove/renomeia campo em resposta de RPC ou edge function pública.
+- Muda tipo de campo de forma não coerciva.
+- Altera semântica de invariante existente (I1–I11).
+- Remove policy RLS que outros clientes assumem ativa.
+- Quebra hash de fechamento (`folha_pagamento` retorna hash diferente para o mesmo input).
+
+Breaking change exige:
+1. RFC aprovada (§16).
+2. Versão Major.
+3. Janela de depreciação mínima de **90 dias** com contrato antigo ativo.
+4. Migration path documentado.
+5. Notificação a clientes ativos em produção.
+
+### 7. Contratos Públicos Entre Módulos
+Enumera os contratos considerados **públicos** (mudança exige §6):
+- Funções DB `folha_pagamento`, `verificar_hash_periodo`, `reabrir_periodo`, `refechar_periodo`, `dashboard_aggregates`, `validar_fechamento`, `promover_previsoes`, `has_role`, `user_has_obra_access`, `get_user_tenant_id`, `is_super_admin`.
+- Edge functions: `export-csv`, `data-retention`, e qualquer edge com URL pública.
+- Tabelas expostas via PostgREST: schema + policies observáveis.
+- Formato de eventos `system_events` (event_type, payload).
+- Formato de hash de fechamento (payload canonicalizado + algoritmo SHA-256).
+
+Contratos **privados** (podem mudar em Minor): componentes React, hooks, tabelas internas sem PostgREST, colunas com prefixo `_internal`, memórias e documentação.
+
+### 8. Modelo Oficial de Eventos
+Padrão único em `system_events`:
+```text
+event_type   verbo.entidade.qualificador  (ex. periodo.reaberto)
+source       origem técnica (rpc.<nome> | edge.<nome> | trigger.<nome>)
+correlation_id  transação lógica
+causation_id    evento que causou este
+payload      jsonb canonicalizado
+severity     info | warn | error
+```
+Toda mutação de estado com efeito jurídico/financeiro emite evento.
+
+### 9. Modelo Oficial de Snapshots
+Snapshot = fotografia imutável de fato consolidado.
+- `folha_pagamento(obra, ini, fim)` produz snapshot canônico.
+- Ao fechar período: `periodos_fechados` armazena `snapshot_json` + `hash_snapshot`.
+- Reabertura preserva versão anterior em `periodos_reaberturas` (append-only).
+- Hash reproduzível: mesmo input ⇒ mesmo SHA-256, indefinidamente.
+
+### 10. Modelo Oficial de Identidade das Entidades
+- Toda entidade primária tem `id uuid default gen_random_uuid()`.
+- Toda entidade multi-tenant tem `tenant_id uuid not null`.
+- Nenhum identificador de negócio (CNPJ, matrícula) serve como PK.
+- Referências entre entidades sempre via UUID + FK explícita.
+- IDs de critério, evidência e evento seguem prefixo estável (`M0-01`, `E-01`, `event.tipo`).
+
+### 11. Política de Compatibilidade Retroativa
+- Aditividade preferida: novos campos opcionais nunca quebram contrato.
+- Respostas de RPC aceitam campos extras ignorados pelo cliente.
+- Clientes toleram versões +1 minor sem falhar.
+- Cliente rejeita apenas em mudança Major com contrato explícito novo.
+
+### 12. Política de Depreciação
+- Marcar como `@deprecated` na documentação + retornar header `X-Deprecated: <motivo>` (edge functions) ou log estruturado (RPC).
+- Janela mínima **90 dias** para contratos públicos, **30 dias** para privados.
+- Remoção só após: prazo cumprido + zero uso em `system_events` no período + RFC aprovada.
+
+### 13. Política de Observabilidade
+- Todo RPC público loga em `audit_logs` OU `system_events` (regra: efeito de negócio → ambos).
+- `correlation_id` propagado do cliente ao DB via `set_correlation_context`.
+- Erros server-side com stack + payload sanitizado.
+- Métricas mínimas: latência p95 de RPCs críticas, taxa de erro, volume de eventos por tipo.
+
+### 14. Política de Auditoria
+- Toda tabela de domínio com efeito financeiro/jurídico tem trigger `fn_audit_log_changes` gravando em `audit_logs_db`.
+- Reabertura de período: registra motivo (≥20 caracteres), autor, correlation.
+- Alteração de `valor_diaria_usado` bloqueada após 7 dias exceto admin (`fn_protect_snapshot`).
+- Fechado + reaberto = registros lado a lado, nunca sobrescrita.
+
+### 15. Política de Performance
+Limites duros (violação = bug, não trade-off):
+- Consultas de dashboard não excedem **15 queries** por render (regra observada como débito atual).
+- RPCs de fechamento executam em **≤ 3s** para 1 obra × 1 mês.
+- Nenhuma query no cliente que produza N+1 sobre `colaboradores` ou `obras`.
+- Bulk operations preferidas via RPC dedicada (ex. bulk delete de presenças).
+
+### 16. Política de Segurança
+- RLS obrigatório em toda tabela `public.*`.
+- Roles administrativas verificadas por SECURITY DEFINER (`has_role`, `is_super_admin`).
+- Nunca checar admin em client-side/localStorage.
+- Secrets apenas via env de edge functions; nunca no bundle cliente.
+- Publishable/anon key ok em código; service_role nunca no cliente.
+
+### 17. Critérios de Aceitação de Nova Funcionalidade
+Uma funcionalidade só entra em `main` quando:
+1. Cabe em uma camada (§2) sem violar dependência.
+2. Não viola nenhum princípio P1–P10.
+3. Traz teste ou justificativa registrada de por que não trouxe.
+4. Se toca DB: migration + GRANT + RLS + policies na mesma migration.
+5. Se toca contrato público: RFC aprovada.
+
+### 18. Critérios de Rejeição
+Rejeitar automaticamente quando:
+- Usa localStorage/IndexedDB para sessão.
+- Instala Service Worker/PWA.
+- Adiciona coluna sem `tenant_id` em tabela multi-tenant.
+- Confia em filtro cliente para separação de dados.
+- Introduz gradiente/roxo genérico ou tipografia default (viola design memory).
+- Adiciona role em `profiles` em vez de `user_roles`.
+- Bypassa `has_role` com check ad-hoc.
+
+### 19. Processo Formal de RFC (Request for Change)
+Estrutura mínima:
+```text
+RFC-XXXX  Título
+Autor · Data · Status (draft | review | approved | rejected | superseded)
+1. Motivação
+2. Proposta (contrato antes/depois)
+3. Alternativas consideradas
+4. Impacto (§21)
+5. Migration path
+6. Compatibilidade retroativa (§11)
+7. Depreciação prevista (§12)
+8. Aprovação (mín. 1 admin + 1 revisor arquitetural)
+```
+RFCs vivem em `.lovable/rfcs/RFC-XXXX.md` (a criar futuramente — fora do escopo deste PDF).
+
+### 20. Fluxo Oficial de Evolução Arquitetural
+```text
+Ideia → Discussão → RFC draft → Review → Aprovação → Implementação
+                                              ↓
+                              Migration + Teste + Docs
+                                              ↓
+                              Release (Patch/Minor/Major)
+                                              ↓
+                              Registro em Governança §7 (histórico)
+```
+
+### 21. Matriz de Impacto Arquitetural
+Tabela: dimensão × classificação.
+
+| Dimensão | Patch | Minor | Major |
+|---|---|---|---|
+| Schema | Índice, comentário | Nova coluna nullable, nova tabela | Remove/rename coluna, muda tipo |
+| RPC pública | Bugfix sem mudar shape | Novo parâmetro opcional | Muda retorno, remove função |
+| Edge pública | Bugfix | Novo endpoint | Muda contrato existente |
+| RLS | Ajuste equivalente | Nova policy permissiva | Restringir acesso já concedido |
+| UI | Estilo, texto | Nova tela, novo card | Remove rota, muda URL |
+| Invariante | — | — | Sempre Major, exige emenda constitucional |
+
+### 22. Classificação de Mudanças
+Regra prática: em caso de dúvida, escalar (Patch→Minor, Minor→Major). Nunca escalar para baixo.
+
+### 23. Checklist Obrigatório Pré-Release
+- [ ] Migrations aplicadas em staging.
+- [ ] `bun run build` sem erros.
+- [ ] Testes que existem verdes.
+- [ ] Se toca DB: `supabase--linter` sem novos avisos.
+- [ ] Se toca contrato público: RFC linkada.
+- [ ] Histórico da Governança §7 atualizado com a mudança.
+- [ ] Sem `console.error` novo no fluxo principal.
+- [ ] Design tokens respeitados (sem hex hardcoded).
+
+### 24. Critérios para Congelamento Arquitetural
+Áreas podem ser declaradas **congeladas** — nenhuma mudança sem emenda constitucional:
+- Formato do hash de fechamento (após primeira execução em cliente pago).
+- Estrutura de `periodos_fechados` e `periodos_reaberturas`.
+- Contrato de `folha_pagamento`.
+- Modelo de eventos em `system_events`.
+
+Congelamento acontece por RFC que altera esta seção.
+
+### 25. Relação Entre Documentos
+Tabela final:
+
+| Documento | Governa | Sujeito a |
+|---|---|---|
+| Constituição Arquitetural v1.0 | Como o Atlas pode mudar | Emenda via RFC |
+| OPERA_CORE v1.3 | Invariantes de domínio | Constituição §3 |
+| Modelo Empresarial | O que o Atlas é | Constituição §17 |
+| Diagnóstico Objetivo | Onde está | Reflete estado real |
+| Roadmap de Maturidade | Marcos M0–M4 | Constituição §21 |
+| Governança de Maturidade v1.1 | Como medir evolução | Constituição §20 |
+| RFCs | Propostas de mudança | Constituição §19 |
+
+### 26. Assinatura Constitucional
+Uma frase de encerramento em caixa laranja:
+> "Esta Constituição é a única fonte de autoridade sobre a arquitetura do OPERA Atlas. Qualquer código, migration, decisão de produto ou release que a viole é considerado defeituoso, independentemente de funcionar."
 
 ## Detalhes técnicos de geração
 
-- Python + `reportlab` Platypus, `SimpleDocTemplate` A4, margens 2 cm.
-- Paleta reaproveitada: laranja `#F97316` (header), verde `#16A34A`, âmbar `#F59E0B`, vermelho `#DC2626`, cinza-escuro `#374151` (header de tabela), cinza claro `#F3F4F6` (linhas alternadas).
-- Barras de progresso: `Table` de 2 colunas (largura proporcional ao %), fill verde no preenchido / cinza no restante.
-- Setas: caractere `>` em Helvetica bold (arrows Unicode não renderizam em Helvetica embedded).
-- Sem Unicode sub/superscript. Nada de `▶`.
-- Cada tabela grande recebe `repeatRows=1` para quebrar entre páginas mantendo cabeçalho.
-- QA obrigatório: `pdftoppm -jpeg -r 110` → `code--view` de todas as páginas, corrigir overflow/alinhamento antes de finalizar. Reportar issues encontrados e como foram corrigidos.
+- Python + `reportlab` A4, margens 1.8 cm.
+- Reaproveitar paleta e estilos (`H1`, `H2`, `H3`, `BODY`, `CELL`, `CELLW`, `QUOTE`) do gerador anterior — copiar de `/tmp/gen_gov.py`.
+- Setas apenas ASCII (`>`, `<`, `->`, `↓` só em blocos monospaced sem tab).
+- Diagramas em `Table` com fundo `GRAY_L` + fonte Courier para lookalike ASCII.
+- Tabela de princípios (P1–P10), matriz de impacto (§21) e relação de documentos (§25) com `repeatRows=1`.
+- QA obrigatório: `pdftoppm -jpeg -r 110` → `code--view` de todas as páginas, corrigir overflow/alinhamento. Reportar issues.
 
 ## Fora de escopo
 
-- **Não** implementar o painel dentro da aplicação (nada de nova rota `/governanca`). Se essa evolução for desejada em UI, virá em pedido separado.
-- **Não** alterar schema, RLS, edge functions ou memórias.
-- **Não** regerar o Diagnóstico Objetivo nem o Roadmap v1.0.
-- **Não** gerar versão pitch/comercial.
+- **Não** criar `.lovable/rfcs/` nem primeira RFC (fica para pedido separado).
+- **Não** codificar checklist §23 em CI (fica para pedido separado).
+- **Não** modificar OPERA_CORE, memórias, schema, código ou edge functions.
+- **Não** regerar Diagnóstico, Roadmap ou Governança v1.1.
 
 ## Entregável
 
-Um arquivo: `/mnt/documents/OPERA_Atlas_Governanca_Maturidade_v1.1.pdf` (~10–12 páginas). Script Python de geração salvo em `/tmp/gen_gov.py` para re-execução determinística nas próximas atualizações (v1.2, v1.3…).
+Um arquivo: `/mnt/documents/OPERA_Atlas_Constituicao_Arquitetural_v1.0.pdf` (~14–16 páginas). Script versionado em `/tmp/gen_const.py`.
