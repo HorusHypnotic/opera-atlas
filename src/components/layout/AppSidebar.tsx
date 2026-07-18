@@ -27,6 +27,7 @@ const sections = [
   { title: "Economia", url: "/economia", icon: Banknote, viewOnly: true },
   { title: "Relatório Equipe", url: "/relatorio-mao-obra", icon: FileText, viewOnly: true },
   { title: "Cronograma", url: "/cronograma", icon: CalendarRange, viewOnly: true },
+  { title: "Pesquisa", url: "/pesquisa", icon: FlaskConical, viewOnly: false },
 ];
 
 export function AppSidebar() {
