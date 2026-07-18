@@ -1362,6 +1362,42 @@ export type Database = {
           },
         ]
       }
+      obras_pesquisa: {
+        Row: {
+          created_at: string
+          data_inicio: string
+          dono_id: string
+          grupo: string
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_inicio?: string
+          dono_id?: string
+          grupo: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_inicio?: string
+          dono_id?: string
+          grupo?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       periodos_fechados: {
         Row: {
           fechado_em: string
