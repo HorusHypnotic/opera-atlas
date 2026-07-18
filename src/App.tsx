@@ -31,6 +31,7 @@ import BetaSignupPage from "./pages/BetaSignupPage";
 import BetaStatusPage from "./pages/BetaStatusPage";
 import RelatorioMaoObraPage from "./pages/RelatorioMaoObraPage";
 import CronogramaPage from "./pages/CronogramaPage";
+import PesquisaPage from "./pages/PesquisaPage";
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
