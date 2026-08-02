@@ -19,7 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { logAudit } from "@/lib/auditLog";
 import {
   FileText, Download, Printer, DollarSign, Users, Calendar, Filter, FileSpreadsheet,
-  Plus, Pencil, Trash2, RotateCcw, AlertTriangle,
+  Plus, Pencil, Trash2, RotateCcw, AlertTriangle, MessageCircle, LockKeyhole,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -149,6 +149,8 @@ export default function RelatorioMaoObraPage() {
   const [formObs, setFormObs] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; nome: string }>({ open: false, id: "", nome: "" });
   const [zerarConfirm, setZerarConfirm] = useState(false);
+  const [paymentShareOpen, setPaymentShareOpen] = useState(false);
+  const [paymentShareText, setPaymentShareText] = useState("");
 
   const obraAtual = obras.find((o) => o.id === selectedObraId) || obras[0];
 
@@ -606,7 +608,7 @@ export default function RelatorioMaoObraPage() {
     // Aviso obrigatório de composição
     doc.setFont("helvetica", "bold");
     doc.setTextColor(180, 60, 0);
-    doc.text("AVISO: TOTAL = Base Presença + Ajuste + Legado. Confira o breakdown antes de pagar. ⚠ = ajuste oculto.", 14, y);
+    doc.text("AVISO: TOTAL = Base Presença + Ajuste + Legado. Ajustes manuais devem ser conferidos antes do pagamento.", 14, y);
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     y += 5;
@@ -623,61 +625,84 @@ export default function RelatorioMaoObraPage() {
       return;
     }
 
-    let totalGeralValor = 0;
-    let totalGeralDiarias = 0;
+    const totalGeralValor = blocks.reduce((total, block) => total + block.subtotal, 0);
+    const totalGeralDiarias = blocks.reduce((total, block) => total + block.totalDiarias, 0);
+    const totalAlocacoes = blocks.reduce((total, block) => total + block.rows.length, 0);
 
     blocks.forEach((block, idx) => {
       const lastY = (doc as any).lastAutoTable?.finalY;
-      let titleY = idx === 0 ? y : (lastY ? lastY + 10 : y);
-      if (titleY > doc.internal.pageSize.getHeight() - 40) {
-        doc.addPage();
-        titleY = 20;
+      const startY = idx === 0 ? y : (lastY ? lastY + 8 : y);
+      const isLastBlock = idx === blocks.length - 1;
+      const foot = [
+        [
+          { content: "SUBTOTAL DA OBRA", colSpan: 3, styles: { halign: "right" } },
+          block.totalDiarias.toFixed(1),
+          "", "", "", "", "",
+          `R$ ${block.subtotal.toFixed(2)}`,
+          "", "",
+        ] as any,
+      ];
+
+      if (isLastBlock && blocks.length > 1) {
+        foot.push([
+          { content: "TOTAL GERAL / DIÁRIAS ALOCADAS", colSpan: 3, styles: { halign: "right" } },
+          totalGeralDiarias.toFixed(1),
+          "", "", "", "", "",
+          `R$ ${totalGeralValor.toFixed(2)}`,
+          "", "",
+        ] as any);
+        foot.push([
+          {
+            content: `${totalAlocacoes} alocações pessoa-obra. A mesma pessoa pode aparecer em mais de uma obra; este total não representa colaboradores únicos.`,
+            colSpan: 12,
+            styles: { halign: "left", fontStyle: "normal", fontSize: 6.5 },
+          },
+        ] as any);
       }
 
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Obra: ${block.obraNome}`, 14, titleY);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-
       autoTable(doc, {
-        startY: titleY + 3,
-        head: [["Nome", "Função", "Diária", "Qtd", "Base Presença", "Ajuste", "Legado", "TOTAL", "Origem", "PIX"]],
-        body: block.rows.map((r) => {
-          const expected = r.valorDiaria * r.qtdDiarias;
-          const delta = r.valorTotal - expected;
-          const flag = Math.abs(delta) > 0.01 ? " ⚠" : "";
-          return [
+        startY,
+        head: [
+          [{ content: `Obra: ${block.obraNome}`, colSpan: 12, styles: { fontSize: 11, halign: "left" } }],
+          ["Nome", "Função", "Diária ref.", "Qtd total", "Qtd base", "Qtd ajuste", "Base Presença", "Ajuste", "Legado", "TOTAL", "Origem", "PIX"],
+        ],
+        body: block.rows.map((r) => [
             r.nome, r.funcao,
             `R$ ${r.valorDiaria.toFixed(2)}`,
             r.qtdDiarias % 1 === 0 ? r.qtdDiarias.toString() : r.qtdDiarias.toFixed(1),
+            r.qtdBasePresenca % 1 === 0 ? r.qtdBasePresenca.toString() : r.qtdBasePresenca.toFixed(1),
+            r.qtdAjuste % 1 === 0 ? r.qtdAjuste.toString() : r.qtdAjuste.toFixed(1),
             `R$ ${r.valorBasePresenca.toFixed(2)}`,
             `R$ ${r.valorAjuste.toFixed(2)}`,
             `R$ ${r.valorLegado.toFixed(2)}`,
-            `R$ ${r.valorTotal.toFixed(2)}${flag}`,
+            `R$ ${r.valorTotal.toFixed(2)}`,
             r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Pres+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
             r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "—",
-          ];
-        }),
-        foot: [["", "", "", `${block.totalDiarias.toFixed(1)}`, "", "", "", `R$ ${block.subtotal.toFixed(2)}`, "", ""]],
-        styles: { fontSize: 8, cellPadding: 2 },
+          ]),
+        foot,
+        showFoot: "lastPage",
+        pageBreak: "avoid",
+        rowPageBreak: "avoid",
+        styles: { fontSize: 6.5, cellPadding: 1.5, overflow: "linebreak" },
         headStyles: { fillColor: [41, 37, 36], textColor: 255 },
         footStyles: { fillColor: [245, 245, 244], textColor: [0, 0, 0], fontStyle: "bold" },
         margin: { left: 8, right: 8 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 16 },
+          3: { cellWidth: 10 },
+          4: { cellWidth: 11 },
+          5: { cellWidth: 12 },
+          6: { cellWidth: 18 },
+          7: { cellWidth: 17 },
+          8: { cellWidth: 16 },
+          9: { cellWidth: 19 },
+          10: { cellWidth: 18 },
+          11: { cellWidth: "auto" },
+        },
       });
-
-      totalGeralValor += block.subtotal;
-      totalGeralDiarias += block.totalDiarias;
     });
-
-    if (blocks.length > 1) {
-      const finalY = (doc as any).lastAutoTable?.finalY || y;
-      let tgY = finalY + 10;
-      if (tgY > doc.internal.pageSize.getHeight() - 20) { doc.addPage(); tgY = 20; }
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text(`TOTAL GERAL — ${totalGeralDiarias.toFixed(1)} diárias — R$ ${totalGeralValor.toFixed(2)}`, 14, tgY);
-    }
 
     doc.save(`relatorio-equipe-${dataInicio}-${dataFim}.pdf`);
   };
@@ -698,32 +723,160 @@ export default function RelatorioMaoObraPage() {
 
     blocks.forEach((block) => {
       wsData.push([`Obra: ${block.obraNome}`]);
-      wsData.push(["Nome", "Função", "Diária (R$)", "Qtd Diárias", "Base Presença (R$)", "Ajuste (R$)", "Legado (R$)", "TOTAL (R$)", "Esperado (Diária×Qtd)", "Delta", "Origem", "PIX"]);
+      wsData.push(["Nome", "Função", "Diária referência (R$)", "Qtd total", "Qtd base", "Qtd ajuste", "Base Presença (R$)", "Ajuste (R$)", "Legado (R$)", "TOTAL (R$)", "Origem", "PIX"]);
       block.rows.forEach((r) => {
-        const expected = r.valorDiaria * r.qtdDiarias;
-        const delta = r.valorTotal - expected;
         wsData.push([
           r.nome, r.funcao, r.valorDiaria, r.qtdDiarias,
+          r.qtdBasePresenca, r.qtdAjuste,
           r.valorBasePresenca, r.valorAjuste, r.valorLegado, r.valorTotal,
-          expected, delta,
           r.fonte === "legado" ? "Legado" : r.fonte === "misto" ? "Presença+Ajuste" : r.fonte === "ajuste" ? "Ajuste" : "Presença",
           r.pixChave ? `${r.pixTipo}: ${r.pixChave}` : "",
         ]);
       });
-      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, "", "", "", block.subtotal, "", "", "", ""]);
+      wsData.push(["", "", "", `Subtotal: ${block.totalDiarias.toFixed(1)}`, "", "", "", "", "", block.subtotal, "", ""]);
       wsData.push([]);
       totalGeralValor += block.subtotal;
       totalGeralDiarias += block.totalDiarias;
     });
 
     if (blocks.length > 1) {
-      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, "", "", "", totalGeralValor, "", "", "", ""]);
+      wsData.push(["", "", "", `TOTAL GERAL (${totalGeralDiarias.toFixed(1)} diárias)`, "", "", "", "", "", totalGeralValor, "", ""]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Mão de Obra");
     XLSX.writeFile(wb, `relatorio-equipe-${dataInicio}-${dataFim}.xlsx`);
+  };
+
+  const shareWhatsAppSummary = async () => {
+    const blocks = buildReportBlocks();
+    if (blocks.length === 0) {
+      toast.info("Nenhum dado encontrado para o período selecionado");
+      return;
+    }
+
+    const totalAlocacoes = blocks.reduce((total, block) => total + block.rows.length, 0);
+    const totalGeralDiarias = blocks.reduce((total, block) => total + block.totalDiarias, 0);
+    const totalGeralValor = blocks.reduce((total, block) => total + block.subtotal, 0);
+    const formatMoney = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const lines = [
+      `Relatório consolidado de ${formatDate(dataInicio)} a ${formatDate(dataFim)}`,
+      "",
+      "Os valores representam diárias alocadas por frente de serviço. Uma pessoa pode aparecer em mais de uma obra.",
+      "",
+    ];
+
+    blocks.forEach((block) => {
+      lines.push(
+        block.obraNome,
+        `Alocações pessoa-obra: ${block.rows.length}`,
+        `Diárias alocadas: ${block.totalDiarias.toFixed(1)}`,
+        `Subtotal: R$ ${formatMoney(block.subtotal)}`,
+        "",
+      );
+    });
+
+    lines.push(
+      "RESUMO CONSOLIDADO",
+      `Total de alocações pessoa-obra: ${totalAlocacoes}`,
+      `Total de diárias alocadas: ${totalGeralDiarias.toFixed(1)}`,
+      `Total geral do período: R$ ${formatMoney(totalGeralValor)}`,
+      "",
+      "Este resumo não representa colaboradores únicos e não contém dados bancários.",
+      `Relatório gerado por O.P.E.R.A. Atlas em ${new Date().toLocaleDateString("pt-BR")}.`,
+    );
+
+    const text = lines.join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      window.location.href = "whatsapp://send";
+      toast.success("Resumo copiado. Escolha o contato no WhatsApp e cole a mensagem.");
+    } catch {
+      toast.error("Não foi possível preparar o compartilhamento");
+    }
+  };
+
+  const preparePaymentShare = async () => {
+    const blocks = buildReportBlocks();
+    if (blocks.length === 0) {
+      toast.info("Nenhum dado encontrado para o período selecionado");
+      return;
+    }
+
+    const formatMoney = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const totalGeralDiarias = blocks.reduce((total, block) => total + block.totalDiarias, 0);
+    const totalGeralValor = blocks.reduce((total, block) => total + block.subtotal, 0);
+    const lines = [
+      `RELATÓRIO DE PAGAMENTO - ${formatDate(dataInicio)} a ${formatDate(dataFim)}`,
+      "Uso interno. Conferir destinatário, valores e chaves Pix antes do envio.",
+      "",
+    ];
+
+    blocks.forEach((block) => {
+      lines.push(
+        `OBRA: ${block.obraNome}`,
+        `Diárias alocadas: ${block.totalDiarias.toFixed(1)}`,
+        "",
+      );
+
+      block.rows.forEach((row) => {
+        lines.push(
+          row.nome,
+          `Função: ${row.funcao}`,
+          `Diária de referência: R$ ${formatMoney(row.valorDiaria)}`,
+          `Quantidade total: ${row.qtdDiarias.toFixed(1)}`,
+          `Presença: ${row.qtdBasePresenca.toFixed(1)} diária(s) / R$ ${formatMoney(row.valorBasePresenca)}`,
+          `Ajustes: ${row.qtdAjuste.toFixed(1)} diária(s) / R$ ${formatMoney(row.valorAjuste)}`,
+          `Legado: R$ ${formatMoney(row.valorLegado)}`,
+          `Total: R$ ${formatMoney(row.valorTotal)}`,
+          `Pix: ${row.pixChave ? `${row.pixTipo}: ${row.pixChave}` : "não informado"}`,
+        );
+        if (Math.abs(row.valorAjuste) > 0.01) {
+          lines.push("ATENÇÃO: conferir ajuste manual antes do pagamento.");
+        }
+        lines.push("");
+      });
+
+      lines.push(`SUBTOTAL DA OBRA: R$ ${formatMoney(block.subtotal)}`, "", "------------------------------", "");
+    });
+
+    lines.push(
+      "RESUMO CONSOLIDADO",
+      `Total de diárias alocadas: ${totalGeralDiarias.toFixed(1)}`,
+      `Total geral: R$ ${formatMoney(totalGeralValor)}`,
+      "",
+      `Gerado por O.P.E.R.A. Atlas em ${new Date().toLocaleString("pt-BR")}.`,
+    );
+
+    setPaymentShareText(lines.join("\n"));
+    setPaymentShareOpen(true);
+    await logAudit({
+      action: "PREPARE_PAYMENT_SHARE",
+      target_type: "relatorio_mao_obra",
+      metadata: {
+        periodo_inicio: dataInicio,
+        periodo_fim: dataFim,
+        quantidade_obras: blocks.length,
+        quantidade_alocacoes: blocks.reduce((total, block) => total + block.rows.length, 0),
+      },
+    });
+  };
+
+  const confirmPaymentShare = async () => {
+    try {
+      await navigator.clipboard.writeText(paymentShareText);
+      await logAudit({
+        action: "START_PAYMENT_SHARE",
+        target_type: "relatorio_mao_obra",
+        metadata: { periodo_inicio: dataInicio, periodo_fim: dataFim },
+      });
+      setPaymentShareOpen(false);
+      window.location.href = "whatsapp://send";
+      toast.success("Relatório copiado. Escolha seu patrão no WhatsApp e cole a mensagem.");
+    } catch {
+      toast.error("Não foi possível preparar o compartilhamento");
+    }
   };
 
   return (
@@ -805,7 +958,13 @@ export default function RelatorioMaoObraPage() {
             <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
             <TabsTrigger value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
           </TabsList>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={shareWhatsAppSummary}>
+              <MessageCircle className="h-4 w-4 mr-1" /> Resumo
+            </Button>
+            <Button variant="outline" size="sm" onClick={preparePaymentShare}>
+              <LockKeyhole className="h-4 w-4 mr-1" /> Pagamento
+            </Button>
             <Button variant="outline" size="sm" onClick={exportPDF}>
               <Download className="h-4 w-4 mr-1" /> PDF
             </Button>
@@ -1299,6 +1458,32 @@ export default function RelatorioMaoObraPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={paymentShareOpen} onOpenChange={setPaymentShareOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Revisar relatório de pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-md border border-status-warning/30 bg-status-warning/10 p-3 text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-status-warning" />
+              <span>Este conteúdo inclui nomes e chaves Pix. Confirme os valores e selecione somente o destinatário autorizado.</span>
+            </div>
+            <Textarea
+              value={paymentShareText}
+              readOnly
+              aria-label="Prévia do relatório de pagamento"
+              className="h-[50vh] resize-none font-mono text-xs"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPaymentShareOpen(false)}>Cancelar</Button>
+              <Button onClick={confirmPaymentShare}>
+                <MessageCircle className="h-4 w-4 mr-2" /> Abrir WhatsApp
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={deleteConfirm.open}

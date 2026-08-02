@@ -14,9 +14,14 @@ export function ShareButton({ summary, obraNome }: ShareButtonProps) {
 
   const fullText = `📊 *Resumo O.P.E.R.A. — ${obraNome}*\n${new Date().toLocaleDateString("pt-BR")}\n\n${summary}`;
 
-  const handleWhatsApp = () => {
-    const encoded = encodeURIComponent(fullText);
-    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+  const handleWhatsApp = async () => {
+    try {
+      await navigator.clipboard.writeText(fullText);
+      window.location.href = "whatsapp://send";
+      toast.success("Resumo copiado. Escolha o contato no WhatsApp e cole a mensagem.");
+    } catch {
+      toast.error("Não foi possível preparar o compartilhamento");
+    }
   };
 
   const handleCopy = async () => {
