@@ -951,27 +951,29 @@ export default function RelatorioMaoObraPage() {
 
       {/* ─── Tabs ─── */}
       <Tabs defaultValue="financeiro" className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
-            {canInsert && <TabsTrigger value="apontamentos">📝 Apontamentos</TabsTrigger>}
-            <TabsTrigger value="operacional">📋 Operacional</TabsTrigger>
-            <TabsTrigger value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
-          </TabsList>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={shareWhatsAppSummary}>
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="w-full overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+            <TabsList className="h-auto w-max min-w-full justify-start lg:min-w-0">
+              <TabsTrigger className="flex-1 lg:flex-none" value="financeiro">💰 Financeiro</TabsTrigger>
+              {canInsert && <TabsTrigger className="flex-1 lg:flex-none" value="apontamentos">📝 Apontamentos</TabsTrigger>}
+              <TabsTrigger className="flex-1 lg:flex-none" value="operacional">📋 Operacional</TabsTrigger>
+              <TabsTrigger className="flex-1 lg:flex-none" value="sequenciamento">🔄 Sequenciamento</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:w-auto lg:flex-wrap">
+            <Button className="w-full lg:w-auto" variant="outline" size="sm" onClick={shareWhatsAppSummary}>
               <MessageCircle className="h-4 w-4 mr-1" /> Resumo
             </Button>
-            <Button variant="outline" size="sm" onClick={preparePaymentShare}>
+            <Button className="w-full lg:w-auto" variant="outline" size="sm" onClick={preparePaymentShare}>
               <LockKeyhole className="h-4 w-4 mr-1" /> Pagamento
             </Button>
-            <Button variant="outline" size="sm" onClick={exportPDF}>
+            <Button className="w-full lg:w-auto" variant="outline" size="sm" onClick={exportPDF}>
               <Download className="h-4 w-4 mr-1" /> PDF
             </Button>
-            <Button variant="outline" size="sm" onClick={exportExcel}>
+            <Button className="w-full lg:w-auto" variant="outline" size="sm" onClick={exportExcel}>
               <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
             </Button>
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Button className="col-span-2 w-full sm:col-span-1 lg:w-auto" variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-1" /> Imprimir
             </Button>
           </div>
@@ -979,7 +981,7 @@ export default function RelatorioMaoObraPage() {
 
         {/* ─── Financeiro Tab ─── */}
         <TabsContent value="financeiro">
-          <div className="glass-card p-4 print:shadow-none">
+          <div className="glass-card p-3 sm:p-4 print:shadow-none">
             <div className="mb-4 pb-3 border-b border-border">
               <h2 className="text-base font-bold">Relatório Financeiro de Equipe</h2>
               <p className="text-sm text-muted-foreground">
@@ -1019,7 +1021,7 @@ export default function RelatorioMaoObraPage() {
                 <strong className="text-orange-600 dark:text-orange-400">ATENÇÃO antes de pagar:</strong>{" "}
                 O <strong>TOTAL</strong> não é simplesmente <em>diária × qtd</em>. Ele é a soma de{" "}
                 <strong>Confirmadas + Previstas + Ajuste + Legado</strong>. Sempre confira o breakdown.
-                Linhas marcadas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold">⚠ ajuste</span> indicam que o total difere de <code>diária × qtd</code>.
+                Linhas marcadas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 font-bold">⚠ ajuste</span> incluem ajustes ou serviços com valor específico e devem ser conferidas.
                 Linhas com <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 font-bold">🟡 previsão</span> incluem dias que ainda não ocorreram.
               </div>
             </div>
@@ -1029,8 +1031,8 @@ export default function RelatorioMaoObraPage() {
                 Nenhum registro encontrado. Use a aba "Apontamentos" para lançar diárias manualmente.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 sm:-mx-4 sm:px-4">
+                <table className="min-w-[1180px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Nome</th>
@@ -1204,7 +1206,7 @@ export default function RelatorioMaoObraPage() {
 
         {/* ─── Apontamentos Tab (CRUD) ─── */}
         <TabsContent value="apontamentos">
-          <div className="glass-card p-4">
+          <div className="glass-card p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border">
               <div>
                 <h2 className="text-base font-bold">Apontamento de Diárias</h2>
@@ -1212,20 +1214,20 @@ export default function RelatorioMaoObraPage() {
                   Lançamento manual de diárias por trabalhador — usado como fonte principal do relatório financeiro.
                 </p>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
                 {canDelete && apontamentosPeriodo.length > 0 && (
-                  <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setZerarConfirm(true)}>
+                  <Button size="sm" variant="outline" className="flex-1 gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 sm:flex-none" onClick={() => setZerarConfirm(true)}>
                     <RotateCcw className="h-3.5 w-3.5" /> Zerar Quinzena
                   </Button>
                 )}
                 {canInsert && (
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" onClick={openNewDialog}>
+                    <Button className="w-full sm:w-auto" size="sm" onClick={openNewDialog}>
                       <Plus className="h-4 w-4 mr-1" /> Novo Apontamento
                     </Button>
                   </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-lg">
                   <DialogHeader>
                     <DialogTitle>{editingId ? "Editar Apontamento" : "Novo Apontamento de Diárias"}</DialogTitle>
                   </DialogHeader>
@@ -1243,7 +1245,7 @@ export default function RelatorioMaoObraPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <Label>Qtd Diárias</Label>
                         <Input
@@ -1298,8 +1300,8 @@ export default function RelatorioMaoObraPage() {
                 Nenhum apontamento de diária para o período selecionado. Clique em "Novo Apontamento" para começar.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 sm:-mx-4 sm:px-4">
+                <table className="min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Trabalhador</th>
@@ -1352,7 +1354,7 @@ export default function RelatorioMaoObraPage() {
 
         {/* ─── Operacional Tab ─── */}
         <TabsContent value="operacional">
-          <div className="glass-card p-4">
+          <div className="glass-card p-3 sm:p-4">
             <div className="mb-4 pb-3 border-b border-border">
               <h2 className="text-base font-bold">Relatório Operacional</h2>
               <p className="text-sm text-muted-foreground">
@@ -1365,8 +1367,8 @@ export default function RelatorioMaoObraPage() {
                 Nenhum dado operacional encontrado para os filtros selecionados.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 sm:-mx-4 sm:px-4">
+                <table className="min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Nome</th>
@@ -1410,7 +1412,7 @@ export default function RelatorioMaoObraPage() {
 
         {/* ─── Sequenciamento Tab ─── */}
         <TabsContent value="sequenciamento">
-          <div className="glass-card p-4">
+          <div className="glass-card p-3 sm:p-4">
             <div className="mb-4 pb-3 border-b border-border">
               <h2 className="text-base font-bold">Sequenciamento de Equipes</h2>
               <p className="text-sm text-muted-foreground">
@@ -1423,8 +1425,8 @@ export default function RelatorioMaoObraPage() {
                 Nenhum sequenciamento cadastrado para esta obra. Cadastre em Redução de Perdas.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 sm:-mx-4 sm:px-4">
+                <table className="min-w-[620px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 px-3">Equipe</th>
@@ -1460,7 +1462,7 @@ export default function RelatorioMaoObraPage() {
       </Tabs>
 
       <Dialog open={paymentShareOpen} onOpenChange={setPaymentShareOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Revisar relatório de pagamento</DialogTitle>
           </DialogHeader>
