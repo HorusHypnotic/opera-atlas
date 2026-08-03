@@ -2,3 +2,6 @@ project_id = "aiyluolhojdszqitusum"
 
 [functions.session-transfer]
 verify_jwt = false
+
+[functions.portfolio-interest]
+verify_jwt = false
