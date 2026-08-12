@@ -2,7 +2,28 @@
 
 **Data:** 2026-08-12
 **Status:** DECISÃO DE CONTENÇÃO
-**Execução remota:** pendente de ação e confirmação pelo owner no Lovable
+**Execução remota:** concluída e confirmada pelo owner no Lovable
+
+## Contenção remota executada
+
+**Timestamp:** 2026-08-12 15:31 UTC
+
+**Estado anterior:** `data-retention-daily active=true`
+
+**Estado posterior:** `data-retention-daily active=false`
+
+Integridade confirmada pelo owner:
+
+- job, schedule e command preservados;
+- Edge Function `data-retention` preservada;
+- autenticação existente preservada e não corrigida;
+- 226 registros anteriormente elegíveis preservados;
+- 8 lançamentos financeiros totais preservados;
+- 7 lançamentos anteriormente elegíveis preservados;
+- nenhum hard delete executado;
+- nenhum evento `retention.*` ocorrido durante a janela da contenção.
+
+A preservação dos dados deixou de depender acidentalmente da falha de autorização HTTP 401. O agendamento automático destrutivo encontra-se deliberadamente desativado por decisão arquitetural.
 
 ## Contexto
 
@@ -60,9 +81,9 @@ O hard delete automático por idade deixa de ser política válida do OPERA Atla
 - Os 226 registros elegíveis não devem ser modificados por esta contenção.
 - A política futura será projetada e implementada separadamente.
 
-## Contenção remota a cargo do owner
+## Plano de contenção executado pelo owner
 
-O Codex não executará esta operação. O owner deve fornecer ao agente Lovable os três blocos abaixo, em ordem, e interromper se a pré-condição não retornar exatamente uma linha com os valores esperados.
+O Codex não executou esta operação. O owner conduziu a contenção no Lovable conforme os três blocos abaixo, em ordem, com validação de pré e pós-condição.
 
 ### 1. Pré-condição — somente leitura
 
@@ -77,7 +98,7 @@ Resultado esperado antes da contenção: uma linha, `jobid = 1`, `jobname = 'dat
 
 ### 2. Alteração mínima
 
-Executar somente se a pré-condição corresponder integralmente:
+Executado somente após a pré-condição corresponder integralmente:
 
 ```sql
 do $$
@@ -112,7 +133,7 @@ where jobid = 1
 
 Resultado obrigatório: exatamente uma linha, com os mesmos identificador, nome, schedule, database, username e command, alterando apenas `active` para `false`.
 
-O owner deve preservar o resultado da pré-condição, da operação e da pós-condição sem reproduzir JWT, token ou secret. O campo `command` deve ser redigido antes de ser registrado fora do ambiente privilegiado.
+Os resultados da pré-condição, da operação e da pós-condição devem permanecer preservados sem reproduzir JWT, token ou secret. O campo `command` deve ser redigido antes de ser registrado fora do ambiente privilegiado.
 
 ## Edge Function
 
@@ -126,13 +147,17 @@ O owner deve preservar o resultado da pré-condição, da operação e da pós-c
 
 O comentário local não publica nem modifica a Edge Function remota.
 
-## Frontend pendente
+## Frontend alinhado após a contenção
 
-A mensagem está em `src/components/dashboard/DataRetentionBanner.tsx`, linhas 72–75 no estado desta decisão:
+A mensagem anterior estava em `src/components/dashboard/DataRetentionBanner.tsx`:
 
 > Política de Retenção — Beta — Durante o período beta, os dados operacionais são mantidos por até 3 meses. Registros mais antigos são removidos automaticamente para manter o desempenho do sistema.
 
-Ela não será alterada nesta primeira fase. Assim que o owner confirmar `active = false`, uma etapa imediatamente posterior deverá substituir a promessa de exclusão automática por comunicação coerente com persistência e com a política em revisão. Até essa confirmação, não se deve publicar alteração do banner.
+Após a confirmação de `active = false`, a comunicação foi substituída por:
+
+> Política de Retenção — Beta — Durante o período beta, os dados operacionais permanecem preservados enquanto a política definitiva de retenção e arquivamento é validada.
+
+Também foram removidos do componente o cálculo de corte, o countdown e os alertas de 30/7/1 dia, pois comunicavam uma exclusão automática que deixou de existir. A nova mensagem não promete retenção eterna, backup ou imutabilidade absoluta.
 
 ## Backup obrigatório antes de transformação futura
 
@@ -166,5 +191,5 @@ Esta missão não:
 - altera os R$ 101.425,00 elegíveis no financeiro;
 - altera schema, migration, RLS, secrets ou dados;
 - apaga cron ou Edge Function;
-- altera ou publica o frontend;
+- publica o frontend;
 - implementa a política futura.
