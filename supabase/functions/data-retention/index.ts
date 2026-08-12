@@ -1,6 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createEdgeObservability, correlationResponseHeaders } from "../_shared/observability.ts";
 
+/**
+ * DEPRECATED — DO NOT ENABLE.
+ *
+ * Legacy Beta retention policy, incompatible with OPERA Atlas historical
+ * reconstructibility. Its production cron is intentionally to remain disabled.
+ * Do not fix or relax authentication, and do not run this function manually
+ * against production without a new architectural decision and explicit approval.
+ * See DECISAO-DESCONTINUACAO-RETENCAO-BETA-ATLAS-2026-08-12.md.
+ */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
