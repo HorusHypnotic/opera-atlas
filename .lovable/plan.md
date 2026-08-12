@@ -1,65 +1,55 @@
-## Objetivo
+# Auditoria remota de retenção — resultados e entrega do relatório
 
-Criar módulo de pesquisa de campo (`/pesquisa`) para acompanhar 10 obras divididas em piloto/controle, com isolamento por dono (usuário logado).
+Investigação somente leitura concluída. Nada foi alterado: sem migration, sem DDL, sem escrita, sem deploy, sem mudança de cron, RLS, secrets ou frontend.
 
-## 1. Migração de banco
+Falta apenas uma ação: gravar o relatório em `docs/decisoes/AUDITORIA-REMOTA-RETENCAO-ATLAS-2026-08-12.md`. Aprovar este plano autoriza somente a criação desse arquivo Markdown.
 
-Nova tabela `public.obras_pesquisa`:
+## Achados principais (evidência do ambiente remoto)
 
-- `id` uuid pk (default `gen_random_uuid()`)
-- `nome` text not null
-- `dono_id` uuid not null → `auth.users(id)` on delete cascade, default `auth.uid()`
-- `grupo` text not null, check in `('piloto','controle')`
-- `status` text not null default `'ativa'`, check in `('ativa','finalizada','desistente')`
-- `data_inicio` date not null default `'2026-08-03'`
-- `observacoes` text
-- `created_at` timestamptz not null default `now()`
-- `updated_at` timestamptz not null default `now()` (trigger de update)
+**1. CRON DE RETENÇÃO ATIVO.** `cron.job` jobid 1, nome `data-retention-daily`, schedule `0 3 * * *`, `active = true`, database `postgres`, usuário `postgres`. O comando faz `net.http_post` para o endpoint `/functions/v1/data-retention`.
 
-Grants (segue política do projeto — sem `anon`, tudo por `auth.uid()`):
+**2. O cron nunca conseguiu apagar nada.** O `Authorization: Bearer` embutido no comando é um JWT de papel `anon`, e o comando **não** envia o header `x-cron-secret`. A Edge Function exige segredo de cron ou JWT de superadmin. Resultado observado:
 
-```sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.obras_pesquisa TO authenticated;
-GRANT ALL ON public.obras_pesquisa TO service_role;
-```
+- `cron.job_run_details`: 157 execuções, todas `succeeded` (isso significa apenas "o POST foi enfileirado"), de 2026-03-09 a 2026-08-12 03:00 UTC.
+- `net._http_response`: resposta HTTP **401**.
+- `system_events`: **74 eventos `retention.run.denied`**, de 2026-05-31 a 2026-08-12, e **zero** `retention.run.started`, `.completed`, `.failed` ou `.table.failed`.
+- `audit_logs_db`: nenhum DELETE em qualquer das 14 tabelas (o único DELETE registrado é `registro_presencas`, 1341 linhas, ação de usuário, tabela fora do escopo da retenção).
 
-RLS habilitado com 4 políticas (isolamento estrito por dono):
+Conclusão: o mecanismo dispara diariamente e é rejeitado diariamente. Não há evidência de hard delete executado.
 
-- SELECT: `dono_id = auth.uid()`
-- INSERT: `WITH CHECK (dono_id = auth.uid())`
-- UPDATE: `USING (dono_id = auth.uid()) WITH CHECK (dono_id = auth.uid())`
-- DELETE: `dono_id = auth.uid()`
+**3. Dados atualmente elegíveis (corte de 3 meses = 2026-05-12).**
 
-Trigger `updated_at` reutilizando padrão existente (`fn_set_updated_meta` já existe, mas exige `updated_by` — criar função local simples `set_updated_at()` se necessário, ou usar `BEFORE UPDATE` inline).
+| Tabela | Total | Mais antigo | Mais recente | Elegível |
+|---|---:|---|---|---:|
+| registros_diarios | 25 | 2026-03-09 | 2026-06-22 | 23 |
+| checklist_semanal | 94 | 2026-03-09 | 2026-04-15 | 94 |
+| ativos | 41 | 2026-03-09 | 2026-04-25 | 41 |
+| sequenciamento_equipes | 36 | 2026-03-11 | 2026-05-04 | 36 |
+| lancamentos_financeiros | 8 | 2026-03-30 | 2026-05-14 | 7 |
+| consumo_materiais | 7 | 2026-03-09 | 2026-06-22 | 2 |
+| logistica_interna | 7 | 2026-03-10 | 2026-03-10 | 7 |
+| compras_emergenciais | 4 | 2026-03-09 | 2026-04-15 | 4 |
+| ciclos_tarefa | 4 | 2026-04-25 | 2026-04-25 | 4 |
+| incidentes_seguranca | 3 | 2026-03-09 | 2026-04-15 | 3 |
+| acoes_corretivas | 2 | 2026-03-19 | 2026-03-19 | 2 |
+| riscos | 2 | 2026-04-25 | 2026-04-25 | 2 |
+| retrabalhos | 1 | 2026-03-11 | 2026-03-11 | 1 |
+| aditivos_contratuais | 0 | — | — | 0 |
 
-Observação: tabela é **isolada por usuário** (não por tenant), conforme pedido explícito — não integra com `obras`, `periodos_fechados`, invariantes do OPERA_CORE. É um registro de pesquisa paralelo, não folha/cronograma.
+**Total elegível hoje: 226 registros.**
 
-## 2. Frontend
+**4. Financeiro (crítico).** 7 de 8 lançamentos elegíveis, soma **R$ 101.425,00**, datas 2026-04-10 a 2026-04-27, **6 obras** e **2 organizações** afetadas. Nenhuma regra bloqueia o DELETE físico: as policies de `lancamentos_financeiros` são SELECT/INSERT/UPDATE/DELETE por papel — e o service_role da função ignora RLS por completo. Existe o trigger `trg_audit_lf` (`fn_audit_log_changes`), que preserva `old_data` em `audit_logs_db`; é a única via de reconstrução.
 
-**Nova rota**: `/pesquisa` em `src/App.tsx` (dentro do `ProtectedRoute` + `AppLayout`).
+**5. Constituição × estado real.** Das 14 tabelas, apenas `lancamentos_financeiros` possui coluna `deleted_at` — e a função de retenção não a usa, faz `DELETE` físico. Nenhuma das 14 tem trigger interceptando DELETE para convertê-lo em soft delete. Classificação: **CONFLITO ARQUITETURAL OBJETIVO — INTENÇÃO NÃO DETERMINÁVEL**.
 
-**Nova página**: `src/pages/PesquisaPage.tsx`
+**6. Fechamentos e hashes.** `periodos_fechados` está **vazia** (0 linhas, 0 snapshots) e `cronograma_baseline` também (0 linhas). Não há fechamento antigo em risco hoje, mas também não há nenhuma camada de snapshot protegendo os dados. Se a retenção passasse a funcionar antes do primeiro fechamento, o período seria **NÃO RECONSTRUÍVEL** para as 13 tabelas sem trilha forense e **PARCIALMENTE RECONSTRUÍVEL** para o financeiro via `audit_logs_db.old_data`.
 
-Conteúdo:
+**7. Classificação final: C + A parcial.** O mecanismo está agendado e ativo (C: há 226 registros elegíveis agora), porém funcionalmente inerte por falha de autorização (A). **Não há evidência de D.** Risco: qualquer correção do header de autenticação do job — sem revisão prévia — apaga imediatamente os 226 registros, incluindo R$ 101.425,00 em lançamentos financeiros.
 
-- Header com título "Pesquisa de Campo — Piloto vs Controle" e contador (X piloto / Y controle / Z total).
-- Botão "Nova obra" → abre `Dialog` (shadcn) com form: nome, grupo (Select), data_inicio (default 2026-08-03), status (default ativa), observações.
-- Tabela/lista com colunas: Nome · Grupo (badge laranja=piloto, cinza=controle) · Status (badge verde/azul/vermelho) · Data início · Observações · Ações (Editar).
-- Dialog de edição: permite alterar apenas `status` e `observacoes` (nome e grupo travados após criação, para não invalidar a pesquisa).
-- Empty state amigável quando lista vazia.
+## O relatório a ser gravado
 
-**Sidebar**: adicionar entrada "Pesquisa" (ícone `FlaskConical` do lucide) em `src/components/layout/AppSidebar.tsx`, visível a todos os usuários autenticados (não view-only-obra), fora do fluxo de obras/tenant.
+`docs/decisoes/AUDITORIA-REMOTA-RETENCAO-ATLAS-2026-08-12.md`, com as 13 seções pedidas: inventário do mecanismo, cron real, execuções anteriores, quantificação das 14 tabelas, análise financeira, constituição × estado real, fechamentos e hashes, política Beta × comportamento real, backup e recuperação (classificado como NÃO CONFIRMADO — o plano de controle não é consultável por SQL), classificação final, matriz de evidências com fonte e nível de confiança, e lista separada de CONFIRMADO / NÃO CONFIRMADO / CONTRADIÇÃO / RISCO / DECISÃO NECESSÁRIA.
 
-**Data fetching**: `useQuery(['obras-pesquisa', user.id])` + `useMutation` para insert/update, invalidando a query. Sem edge function — RLS já garante o isolamento.
+Cada afirmação virá acompanhada da consulta SQL que a produziu. Nenhum segredo, token, JWT ou credencial será incluído — o JWT do cron será referenciado apenas pelo papel (`anon`), nunca pelo valor.
 
-## 3. Fora de escopo (explícito)
-
-- Não cria vínculo com `obras`, `colaboradores`, cronograma, folha.
-- Não altera invariantes OPERA_CORE nem gera `system_events`.
-- Não implementa checklist externo do grupo controle (só registra que a obra existe).
-- Sem multi-tenant: `dono_id` é a única fronteira, conforme pedido "cada usuário vê só as suas".
-
-## 4. Ordem de execução
-
-1. Migration (aprovação do usuário via tool).
-2. Após regenerar tipos: criar `PesquisaPage.tsx`, adicionar rota em `App.tsx`, adicionar item no `AppSidebar.tsx`.
+Nenhuma correção será proposta ou executada neste documento.
