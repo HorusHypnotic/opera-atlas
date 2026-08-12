@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { GanttBoard } from "@/components/cronograma/GanttBoard";
+import { ScheduleBaselinePanel } from "@/components/cronograma/ScheduleBaselinePanel";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Plus, CalendarRange } from "lucide-react";
@@ -114,6 +115,7 @@ export default function CronogramaPage() {
         </Dialog>
       </div>
 
+      <ScheduleBaselinePanel obraId={selectedObra.id} />
       <GanttBoard key={reloadKey} obraId={selectedObra.id} tenantId={profile?.tenant_id ?? undefined} />
     </div>
   );

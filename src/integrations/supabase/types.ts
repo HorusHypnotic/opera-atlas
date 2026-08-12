@@ -828,39 +828,59 @@ export type Database = {
       }
       cronograma_baseline: {
         Row: {
+          algoritmo_hash: string | null
+          baseline_anterior_id: string | null
           congelado_em: string
           congelado_por: string
           hash: string
           id: string
+          formato_snapshot: string | null
           motivo: string | null
           obra_id: string
           snapshot_json: Json
           tenant_id: string
           versao: number
+          versao_formato: number | null
         }
         Insert: {
+          algoritmo_hash?: string | null
+          baseline_anterior_id?: string | null
           congelado_em?: string
           congelado_por: string
           hash: string
           id?: string
+          formato_snapshot?: string | null
           motivo?: string | null
           obra_id: string
           snapshot_json: Json
           tenant_id: string
           versao?: number
+          versao_formato?: number | null
         }
         Update: {
+          algoritmo_hash?: string | null
+          baseline_anterior_id?: string | null
           congelado_em?: string
           congelado_por?: string
           hash?: string
           id?: string
+          formato_snapshot?: string | null
           motivo?: string | null
           obra_id?: string
           snapshot_json?: Json
           tenant_id?: string
           versao?: number
+          versao_formato?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_baseline_anterior_fkey"
+            columns: ["baseline_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "cronograma_baseline"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       incidentes_seguranca: {
         Row: {
@@ -2030,6 +2050,10 @@ export type Database = {
       }
     }
     Functions: {
+      aprovar_baseline_cronograma: {
+        Args: { _correlation_id?: string; _motivo?: string; _obra_id: string }
+        Returns: Json
+      }
       dashboard_aggregates: {
         Args: {
           _end?: string
@@ -2100,6 +2124,19 @@ export type Database = {
       listar_historico_periodo: {
         Args: { _mes: string; _obra_id: string }
         Returns: Json
+      }
+      listar_baselines_cronograma: {
+        Args: { _obra_id: string }
+        Returns: {
+          aprovado_em: string
+          aprovado_por: string
+          aprovado_por_nome: string
+          hash_snapshot: string
+          id: string
+          motivo: string | null
+          versao: number
+          vigente: boolean
+        }[]
       }
       log_system_event: {
         Args: {

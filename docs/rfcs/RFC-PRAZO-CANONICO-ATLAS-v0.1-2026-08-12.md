@@ -1,8 +1,10 @@
 # RFC — Domínio canônico de prazo do OPERA Atlas v0.1
 
-**Status:** PROPOSTA PARA APROVAÇÃO / NÃO IMPLEMENTADO
+**Status:** FASE 1A IMPLEMENTADA / FASE 1B NÃO IMPLEMENTADA
 
 **Data:** 2026-08-12
+
+**Implementação:** Fase 1A — baseline versionado funcional — implementada em 2026-08-12. O diff estrutural da Fase 1B permanece não implementado. Ver `docs/decisoes/IMPLEMENTACAO-BASELINE-PRAZO-V1-2026-08-12.md`.
 
 **Classificação proposta:** MINOR / ADITIVA
 

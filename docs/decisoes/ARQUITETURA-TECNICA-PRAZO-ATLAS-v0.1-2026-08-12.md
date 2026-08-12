@@ -1,8 +1,10 @@
 # Arquitetura técnica mínima do domínio de prazo do OPERA Atlas v0.1
 
-**Status:** PROPOSTA TÉCNICA / NÃO IMPLEMENTADO
+**Status:** FASE 1A IMPLEMENTADA / DEMAIS FASES NÃO IMPLEMENTADAS
 
 **Data:** 2026-08-12
+
+**Implementação:** persistência e operação transacional da Fase 1A — baseline versionado funcional — implementadas em 2026-08-12. As demais fases e o diff estrutural da Fase 1B permanecem não implementados. Ver `IMPLEMENTACAO-BASELINE-PRAZO-V1-2026-08-12.md`.
 
 **Baseline analisado:** `8309476b4bd831dcace3a3a559ac097e64e2f620`
 
