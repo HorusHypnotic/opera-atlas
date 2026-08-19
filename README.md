@@ -1,73 +1,56 @@
-# Welcome to your Lovable project
+# OPERA Atlas — Gestão de obras para pequenos e médios construtores
 
-## Project info
+OPERA Atlas é um sistema de gestão de obras web (PWA) para registrar e acompanhar **cronograma, mão de obra e produção**, com geração de relatórios em PDF e exportação de dados. Foi construído a partir de um problema real de canteiro: o que está planejado deixa de corresponder ao que está registrado, e essa divergência costuma ser percebida tarde demais.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Para quem foi construído
 
-## How can I edit this code?
+Pequenos e médios construtores, mestres de obras e responsáveis por mais de uma obra simultânea, que precisam de um controle centralizado de cronograma e mão de obra sem planilhas descentralizadas.
 
-There are several ways of editing your application.
+## O que já funciona
 
-**Use Lovable**
+| Área | Capacidade | Evidência no repositório |
+|---|---|---|
+| Cronograma | Criação e acompanhamento de cronograma com linha de base versionada | `docs/decisoes/` (baseline de cronograma, 12/08/2026) |
+| Mão de obra | Registro e relatórios de mão de obra em PDF (IPMO) | Relatórios PDF implementados |
+| Exportação | Exportação de dados em CSV a partir do painel administrativo | Exportação CSV implementada |
+| Colaboração | Compartilhamento de relatórios via WhatsApp | Funcionalidade implementada |
+| Dashboard | Painel de acompanhamento de obras | Dashboard implementado |
+| Multi-tenant | Isolamento de dados entre organizações (tenants) | RLS no Supabase; teste de contrato de permissões em `supabase/tests/database/permission_contract.test.sql` |
+| Retenção de dados | Política de retenção auditada | `docs/decisoes/AUDITORIA-REMOTA-RETENCAO-ATLAS-2026-08-12.md` |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Arquitetura
 
-Changes made via Lovable will be committed automatically to this repo.
+React 18 + TypeScript + Vite, Tailwind CSS e shadcn/ui, com backend em Supabase (PostgreSQL) operando multi-tenant com Row Level Security. Edge functions em Deno (Deno Deploy) executam operações privilegiadas (convites, retenção de dados, exportação CSV, gantt, transferências de sessão). O projeto tem origem na plataforma Lovable, que gerou a base do código; funcionalidades, testes e documentação evoluem sobre essa base. Licenciado sob MIT.
 
-**Use your preferred IDE**
+## Demonstração
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+A demonstração pública está em [opera-atlas.lovable.app](https://opera-atlas.lovable.app).
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Status e maturidade
 
-Follow these steps:
+**Beta ativo.** O sistema está em demonstração pública e em evolução constante; não há garantia de estabilidade de banco de dados nem SLA. A política de retenção de dados do período de beta está documentada em `docs/decisoes/`.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Limitações atuais
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+O banco de dados é de demonstração e pode ser resetado; a exportação CSV e os relatórios PDF cobrem os fluxos principais de cronograma e mão de obra — não incluem cotação, pedidos, notas fiscais ou financeiro (esses fluxos existem em outros sistemas do ecossistema OPERA, cujos repositórios permanecem privados durante a maturação); a interface pode variar antes de uma versão estável.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Relação com o OPERA e a TPC
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+OPERA Atlas é a implementação inicial do ecossistema OPERA, que nasceu de observações de campo formalizadas em um programa de pesquisa aplicado (Informodinâmica / TPC — Teoria dos Processos Coordenativos). A TPC orienta conceitualmente o desenho do sistema (representações que precisam permanecer coerentes com a realidade), mas **não é uma teoria validada cientificamente**: as métricas e construtos documentados no programa de pesquisa são candidatos, não resultados estabelecidos.
+
+## Execução local
+
+O frontend pode ser construído e testado localmente:
+
+```bash
+pnpm install
+pnpm build     # build de produção
+pnpm test      # suíte vitest
+pnpm dev       # servidor de desenvolvimento (porta 8080)
 ```
 
-**Edit a file directly in GitHub**
+A execução completa exige um projeto Supabase equivalente, configurado pelas migrações em `supabase/migrations/` e pelas variáveis listadas em `.env.example`. As edge functions rodam em Deno Deploy e dependem de secrets configuradas no painel do deploy (`SUPABASE_SERVICE_ROLE_KEY`), que não residem neste repositório.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Segurança
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Este repositório não contém credenciais de produção. Variáveis sensíveis são injetadas por ambiente (`.env.example` documenta as necessárias; secrets de edge functions ficam no painel do deploy). Chaves do tipo `anon`/publishable do Supabase são concebidas para uso no cliente e, portanto, públicas por design.

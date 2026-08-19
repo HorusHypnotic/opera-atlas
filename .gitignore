@@ -26,3 +26,8 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets e ambientes locais
+.env
+.env.local
+.env.*.local
