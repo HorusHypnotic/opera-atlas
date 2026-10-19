@@ -87,3 +87,15 @@ Handoff técnico para suporte Lovable, sem valores de credenciais:
 - O agente sugeriu embutir chave publicável em `vite.config.ts` ou retirar `.env` do ignore. **Não aprovado**: essas opções não demonstram a causa nem atendem à regra de menor mudança reversível; não implementar.
 - Veredito revisado: duas observações comprovadas por origens diferentes: `ATLAS-CONFIG-KEY` na captura de preview do usuário; `401` em acesso direto automatizado. **Primeiro gate** é diferenciar autenticação do preview Lovable e bundle efetivamente servido em sessão autorizada. Só então diagnosticar variável de build.
 - Estados: histórico PASS; ausência de mudanças na chamada PASS; teste externo autorizado BLOCKED (401); build ID/chave no bundle UNKNOWN; preview funcional FAIL na última captura; produção não publicada nem alterada.
+
+## Evidência de alternância no celular (19/10, 19h25–19h28 local) e teste decisivo
+O usuário apresentou três capturas **no editor Lovable em Android**, com horário do aparelho:
+1. 19h25: rota `/landing` renderiza a landing e menu de rotas do editor.
+2. 19h27: dashboard O.P.E.R.A. renderiza filtro `Dirceu Engenharia`, `Últimos 30 dias`, CTA de relatório e wizard 3/6. Evidência **visual**, não prova queries, auth nem exportação.
+3. 19h28: tela `ATLAS-CONFIG-KEY` após navegação/recarregamento não caracterizado. É **FAIL real** no contexto observado, não foi resolvido.
+A sequência prova **alternância de telas** mas NÃO comprova troca de bundle, intermitência da variável dentro do mesmo bundle ou qual rota/URL exata falhou. Uma variável Vite incorporada ao mesmo bundle não deveria alternar espontaneamente; investigar diferença de contexto/artefato antes de atribuir ao backend.
+Releitura de `src/main.tsx`: o teste `!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY` antecede `import("./App.tsx")`; logo não é erro de query do dashboard nem do broker de auth.
+### Teste mínimo de discriminação (sem código, sem publicação)
+Com Lovable editor autenticado e preview visível, registrar **URL efetiva, rota e contexto** de cada tentativa. No MESMO contexto, abrir `/landing` e `/login`, alternar rota, e fazer uma recarga completa uma vez. Observar se falha somente após reload, troca de rota, ou ao abrir nova aba. Guardar horário e, se acessível sem revelar segredos, nome/URL do JS `/assets/index-*.js` em cada execução. Comparar nomes/hash do bundle; se idênticos, investigar se o contexto está realmente executando o mesmo build. Se diferentes, solicitar build ID/SHA por contexto ao suporte. O HTTP 401 obtido por agente sem sessão não substitui teste autenticado.
+### Gate
+NÃO usar `Publish`; não fazer fallback de chave no Vite; não retirar `.env` do `.gitignore`; não alterar cliente Supabase. Sem evidência de bundle, causa exata **UNKNOWN**; preview **FAIL intermitente/condicional observado**, não PASS estável.
