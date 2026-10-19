@@ -34,7 +34,7 @@ describe("pre-React bootstrap fallback", () => {
     expect(appSource).toContain('const DashboardOverview = lazy(() => import("./pages/DashboardOverview"))');
     expect(appSource).toContain('const LoginPage = lazy(() => import("./pages/LoginPage"))');
     expect(appSource).toContain("<Suspense fallback=");
-    expect(appSource).not.toMatch(/^import \\w+ from "\\.\\/pages\\//m);
+    expect(appSource.split("\n").filter((line) => line.startsWith("import ") && line.includes('from "./pages/'))).toHaveLength(0);
   });
 
 });
