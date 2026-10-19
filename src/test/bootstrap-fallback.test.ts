@@ -37,15 +37,23 @@ describe("pre-React bootstrap fallback", () => {
   });
 
   it("renders a safe phase code on the fallback screen", () => {
-    expect(source).toContain('showBootstrapFailure(phase: "boundary" | "app" | "render")');
+    expect(source).toContain('showBootstrapFailure(phase: "boundary" | "app" | "render" | "config")');
     expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
     expect(source).toContain("wrapper.append(heading, detail, code)");
   });
 
-  it("keeps phase codes limited to the three startup stages", () => {
-    expect(source).toContain('let phase: "boundary" | "app" | "render" = "boundary"');
+  it("keeps phase codes limited to the four startup stages", () => {
+    expect(source).toContain('let phase: "boundary" | "app" | "render" | "config" = "boundary"');
     expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
     expect(source).not.toContain("JSON.stringify(error)");
+  });
+
+  it("detects missing Supabase public configuration without exposing values", () => {
+    expect(source).toContain('phase = "config"');
+    expect(source).toContain('OPERA_BOOTSTRAP_CONFIG_MISSING');
+    expect(source).toContain('!import.meta.env.VITE_SUPABASE_URL');
+    expect(source).toContain('!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY');
+    expect(source).not.toContain('console.log(import.meta.env');
   });
 
   it("defers route page modules so they do not block the initial App import", () => {
