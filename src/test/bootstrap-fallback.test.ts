@@ -42,4 +42,10 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain("wrapper.append(heading, detail, code)");
   });
 
+  it("keeps phase codes limited to the three startup stages", () => {
+    expect(source).toContain('let phase: "boundary" | "app" | "render" = "boundary"');
+    expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
+    expect(source).not.toContain("JSON.stringify(error)");
+  });
+
 });
