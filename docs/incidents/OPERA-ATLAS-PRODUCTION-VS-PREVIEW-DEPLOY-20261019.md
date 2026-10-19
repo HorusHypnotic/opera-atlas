@@ -78,3 +78,12 @@ Handoff técnico para suporte Lovable, sem valores de credenciais:
 - `is_published=true` indica existência de publicação, não que preview atual tenha sido reconstruído ou esteja funcional.
 - Para fechar P0, obter por painel/suporte Lovable: build ID/SHA externo, modo e timestamp, presença da variável na etapa de build (boolean), resultado de rebuild de preview, smoke test. Não usar a URL de screenshot como prova de bootstrap, nem afirmar ausência de chave no ambiente inteiro.
 - Sem mutações em app, banco, configuração, credenciais ou produção.
+
+## Chamada Lovable autorizada adicional e auditoria independente
+- Uma chamada de IA Lovable autorizada explicitamente, `message_id=umsg_01m5b44r3tev6tkxa1fwgm4va2`, concluída, custo reportado **1,7 crédito**. Não repetir sem autorização.
+- Lovable relatou `curl` do preview externo `/` e `/login` com **HTTP 401**. Não conseguiu obter HTML, JS, build ID/SHA nem comprovar presença de chave no bundle. O `ATLAS-CONFIG-KEY` visto na captura anterior e o 401 obtido agora são observações de **contextos de acesso diferentes**. Não confundir 401 com prova de chave ausente.
+- Internamente, Lovable reportou `.env` presente com chave, ainda ignorado por Git. Não revelou valor. Não editou nem reconstruiu preview.
+- **Auditoria independente pós-chamada:** `get_project` mantém `latest_commit_sha=f312092eccb84adbe59c5546b6ddd4da48e40a79` e `agentFinished=true`; `compare_commits(base=f312092, head=main)` retornou `status=identical`, `ahead_by=0`, `behind_by=0`, `files=[]`. `get_diff(message_id)` retornou `Message has no associated edit`. Portanto **nenhuma alteração rastreável no GitHub/Lovable** nesta chamada. Isso não atesta configurações ocultas, mas não há indício de mudança nelas.
+- O agente sugeriu embutir chave publicável em `vite.config.ts` ou retirar `.env` do ignore. **Não aprovado**: essas opções não demonstram a causa nem atendem à regra de menor mudança reversível; não implementar.
+- Veredito revisado: duas observações comprovadas por origens diferentes: `ATLAS-CONFIG-KEY` na captura de preview do usuário; `401` em acesso direto automatizado. **Primeiro gate** é diferenciar autenticação do preview Lovable e bundle efetivamente servido em sessão autorizada. Só então diagnosticar variável de build.
+- Estados: histórico PASS; ausência de mudanças na chamada PASS; teste externo autorizado BLOCKED (401); build ID/chave no bundle UNKNOWN; preview funcional FAIL na última captura; produção não publicada nem alterada.
