@@ -24,3 +24,11 @@ Usuário confirma: **a produção está funcionando** e **o preview parou de fun
 
 ## Gates
 Produção: **PASS reportado pelo usuário**, SHA/data do último deploy **UNKNOWN**. Preview externo: **FAIL reportado pelo usuário**. Causa raiz: **UNKNOWN**. **Não publicar produção**: ela é a referência funcional. Sem novo crédito Lovable AI, alteração de env em GitHub, migrations, merge ou alteração de autenticação.
+
+## Verificação independente de endpoints e acesso (lote seguinte)
+- `https://opera-atlas.lovable.app`: leitura externa retornou **DisabledError**. Isso é restrição da ferramenta, **não** evidência de produção indisponível.
+- `https://preview--opera-atlas.lovable.app`: endpoint inacessível pela ferramenta web. **Não** é diagnóstico de HTTP 404/500.
+- `https://id-preview--5198af1a-2d9b-4863-aced-2ac8cd06e9a9.lovable.app`: leitura externa retornou **DisabledError**.
+- Ferramentas Lovable acessíveis incluem `get_project`, `list_edits`, `deploy_project`, mas **não há leitura de histórico de deploy nem de SHA publicado**. **Não chamar deploy_project** para obter metadados: é operação mutável e não autorizada.
+- GitHub disponível neste conector não expõe leitura de deployments/environments. Portanto, **não atribuir SHA de publicação** a partir do commit mais recente.
+- Gate objetivo permanece: obter evidência somente leitura do painel Lovable (última publicação com timestamp/versão), ou por mecanismo de inspeção de bundle autorizado. Não republicar a produção que o operador confirmou funcional.
