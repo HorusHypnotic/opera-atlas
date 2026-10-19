@@ -28,4 +28,13 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain("rootElement.replaceChildren(wrapper)");
   });
 
+  it("defers route page modules so they do not block the initial App import", () => {
+    const appSource = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    expect(appSource).toContain('import { lazy, Suspense } from "react"');
+    expect(appSource).toContain('const DashboardOverview = lazy(() => import("./pages/DashboardOverview"))');
+    expect(appSource).toContain('const LoginPage = lazy(() => import("./pages/LoginPage"))');
+    expect(appSource).toContain("<Suspense fallback=");
+    expect(appSource).not.toMatch(/^import \\w+ from "\\.\\/pages\\//m);
+  });
+
 });
