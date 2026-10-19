@@ -278,7 +278,7 @@ INSERT INTO public.portfolio_product_versions (product_id,version,titulo,descric
 SELECT id,1,nome,'Versão comercial inicial publicada no portfólio.',maturity_level,true FROM public.portfolio_products;
 
 INSERT INTO public.portfolio_offers (product_version_id,offer_type,titulo,amount_min,amount_max,recorrencia,price_label,performance_percent)
-SELECT v.id,'analise','Análise inicial',197,197,'unico','R$ 197',NULL FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='diagnostico-opera'
+SELECT v.id,'analise','Análise inicial',197,197,'unico','R$ 197',NULL::numeric FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='diagnostico-opera'
 UNION ALL SELECT v.id,'mensalidade','Operação por obra',2500,3500,'por_obra','R$ 2.500 a R$ 3.500/mês por obra',NULL FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='copiloto-obras'
 UNION ALL SELECT v.id,'setup','Setup Atlas',3500,8000,'unico','Setup de R$ 3.500 a R$ 8.000',NULL FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='opera-atlas'
 UNION ALL SELECT v.id,'mensalidade','Operação Atlas',2500,4500,'mensal','R$ 2.500 a R$ 4.500/mês',NULL FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='opera-atlas'
