@@ -14,5 +14,6 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain('wrapper.setAttribute("role", "alert")');
     expect(source).toContain("OPERA_BOOTSTRAP_FAILED");
     expect(source).not.toContain("console.error(error)");
+    expect(source).toContain("showBootstrapFailure()");
   });
 });
