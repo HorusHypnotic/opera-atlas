@@ -70,3 +70,11 @@ Verificação direta da `main`:
 Handoff técnico para suporte Lovable, sem valores de credenciais:
 **Projeto:** `5198af1a-2d9b-4863-aced-2ac8cd06e9a9`. **Repo:** `HorusHypnotic/opera-atlas`. **SHA Lovable reportado:** `f312092eccb84adbe59c5546b6ddd4da48e40a79`. **Produção:** `https://opera-atlas.lovable.app` (última publicação 12/08/2026 conforme painel). **Preview:** `https://id-preview--5198af1a-2d9b-4863-aced-2ac8cd06e9a9.lovable.app`. **Sintoma:** `ATLAS-CONFIG-KEY` no preview externo, apesar de `VITE_SUPABASE_PUBLISHABLE_KEY` presente no ambiente interno Lovable segundo turno de IA de 19/10 e navegação interna `/` e `/login` bem-sucedida. **Pergunta ao suporte:** qual mecanismo injeta `VITE_SUPABASE_PUBLISHABLE_KEY` no build/preview externo, qual SHA/artefato está servido e como reconstruir apenas preview sem publicar produção? Pedir diagnóstico de presença/ausência, não o valor da chave. Não alterar auth, banco, GitHub .env ou produção.
 **Gate:** sem ferramenta de leitura do ambiente/artefato do preview externo e sem acesso de suporte pelo conector, a correção permanece **BLOCKED**. Nenhum ticket de suporte foi enviado por esta operação.
+
+## Revalidação Lovable, somente leitura, após pesquisa externa
+- `get_project` confirma projeto `5198af1a-2d9b-4863-aced-2ac8cd06e9a9`, `is_published=true`, `latest_commit_sha=f312092eccb84adbe59c5546b6ddd4da48e40a79`, `last_edited_at=2026-10-19T21:51:59.683Z`, `preview_url=https://id-preview--5198af1a-2d9b-4863-aced-2ac8cd06e9a9.lovable.app`, `agentFinished=true`.
+- `list_edits(limit=12)` confirma cronologia do diagnóstico `d43d5c7` (20:02:31Z), URL fallback `2b06fc5` (20:14:36Z) e edição final `f312092` (21:51:59Z). **Nenhuma dessas informações é SHA do artefato externo nem histórico de deploy**.
+- `get_project_knowledge` retornou vazio; não há ali informação de configuração de build.
+- `is_published=true` indica existência de publicação, não que preview atual tenha sido reconstruído ou esteja funcional.
+- Para fechar P0, obter por painel/suporte Lovable: build ID/SHA externo, modo e timestamp, presença da variável na etapa de build (boolean), resultado de rebuild de preview, smoke test. Não usar a URL de screenshot como prova de bootstrap, nem afirmar ausência de chave no ambiente inteiro.
+- Sem mutações em app, banco, configuração, credenciais ou produção.
