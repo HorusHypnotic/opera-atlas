@@ -5,7 +5,7 @@ import "./index.css";
 // App evaluate Supabase modules before a React error boundary can mount.
 const rootElement = document.getElementById("root");
 
-function showBootstrapFailure(): void {
+function showBootstrapFailure(phase: "boundary" | "app" | "render" | "config"): void {
   if (!rootElement) return;
   const wrapper = document.createElement("main");
   wrapper.setAttribute("role", "alert");
@@ -15,17 +15,25 @@ function showBootstrapFailure(): void {
   heading.textContent = "Não foi possível iniciar o OPERA Atlas";
   const detail = document.createElement("p");
   detail.textContent = "O carregamento falhou. Recarregue a página ou contate o suporte.";
-  wrapper.append(heading, detail);
+  const code = document.createElement("p");
+  code.textContent = `Código de diagnóstico: ATLAS-${phase.toUpperCase()}`;
+  wrapper.append(heading, detail, code);
   rootElement.replaceChildren(wrapper);
 }
 
 async function bootstrap(): Promise<void> {
   if (!rootElement) throw new Error("OPERA_BOOTSTRAP_ROOT_MISSING");
+  let phase: "boundary" | "app" | "render" | "config" = "boundary";
   try {
-    const [{ default: App }, { AppErrorBoundary }] = await Promise.all([
-      import("./App.tsx"),
-      import("./components/AppErrorBoundary"),
-    ]);
+    const { AppErrorBoundary } = await import("./components/AppErrorBoundary");
+    // Diagnose missing public configuration without exposing URLs or keys.
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+      phase = "config";
+      throw new Error("OPERA_BOOTSTRAP_CONFIG_MISSING");
+    }
+    phase = "app";
+    const { default: App } = await import("./App.tsx");
+    phase = "render";
     createRoot(rootElement).render(
       <AppErrorBoundary>
         <App />
@@ -33,8 +41,8 @@ async function bootstrap(): Promise<void> {
     );
   } catch (error) {
     // Diagnostic code only: never log environment values or credentials.
-    console.error("OPERA_BOOTSTRAP_FAILED", error instanceof Error ? error.name : "UnknownError");
-    showBootstrapFailure();
+    console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError");
+    showBootstrapFailure(phase);
   }
 }
 

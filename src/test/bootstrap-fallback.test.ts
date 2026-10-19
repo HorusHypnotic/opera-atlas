@@ -14,7 +14,7 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain('wrapper.setAttribute("role", "alert")');
     expect(source).toContain("OPERA_BOOTSTRAP_FAILED");
     expect(source).not.toContain("console.error(error)");
-    expect(source).toContain("showBootstrapFailure()");
+    expect(source).toContain("showBootstrapFailure(phase)");
   });
   it("wraps App in a render error boundary", () => {
     expect(source).toContain("<AppErrorBoundary>");
@@ -26,6 +26,65 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).not.toContain("error.message");
     expect(source).not.toContain("error.stack");
     expect(source).toContain("rootElement.replaceChildren(wrapper)");
+  });
+
+  it("identifies the failed startup phase without logging exception contents", () => {
+    expect(source).toContain('phase = "app"');
+    expect(source).toContain('phase = "render"');
+    expect(source).toContain('console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError")');
+    expect(source).not.toContain("error.message");
+    expect(source).not.toContain("error.stack");
+  });
+
+  it("renders a safe phase code on the fallback screen", () => {
+    expect(source).toContain('showBootstrapFailure(phase: "boundary" | "app" | "render" | "config")');
+    expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
+    expect(source).toContain("wrapper.append(heading, detail, code)");
+  });
+
+  it("keeps phase codes limited to the four startup stages", () => {
+    expect(source).toContain('let phase: "boundary" | "app" | "render" | "config" = "boundary"');
+    expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
+    expect(source).not.toContain("JSON.stringify(error)");
+  });
+
+  it("detects missing Supabase public configuration without exposing values", () => {
+    expect(source).toContain('phase = "config"');
+    expect(source).toContain('OPERA_BOOTSTRAP_CONFIG_MISSING');
+    expect(source).toContain('!import.meta.env.VITE_SUPABASE_URL');
+    expect(source).toContain('!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY');
+    expect(source).not.toContain('console.log(import.meta.env');
+  });
+
+
+  it("checks configuration before importing the App module", () => {
+    const configCheck = source.indexOf('!import.meta.env.VITE_SUPABASE_URL');
+    const appImport = source.indexOf('import("./App.tsx")');
+    expect(configCheck).toBeGreaterThan(-1);
+    expect(appImport).toBeGreaterThan(configCheck);
+    expect(source).toContain('phase = "config"');
+  });
+
+  it("defers route page modules so they do not block the initial App import", () => {
+    const appSource = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    expect(appSource).toContain('import { lazy, Suspense } from "react"');
+    expect(appSource).toContain('const DashboardOverview = lazy(() => import("./pages/DashboardOverview"))');
+    expect(appSource).toContain('const LoginPage = lazy(() => import("./pages/LoginPage"))');
+    expect(appSource).toContain("<Suspense fallback=");
+    expect(appSource.split("\n").filter((line) => line.startsWith("import ") && line.includes('from "./pages/'))).toHaveLength(0);
+  });
+
+  it("resolves every lazy route module to a file with a default export", () => {
+    const appSource = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    const paths = appSource.split("\n")
+      .filter((line) => line.includes(" = lazy(() => import("))
+      .map((line) => line.split('import("')[1]?.split('")')[0])
+      .filter((path): path is string => Boolean(path));
+    expect(paths).toHaveLength(24);
+    for (const path of paths) {
+      const pageSource = readFileSync(new URL(`..${path.slice(1)}.tsx`, import.meta.url), "utf8");
+      expect(pageSource, `Missing default export in ${path}`).toMatch(/\bexport\s+default\b/);
+    }
   });
 
 });
