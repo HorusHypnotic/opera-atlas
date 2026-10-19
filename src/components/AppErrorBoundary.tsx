@@ -12,9 +12,9 @@ export class AppErrorBoundary extends React.Component<
     return { error };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // No tokens, user data, or environment values are logged.
-    console.error("OPERA Atlas render failure", error, info.componentStack);
+  componentDidCatch(error: Error, _info: React.ErrorInfo) {
+    // Avoid serializing exception messages or component props into browser logs.
+    console.error("OPERA_RENDER_FAILED", error.name);
   }
 
   render() {
