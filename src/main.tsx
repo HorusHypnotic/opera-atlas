@@ -21,11 +21,12 @@ function showBootstrapFailure(): void {
 
 async function bootstrap(): Promise<void> {
   if (!rootElement) throw new Error("OPERA_BOOTSTRAP_ROOT_MISSING");
+  let phase: "boundary" | "app" | "render" = "boundary";
   try {
-    const [{ default: App }, { AppErrorBoundary }] = await Promise.all([
-      import("./App.tsx"),
-      import("./components/AppErrorBoundary"),
-    ]);
+    const { AppErrorBoundary } = await import("./components/AppErrorBoundary");
+    phase = "app";
+    const { default: App } = await import("./App.tsx");
+    phase = "render";
     createRoot(rootElement).render(
       <AppErrorBoundary>
         <App />
@@ -33,7 +34,7 @@ async function bootstrap(): Promise<void> {
     );
   } catch (error) {
     // Diagnostic code only: never log environment values or credentials.
-    console.error("OPERA_BOOTSTRAP_FAILED", error instanceof Error ? error.name : "UnknownError");
+    console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError");
     showBootstrapFailure();
   }
 }
