@@ -47,3 +47,10 @@ Comparação `2b06fc5...f312092`: **3 commits, 5 arquivos**. Nenhuma alteração
 - Preview externo funcional: FAIL (relato atual do usuário).
 - Correção: BLOCKED por falta de operação de configuração de build no conector.
 - Créditos Lovable: 2,7 reportados, **não repetir sem autorização**.
+
+## Revisão estática direcionada (lote posterior ao #rebobine)
+- `src/main.tsx` na main verifica `import.meta.env.VITE_SUPABASE_URL` e depois `import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY` **antes** do `await import("./App.tsx")`. Portanto, o diagnóstico `ATLAS-CONFIG-KEY` acontece **antes** de o cliente Supabase e `previewAuthStorage.ts` serem importados pelo caminho normal da aplicação. A mudança de storage não explica diretamente esse código de erro.
+- `src/integrations/supabase/client.ts` importa e usa `brokeredPreviewStorage()`. Na ausência de ID no hostname ou iframe, `brokeredPreviewStorage()` devolve `localStorage`. Em `preview--opera-atlas.lovable.app` o padrão de hostname não corresponde ao UUID do projeto, portanto esse caminho tende a usar `localStorage` e não o broker. O host `id-preview--<UUID>.lovable.app` pode usar broker quando embutido.
+- No listener de resposta `onMessage`, a implementação valida `e.origin` e `requestId`, mas **não valida `e.source === window.parent`**. A falta dessa verificação é um achado estático, **não prova de exploração**. Uma mensagem de outra janela sob origem permitida, com requestId conhecido, não seria rejeitada pelo critério de source. Teste e revisão de threat model necessários.
+- `document.referrer ? new URL(document.referrer).origin : ''` não está protegido contra referrer inválido; risco de exceção no caminho de iframe. A verificação de chave no bootstrap antecede esse código, logo são problemas distintos.
+- Testes de aceitação sugeridos: modo top-level; iframe editor legítimo; iframe não confiável; mensagem com origin legítima mas source não-parent; expiração e logout tombstone; bloqueio de localStorage; timeout; refresh. Não fazer mudanças no cliente gerado nem merge sem gate humano.
