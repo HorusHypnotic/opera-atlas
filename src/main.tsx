@@ -18,6 +18,14 @@ function showBootstrapFailure(phase: "boundary" | "app" | "render" | "config-url
   const code = document.createElement("p");
   code.textContent = `Código de diagnóstico: ATLAS-${phase.toUpperCase()}`;
   wrapper.append(heading, detail, code);
+  // Diagnostic metadata contains booleans only. No URLs, keys or session data.
+  if (phase === "config-key" || phase === "config-url") {
+    const envState = document.createElement("p");
+    const urlPresent = Boolean(import.meta.env.VITE_SUPABASE_URL);
+    const keyPresent = Boolean(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+    envState.textContent = `Configuração do preview: URL ${urlPresent ? "presente" : "ausente"} | chave pública ${keyPresent ? "presente" : "ausente"}`;
+    wrapper.append(envState);
+  }
   rootElement.replaceChildren(wrapper);
 }
 
