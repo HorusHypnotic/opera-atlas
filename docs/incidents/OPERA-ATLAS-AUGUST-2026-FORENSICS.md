@@ -39,3 +39,10 @@ Sem Lovable AI adicional (turno único já consumiu 2,7 créditos), sem merge, d
 - As migrations e tipos do baseline de 12/08 continuam a ser a referência de contrato para revisar as mudanças de outubro; não executar migrations.
 - **Limite metodológico:** a busca de commits com ordenação ascendente retornou dado anômalo de 2025 e não foi usada como evidência de completude. A confirmação independente veio de `compare_commits`.
 - **Próximo teste decisivo:** comparar artefatos/ambientes internos e externos no mecanismo oficial do Lovable, sem exibir valor de chave; e comparar types/RPC com schema remoto. A integração atual não disponibiliza operação segura de build-env, logo esse gate permanece BLOCKED.
+
+## Lote seguinte: contratos ativos e limites (19/10)
+- A migration de agosto `supabase/migrations/20260812170000_schedule_baseline_v1.sql` **continua presente na main** e contém `aprovar_baseline_cronograma`, `listar_baselines_cronograma`, `baseline_anterior_id`. SHA do blob `c13c16b5138033216cee1862ad4f3d9648748bd1`.
+- A UI atual `src/components/cronograma/ScheduleBaselinePanel.tsx` **continua chamando ambas as RPCs**; blob `1b83d4569e5f6f8eb7cca4f69086408387181cd9`. Portanto, a remoção das declarações em `types.ts` é uma **divergência estática demonstrada** entre código/migration e tipos, não prova de que as RPCs foram removidas do banco remoto.
+- `vite.config.ts` atual usa `loadEnv(mode, process.cwd(), "VITE_")` e aplica fallback **somente à URL pública**, derivada de `supabase/config.toml`. Não define fallback da publishable key. Logo o código não pode recuperar uma chave ausente no build externo; este é um limite comprovado do código, não diagnóstico conclusivo da plataforma.
+- Metadados Lovable consultados neste lote não forneceram artefatos de build nem verificação visual do preview externo; sem PASS de runtime. Não consumir mais créditos.
+- Recomendação: **não restaurar o `.env`**; corrigir injeção no build oficial. Em paralelo, preparar PR de restauração dos tipos somente após confrontar schema remoto, e testar o broker de sessão antes de aceitá-lo.
