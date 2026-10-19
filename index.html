@@ -38,6 +38,23 @@
         });
       }
     </script>
+    <script>
+      // Diagnostic only: reveal a startup failure when the app cannot mount.
+      // Do not display exception details, URLs, tokens or user data.
+      (function () {
+        function showStartupFailure() {
+          var root = document.getElementById("root");
+          if (!root || root.childNodes.length) return;
+          root.innerHTML = '<main role="alert" style="min-height:100vh;background:#0b0f14;color:#f8fafc;display:grid;place-items:center;padding:24px;font-family:system-ui,sans-serif"><section style="max-width:480px"><h1>Não foi possível iniciar o OPERA Atlas</h1><p>O carregamento da aplicação falhou antes da abertura da interface. Nenhum dado foi alterado.</p><button type="button" onclick="location.reload()" style="padding:12px 18px">Tentar novamente</button></section></main>';
+        }
+        window.addEventListener("error", function () {
+          setTimeout(showStartupFailure, 0);
+        }, true);
+        window.addEventListener("unhandledrejection", function () {
+          setTimeout(showStartupFailure, 0);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
