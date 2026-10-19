@@ -38,3 +38,12 @@ Captura do painel Publish do Lovable (19/10/2026, 19:02 no aparelho): texto **"C
 **Inferência forte:** publicação atual é datada de **12/08/2026** e existem mudanças posteriores ainda não publicadas. A imagem **não identifica SHA publicado nem hora exata do deploy**. O operador confirma que a produção funciona.
 **Correlação temporal importante:** o commit `3301911` que removeu `.env` do tracking ocorreu **19/08**, depois da publicação indicada pelo Lovable. Isso torna a hipótese de produção antiga com configuração preservada versus preview reconstruído sem chave muito mais forte, **sem provar a causa raiz**.
 **Gate crítico:** não clicar `Publish changes`, não forçar sincronização nem republish. Preservar produção de 12/08. Próximo teste seguro: identificar último commit anterior à publicação de 12/08 e inspecionar o histórico do preview/build, sem exibir chave.
+
+## Prova de igualdade do bootstrap entre 12/08 e 19/08
+Comparados refs `37b2d93b3e7cdf55d1b5ed5a62802ddd11376f7d` (12/08) e `3301911686b576ebbc096c6eda0a12bcdfab48a8` (19/08), via blob SHA GitHub:
+- `src/integrations/supabase/client.ts`: blob **`1619b4712ada615cc601cd2e63c889db30091dca`** em ambos; cliente gerado usa `import.meta.env.VITE_SUPABASE_URL` e `import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY`, storage `localStorage`.
+- `src/main.tsx`: blob **`68176a72f30ae0650f5093c8b6a7b01016acf07a`** em ambos; bootstrap React simples, sem diagnóstico.
+- `vite.config.ts`: blob **`303a0ee420c4f0bdc9308912020f5b96aedc5509`** em ambos; sem fallback de env.
+- Entre esses refs, a alteração `3301911` foi restrita a `.env`, `.env.example`, `.gitignore`, `README.md`.
+**Inferência:** o código consumidor da chave não mudou entre 12 e 19/08. Se um build de 12/08 recebeu a chave e um posterior não, a diferença é de disponibilidade/configuração no momento do build, não de leitura dessa variável pelo cliente nesse intervalo. Não afirmar que o Lovable necessariamente usou o `.env` versionado: mecanismo de injeção não comprovado.
+**Segurança:** não copiar chave histórica para repo; não alterar o cliente gerado; preservar deploy de produção.
