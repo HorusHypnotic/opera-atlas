@@ -5,7 +5,7 @@ import "./index.css";
 // App evaluate Supabase modules before a React error boundary can mount.
 const rootElement = document.getElementById("root");
 
-function showBootstrapFailure(): void {
+function showBootstrapFailure(phase: "boundary" | "app" | "render"): void {
   if (!rootElement) return;
   const wrapper = document.createElement("main");
   wrapper.setAttribute("role", "alert");
@@ -15,7 +15,9 @@ function showBootstrapFailure(): void {
   heading.textContent = "Não foi possível iniciar o OPERA Atlas";
   const detail = document.createElement("p");
   detail.textContent = "O carregamento falhou. Recarregue a página ou contate o suporte.";
-  wrapper.append(heading, detail);
+  const code = document.createElement("p");
+  code.textContent = `Código de diagnóstico: ATLAS-${phase.toUpperCase()}`;
+  wrapper.append(heading, detail, code);
   rootElement.replaceChildren(wrapper);
 }
 
@@ -35,7 +37,7 @@ async function bootstrap(): Promise<void> {
   } catch (error) {
     // Diagnostic code only: never log environment values or credentials.
     console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError");
-    showBootstrapFailure();
+    showBootstrapFailure(phase);
   }
 }
 
