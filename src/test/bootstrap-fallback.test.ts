@@ -59,11 +59,14 @@ describe("pre-React bootstrap fallback", () => {
 
   it("resolves every lazy route module to a file with a default export", () => {
     const appSource = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
-    const paths = [...appSource.matchAll(/lazy\\(\\(\\) => import\\("(\\.\\/pages\\/[^"]+)"\\)\\)/g)].map((match) => match[1]);
+    const paths = appSource.split("\n")
+      .filter((line) => line.includes(" = lazy(() => import("))
+      .map((line) => line.split('import("')[1]?.split('")')[0])
+      .filter((path): path is string => Boolean(path));
     expect(paths).toHaveLength(24);
     for (const path of paths) {
       const pageSource = readFileSync(new URL(`..${path.slice(1)}.tsx`, import.meta.url), "utf8");
-      expect(pageSource, `Missing default export in ${path}`).toMatch(/\\bexport\\s+default\\b/);
+      expect(pageSource, `Missing default export in ${path}`).toMatch(/\bexport\s+default\b/);
     }
   });
 
