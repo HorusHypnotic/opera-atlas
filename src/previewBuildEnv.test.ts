@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadConfigFromFile } from "vite";
+import { loadConfigFromFile, loadEnv } from "vite";
 
 const ORIGINAL_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const ORIGINAL_URL = process.env.VITE_SUPABASE_URL;
@@ -28,8 +28,9 @@ describe("Atlas preview build environment", () => {
     );
   });
 
-  it("does not synthesize a missing key", async () => {
+  it("mirrors the key resolved from the build environment, including local env files", async () => {
     delete process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const resolved = loadEnv("development", process.cwd(), "VITE_");
     const loaded = await loadConfigFromFile(
       { command: "build", mode: "development" },
       "vite.config.ts",
@@ -37,6 +38,11 @@ describe("Atlas preview build environment", () => {
       "silent",
     );
     expect(loaded).toBeTruthy();
-    expect(loaded?.config.define?.["import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY"]).toBeUndefined();
+    const configured = loaded?.config.define?.["import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY"];
+    if (resolved.VITE_SUPABASE_PUBLISHABLE_KEY) {
+      expect(configured).toBe(JSON.stringify(resolved.VITE_SUPABASE_PUBLISHABLE_KEY));
+    } else {
+      expect(configured).toBeUndefined();
+    }
   });
 });
