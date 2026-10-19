@@ -11,22 +11,22 @@ export default defineConfig(({ mode }) => {
   const projectId = config.match(/^project_id[ \t]*=[ \t]*"([a-z0-9]+)"/m)?.[1];
   const publicUrl = env.VITE_SUPABASE_URL || (projectId ? `https://${projectId}.supabase.co` : "");
   return {
-  define: publicUrl ? { "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(publicUrl) } : {},
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
+    define: publicUrl ? { "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(publicUrl) } : {},
+    server: {
+      host: "::",
+      port: 8080,
+      hmr: {
+        overlay: false,
+      },
     },
-  },
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
   };
 });
