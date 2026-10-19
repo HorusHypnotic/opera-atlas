@@ -32,3 +32,9 @@ Produção: **PASS reportado pelo usuário**, SHA/data do último deploy **UNKNO
 - Ferramentas Lovable acessíveis incluem `get_project`, `list_edits`, `deploy_project`, mas **não há leitura de histórico de deploy nem de SHA publicado**. **Não chamar deploy_project** para obter metadados: é operação mutável e não autorizada.
 - GitHub disponível neste conector não expõe leitura de deployments/environments. Portanto, **não atribuir SHA de publicação** a partir do commit mais recente.
 - Gate objetivo permanece: obter evidência somente leitura do painel Lovable (última publicação com timestamp/versão), ou por mecanismo de inspeção de bundle autorizado. Não republicar a produção que o operador confirmou funcional.
+
+## Evidência visual fornecida pelo operador: publicação em 12/08
+Captura do painel Publish do Lovable (19/10/2026, 19:02 no aparelho): texto **"Changes since published Aug 12, 2026"**, domínio `opera-atlas.lovable.app`, botão **"Publish changes"**, e ao fundo preview com diagnóstico **`ATLAS-CONFIG-KEY`**.
+**Inferência forte:** publicação atual é datada de **12/08/2026** e existem mudanças posteriores ainda não publicadas. A imagem **não identifica SHA publicado nem hora exata do deploy**. O operador confirma que a produção funciona.
+**Correlação temporal importante:** o commit `3301911` que removeu `.env` do tracking ocorreu **19/08**, depois da publicação indicada pelo Lovable. Isso torna a hipótese de produção antiga com configuração preservada versus preview reconstruído sem chave muito mais forte, **sem provar a causa raiz**.
+**Gate crítico:** não clicar `Publish changes`, não forçar sincronização nem republish. Preservar produção de 12/08. Próximo teste seguro: identificar último commit anterior à publicação de 12/08 e inspecionar o histórico do preview/build, sem exibir chave.
