@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,30 +9,30 @@ import { ObraProvider } from "@/hooks/useObra";
 import { PeriodFilterProvider } from "@/hooks/usePeriodFilter";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
-import DashboardOverview from "./pages/DashboardOverview";
-import OrganizacaoPage from "./pages/OrganizacaoPage";
-import PadronizacaoPage from "./pages/PadronizacaoPage";
-import EficienciaPage from "./pages/EficienciaPage";
-import ReducaoPerdasPage from "./pages/ReducaoPerdasPage";
-import AnaliseContinuaPage from "./pages/AnaliseContinuaPage";
-import SegurancaQualidadePage from "./pages/SegurancaQualidadePage";
-import AcoesCorretivasPage from "./pages/AcoesCorretivasPage";
-import ChecklistSemanalPage from "./pages/ChecklistSemanalPage";
-import ColaboradoresPage from "./pages/ColaboradoresPage";
-import ObrasPage from "./pages/ObrasPage";
-import EconomiaPage from "./pages/EconomiaPage";
-import LandingPage from "./pages/LandingPage";
-import AdminPage from "./pages/AdminPage";
-import LoginPage from "./pages/LoginPage";
-import SetupPage from "./pages/SetupPage";
-import NotFound from "./pages/NotFound";
-import InvitePage from "./pages/InvitePage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import BetaSignupPage from "./pages/BetaSignupPage";
-import BetaStatusPage from "./pages/BetaStatusPage";
-import RelatorioMaoObraPage from "./pages/RelatorioMaoObraPage";
-import CronogramaPage from "./pages/CronogramaPage";
-import PesquisaPage from "./pages/PesquisaPage";
+const DashboardOverview = lazy(() => import("./pages/DashboardOverview"));
+const OrganizacaoPage = lazy(() => import("./pages/OrganizacaoPage"));
+const PadronizacaoPage = lazy(() => import("./pages/PadronizacaoPage"));
+const EficienciaPage = lazy(() => import("./pages/EficienciaPage"));
+const ReducaoPerdasPage = lazy(() => import("./pages/ReducaoPerdasPage"));
+const AnaliseContinuaPage = lazy(() => import("./pages/AnaliseContinuaPage"));
+const SegurancaQualidadePage = lazy(() => import("./pages/SegurancaQualidadePage"));
+const AcoesCorretivasPage = lazy(() => import("./pages/AcoesCorretivasPage"));
+const ChecklistSemanalPage = lazy(() => import("./pages/ChecklistSemanalPage"));
+const ColaboradoresPage = lazy(() => import("./pages/ColaboradoresPage"));
+const ObrasPage = lazy(() => import("./pages/ObrasPage"));
+const EconomiaPage = lazy(() => import("./pages/EconomiaPage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SetupPage = lazy(() => import("./pages/SetupPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const BetaSignupPage = lazy(() => import("./pages/BetaSignupPage"));
+const BetaStatusPage = lazy(() => import("./pages/BetaStatusPage"));
+const RelatorioMaoObraPage = lazy(() => import("./pages/RelatorioMaoObraPage"));
+const CronogramaPage = lazy(() => import("./pages/CronogramaPage"));
+const PesquisaPage = lazy(() => import("./pages/PesquisaPage"));
 import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
       <Sonner />
       <PWAInstallBanner />
       <BrowserRouter>
+        <Suspense fallback={<main role="status" className="min-h-screen grid place-items-center">Carregando OPERA Atlas...</main>}>
         <AuthProvider>
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
@@ -85,6 +87,7 @@ const App = () => (
             } />
           </Routes>
         </AuthProvider>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
