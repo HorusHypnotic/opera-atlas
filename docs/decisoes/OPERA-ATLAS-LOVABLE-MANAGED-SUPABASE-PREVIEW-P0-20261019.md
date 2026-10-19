@@ -30,3 +30,15 @@ Sem GitHub Actions, migrations, edição de `src/integrations/supabase/client.ts
 
 ## Critério de conclusão
 Preview externo acessível, inicialização sem erro de configuração, smoke test de telas e login autorizado, SHA confirmado, evidência registrada. Até então: PREVIEW UNKNOWN / P0 ABERTO.
+
+## Evidência adicional | turno único Lovable AI (19/10/2026)
+- Autorização humana: **uma única chamada** Lovable AI, executada, custo reportado **2,7 créditos**. Não repetir sem autorização nova.
+- Lovable confirmou **PRESENTE** para `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` no **ambiente interno**, sem imprimir valores.
+- Lovable relatou navegação `/` e `/login` no preview **interno** sem `ATLAS-CONFIG-KEY`. Preview externo segue **BLOCKED** conforme relato do usuário e do agente.
+- O agente tentou remover a linha `.env` de `.gitignore`, mas falhou; GitHub `main` mantém `.env` ignorado. **NÃO remover** esta proteção: isso pode expor segredos e não prova correção do build externo. Não versionar `.env` nem anon keys históricas.
+- Apesar de relatar nenhuma alteração, o agente gerou commits no repositório `73fd63a`, `13ef2cf`, `f312092`; Lovable agora informa SHA `f312092eccb84adbe59c5546b6ddd4da48e40a79`.
+- Compare `2b06fc5..f312092`: **3 commits, 5 arquivos**: `src/components/cronograma/ScheduleBaselinePanel.tsx`, `src/integrations/supabase/client.ts`, `src/integrations/supabase/previewAuthStorage.ts`, `src/integrations/supabase/types.ts`, `supabase/functions/_shared/observability.ts`.
+- **Risco P0 adicional:** houve mudança em cliente Supabase gerado e no mecanismo de armazenamento de sessão via `postMessage`, não relacionada ao erro de variável. Tipagem `any` substituiu tipos específicos em painel e observabilidade; tipos gerados perderam funções de baseline e campos. Essas mudanças exigem revisão de segurança/compatibilidade e não devem ser confundidas com solução de preview. Não fazer revert cego sem comparar commits e impactos.
+- `f312092` tem mensagem sobre `.gitignore`, mas diff observado não altera `.gitignore`. Nunca tomar mensagem de commit como evidência de mudança.
+- **Próxima ação real:** abrir chamado técnico Lovable para injeção de `VITE_SUPABASE_PUBLISHABLE_KEY` no preview externo com prova de interno OK/externo FAIL, IDs do projeto e SHA, sem valores. Ou usar painel oficial de configuração de build, se disponível. Sem nova IA.
+- Estados: interno PASS (relato do agente), externo FAIL (relato do usuário), causa exata da diferença de build UNKNOWN, P0 BLOCKED.
