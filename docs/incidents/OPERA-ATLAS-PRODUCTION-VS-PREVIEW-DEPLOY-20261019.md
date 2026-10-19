@@ -54,3 +54,9 @@ Comparados refs `37b2d93b3e7cdf55d1b5ed5a62802ddd11376f7d` (12/08) e `3301911686
 - SHA blobs GitHub de `client.ts`, `main.tsx`, `vite.config.ts` entre 12/08 e 19/08 são idênticos (ver seção anterior).
 - Hipótese priorizada: build de produção anterior a 19/08 preservou configuração; build posterior não recebeu chave. **Não tratar como causa raiz sem evidência de injeção/artefato**.
 - Não consultar valores da chave histórica nem acionar `deploy_project`.
+
+## Gate de leitura do schema remoto (19/10, lote seguinte)
+- `mcp__Lovable__get_database_status` respondeu `enabled=true, stack=supabase` para o projeto correto.
+- Tentativa de **SELECT somente leitura** no catálogo PostgreSQL `pg_proc`/ `pg_namespace` para verificar presença das RPCs `aprovar_baseline_cronograma` e `listar_baselines_cronograma` foi **bloqueada pela política de segurança da ferramenta**, sem retorno de linhas. Isso **não prova ausência** das funções.
+- Não houve escrita SQL, migrations, alterações de credenciais ou publicação. Status do schema remoto: **BLOCKED/UNKNOWN**. Não repetir automaticamente consultas equivalentes para contornar o bloqueio.
+- Investigação de env do preview permanece separada: status do banco habilitado não confirma `VITE_SUPABASE_PUBLISHABLE_KEY` no build.
