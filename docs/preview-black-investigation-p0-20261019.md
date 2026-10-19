@@ -8,9 +8,9 @@ PR de integração existente: https://github.com/HorusHypnotic/opera-atlas/pull/
 
 | URL | Estado observado nesta rodada |
 |---|---|
-| `https://preview--opera-atlas.lovable.app` | Redireciona para login da Lovable com retorno ao preview |
-| `https://id-preview--5198af1a-2d9b-4863-aced-2ac8cd06e9a9.lovable.app` | Redireciona para login da Lovable com retorno ao preview |
-| `https://opera-atlas.lovable.app` | Landing carregou e renderizou no Chrome remoto |
+| `https://preview--opera-atlas.lovable.app` | `curl -I` recebeu HTTP 401; Chrome remoto redirecionou à tela de login Lovable |
+| `https://id-preview--5198af1a-2d9b-4863-aced-2ac8cd06e9a9.lovable.app` | `curl -I` recebeu HTTP 401; Chrome remoto redirecionou à tela de login Lovable |
+| `https://opera-atlas.lovable.app` | `curl -I` recebeu HTTP 200; landing carregou e renderizou no Chrome remoto |
 
 Ambas as URLs de preview abriram a tela de login da Lovable. A sessão do Chrome remoto está separada da sessão já autenticada do usuário no PC. Não houve nova tentativa de autenticação depois da recusa anterior de login nessa sessão automatizada. O acesso à aplicação preview, ao Console e à Network permanece bloqueado por essa barreira neste ambiente; isso não demonstra falha da conta ou do navegador local do usuário.
 
@@ -39,6 +39,6 @@ O build PASS não prova autenticação, carregamento de assets no hosting, monta
 - PR #4 adiciona ErrorBoundary e fallback pré-React. O build passou, mas isso não explica nem resolve a barreira atual de autenticação do preview.
 - Não mesclar PR #4/#5, não alterar produção, não publicar e não executar migrations.
 - Nenhuma alteração em Supabase hospedado foi feita; nenhuma tentativa de usar Lovable AI foi feita.
-- Main consultada: `3301911686b576ebbc096c6eda0a12bcdfab48a8`. PR #2: `5ea5e59e70f28126d2014e8121a5b04d6a6d3a86`; PR #3: `70eedcfdf1b808b746999d84630036819cad924f`; PR #4: `4664a094c5d667463b822bfbb1ac72693781e801`; PR #5 antes do registro deste build: `897af6df9d986d71ec9b08316bda2dcda3002ebb`.
+- Main consultada: `3301911686b576ebbc096c6eda0a12bcdfab48a8`. PR #2: `5ea5e59e70f28126d2014e8121a5b04d6a6d3a86`; PR #3: `70eedcfdf1b808b746999d84630036819cad924f`; PR #4: `4664a094c5d667463b822bfbb1ac72693781e801`; PR #5 antes do registro HTTP: `526a8758a2f801f6893b60adc7c7808f53cefe70`.
 
 Próximo gate: obter uma sessão de preview autenticada neste navegador Work pelo fluxo Google autorizado; então comparar Console/Network, conferir apenas a presença das variáveis sem revelar valores e aplicar somente uma correção reversível se a causa for reproduzida. Revalidar a produção sem autenticar nem gravar dados. Nenhum merge, publicação ou deploy sem aprovação.
