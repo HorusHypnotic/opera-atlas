@@ -31,20 +31,20 @@ export function ScheduleBaselinePanel({ obraId }: { obraId: string }) {
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc("listar_baselines_cronograma", { _obra_id: obraId });
+    const { data, error } = await (supabase.rpc as any)("listar_baselines_cronograma", { _obra_id: obraId });
     setLoading(false);
     if (error) {
       toast.error(`Não foi possível carregar os baselines: ${error.message}`);
       return;
     }
-    setHistory((data ?? []) as BaselineHistoryItem[]);
+    setHistory((data ?? []) as unknown as BaselineHistoryItem[]);
   }, [obraId]);
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   const approve = async () => {
     setApproving(true);
-    const { data, error } = await supabase.rpc("aprovar_baseline_cronograma", {
+    const { data, error } = await (supabase.rpc as any)("aprovar_baseline_cronograma", {
       _obra_id: obraId,
       _motivo: null,
     });
