@@ -16,4 +16,16 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).not.toContain("console.error(error)");
     expect(source).toContain("showBootstrapFailure()");
   });
+  it("wraps App in a render error boundary", () => {
+    expect(source).toContain("<AppErrorBoundary>");
+    expect(source).toContain("</AppErrorBoundary>");
+    expect(source).toContain('import("./components/AppErrorBoundary")');
+  });
+
+  it("keeps bootstrap error details out of the UI", () => {
+    expect(source).not.toContain("error.message");
+    expect(source).not.toContain("error.stack");
+    expect(source).toContain("rootElement.replaceChildren(wrapper)");
+  });
+
 });
