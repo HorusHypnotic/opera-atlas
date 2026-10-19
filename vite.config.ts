@@ -10,7 +10,13 @@ export default defineConfig(({ mode }) => {
   const config = readFileSync(path.resolve(__dirname, "supabase/config.toml"), "utf8");
   const projectId = config.match(/^project_id[ \t]*=[ \t]*"([a-z0-9]+)"/m)?.[1];
   const publicUrl = env.VITE_SUPABASE_URL || (projectId ? `https://${projectId}.supabase.co` : "");
-  // Keep the public Vite client configuration consistent across preview build modes.
+  // Diagnostics reveal presence only, never the public key value.
+  // Enable temporarily with ATLAS_PREVIEW_DIAGNOSTIC=1 in a controlled build.
+  if (process.env.ATLAS_PREVIEW_DIAGNOSTIC === "1") {
+    const keyPresent = Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY);
+    const urlPresent = Boolean(publicUrl);
+    console.info(`ATLAS_PREVIEW_ENV mode=${mode} url=${urlPresent ? "present" : "missing"} key=${keyPresent ? "present" : "missing"}`);
+  }
   // Values are supplied by the build environment; never commit a literal key.
   const publicKey = env.VITE_SUPABASE_PUBLISHABLE_KEY;
   return {
