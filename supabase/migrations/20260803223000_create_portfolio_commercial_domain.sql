@@ -285,6 +285,12 @@ UNION ALL SELECT v.id,'mensalidade','Operação Atlas',2500,4500,'mensal','R$ 2.
 UNION ALL SELECT v.id,'mensalidade','Operação Control',1500,3000,'mensal','R$ 1.500 a R$ 3.000/mês',NULL FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='opera-control'
 UNION ALL SELECT v.id,'performance','Performance elegível',NULL,NULL,'variavel','Até 20% da economia comprovada',20::numeric(5,2) FROM public.portfolio_product_versions v JOIN public.portfolio_products p ON p.id=v.product_id WHERE p.slug='opera-control';
 
+-- Server-side operations require explicit grants for the ten portfolio tables.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.portfolio_companies, public.portfolio_leads, public.portfolio_products,
+  public.portfolio_product_versions, public.portfolio_offers, public.portfolio_diagnoses,
+  public.portfolio_interests, public.portfolio_events, public.portfolio_interest_history,
+  public.portfolio_daily_metrics TO service_role;
+
 REVOKE ALL ON public.portfolio_companies, public.portfolio_leads, public.portfolio_products,
   public.portfolio_product_versions, public.portfolio_offers, public.portfolio_diagnoses,
   public.portfolio_interests, public.portfolio_events, public.portfolio_interest_history,
