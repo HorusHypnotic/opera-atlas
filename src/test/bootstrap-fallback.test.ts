@@ -14,7 +14,7 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain('wrapper.setAttribute("role", "alert")');
     expect(source).toContain("OPERA_BOOTSTRAP_FAILED");
     expect(source).not.toContain("console.error(error)");
-    expect(source).toContain("showBootstrapFailure()");
+    expect(source).toContain("showBootstrapFailure(phase)");
   });
   it("wraps App in a render error boundary", () => {
     expect(source).toContain("<AppErrorBoundary>");
@@ -34,6 +34,12 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain('console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError")');
     expect(source).not.toContain("error.message");
     expect(source).not.toContain("error.stack");
+  });
+
+  it("renders a safe phase code on the fallback screen", () => {
+    expect(source).toContain('showBootstrapFailure(phase: "boundary" | "app" | "render")');
+    expect(source).toContain('Código de diagnóstico: ATLAS-${phase.toUpperCase()}');
+    expect(source).toContain("wrapper.append(heading, detail, code)");
   });
 
 });
