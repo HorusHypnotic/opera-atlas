@@ -114,3 +114,19 @@ NÃO usar `Publish`; não fazer fallback de chave no Vite; não retirar `.env` d
 - `public/sw.js`, `public/service-worker.js` e `src/registerSW.ts` não foram encontrados nas rotas consultadas; isso não equivale a auditoria exaustiva do repositório.
 - Acesso de rede a preview a partir do container não foi possível por falha DNS; **não** inferir HTTP status nem disponibilidade do serviço a partir dessa tentativa.
 - Novo gate de prova: identificar se o retorno ao editor cria novo documento/iframe e qual script main/bundle foi servido. Até lá, classificar como **bootstrap executado novamente ou contexto distinto**, mecanismo exato UNKNOWN.
+
+## Contrato operacional ativo: OPERA-ATLAS-PREVIEW-RECOVERY-P0-V1
+Comando `#rebobine | OPERA-ATLAS-PREVIEW-RECOVERY-P0-V1`. Revalidação: `get_project` mantém `f312092eccb84adbe59c5546b6ddd4da48e40a79` e `agentFinished=true`; `compare_commits(f312092...main)` retorna `identical`, `ahead_by=0`, `files=[]`. Não repetir arqueologia de agosto.
+### Lotes e gates
+1. **Recuperar baseline/contratos:** PASS (relatório existente e SHA recuperados).
+2. **Identificar contexto/artefato antes/depois da retomada:** BLOCKED, falta leitura autenticada do iframe/JS/build ID.
+3. **Presença booleana da chave no build que falha:** UNKNOWN; presença no `.env` interno não equivale a presença no bundle externo.
+4. **Causa raiz:** UNKNOWN; priorizar retomada/reconexão do preview, diferença de bundle e SW/cache apenas como hipóteses.
+5. **Correção mínima:** NOT STARTED por gate de evidência. Não adicionar fallback de chave, não versionar `.env`.
+6. **Três retomadas e QA landing/login/dashboard:** NOT STARTED; screenshots anteriores comprovam somente renderização pontual.
+7. **Auditoria de efeitos colaterais:** PASS no código versionado até esta verificação; reauditar após qualquer intervenção.
+8. **Documentação:** PASS parcial; P0 continua aberto.
+### Próxima ação executável
+Obter inspeção autenticada do preview Lovable por interface com acesso ao iframe ou via suporte oficial: URL efetiva e bundle JS antes/depois de sair/voltar, build ID/SHA e confirmação booleana da variável na compilação. O conector disponível fornece SHA do projeto, mas não SHA do bundle nem acesso autenticado à rede do iframe; **não afirmar teste que não ocorreu**.
+### Restrições
+Sem Publish, merge, migrations, GitHub Actions, edição de código, exposição de chave ou créditos Lovable adicionais sem aprovação. Estado geral: **P0 OPEN/BLOCKED**.
