@@ -47,3 +47,10 @@ Comparados refs `37b2d93b3e7cdf55d1b5ed5a62802ddd11376f7d` (12/08) e `3301911686
 - Entre esses refs, a alteração `3301911` foi restrita a `.env`, `.env.example`, `.gitignore`, `README.md`.
 **Inferência:** o código consumidor da chave não mudou entre 12 e 19/08. Se um build de 12/08 recebeu a chave e um posterior não, a diferença é de disponibilidade/configuração no momento do build, não de leitura dessa variável pelo cliente nesse intervalo. Não afirmar que o Lovable necessariamente usou o `.env` versionado: mecanismo de injeção não comprovado.
 **Segurança:** não copiar chave histórica para repo; não alterar o cliente gerado; preservar deploy de produção.
+
+## Lote de validação cruzada com Lovable (read-only)
+- Lovable `get_diff(sha=3301911686b576ebbc096c6eda0a12bcdfab48a8)` confirma **quatro caminhos apenas**: `.env` delete, `.env.example` new, `.gitignore` edit, `README.md` edit. Esta é uma fonte independente do diff GitHub.
+- Lovable `list_messages` confirma um turno de IA em 19/10 às 21:51 UTC, distinto das operações de agosto. O histórico não contém comprovação de novo deploy nem correção do preview externo.
+- SHA blobs GitHub de `client.ts`, `main.tsx`, `vite.config.ts` entre 12/08 e 19/08 são idênticos (ver seção anterior).
+- Hipótese priorizada: build de produção anterior a 19/08 preservou configuração; build posterior não recebeu chave. **Não tratar como causa raiz sem evidência de injeção/artefato**.
+- Não consultar valores da chave histórica nem acionar `deploy_project`.
