@@ -28,4 +28,12 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).toContain("rootElement.replaceChildren(wrapper)");
   });
 
+  it("identifies the failed startup phase without logging exception contents", () => {
+    expect(source).toContain('phase = "app"');
+    expect(source).toContain('phase = "render"');
+    expect(source).toContain('console.error("OPERA_BOOTSTRAP_FAILED", phase, error instanceof Error ? error.name : "UnknownError")');
+    expect(source).not.toContain("error.message");
+    expect(source).not.toContain("error.stack");
+  });
+
 });
