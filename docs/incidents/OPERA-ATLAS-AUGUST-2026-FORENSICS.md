@@ -30,3 +30,12 @@ H4. Outubro removeu declarações de RPC/colunas introduzidas em agosto, provoca
 
 ## Segurança e gates
 Sem Lovable AI adicional (turno único já consumiu 2,7 créditos), sem merge, deploy, publicação, GitHub Actions, alteração de cliente gerado, migrations ou chaves em logs/GitHub. **Status**: arqueologia agosto parcial; hipótese de agosto consistente; preview externo FAIL; segurança broker UNKNOWN.
+
+## Lote adicional: confirmação de sequência e configuração (19/10/2026)
+- Comparação GitHub `ab0c776c (02/08) ... 3301911 (19/08)`: **35 commits posteriores**, **38 arquivos no diff agregado**. A comparação não equivale à inspeção individual de todos os 35 commits; commits anteriores ao marco de 02/08 podem ficar fora do conjunto.
+- `fe6c381 (03/08)` alterou `supabase/config.toml` **somente adicionando** `[functions.portfolio-interest] verify_jwt = false`; **não alterou** `project_id = "aiyluolhojdszqitusum"`. A hipótese de troca de ID nesse commit foi descartada.
+- `ab0c776 (02/08)` introduziu `.github/workflows/database-tests.yml`, que roda em push e PR na main. **Não executar GitHub Actions**. Isso é achado histórico, não causa demonstrada do preview.
+- A comparação acumulada identifica `.env` removido, `.env.example` adicionado, `.gitignore` alterado; não mostra alteração de `vite.config.ts`, `src/main.tsx` ou `src/integrations/supabase/client.ts` nesse intervalo de 02 a 19/08. Isso aumenta a prioridade da hipótese de configuração ausente no build externo, mas não a prova.
+- As migrations e tipos do baseline de 12/08 continuam a ser a referência de contrato para revisar as mudanças de outubro; não executar migrations.
+- **Limite metodológico:** a busca de commits com ordenação ascendente retornou dado anômalo de 2025 e não foi usada como evidência de completude. A confirmação independente veio de `compare_commits`.
+- **Próximo teste decisivo:** comparar artefatos/ambientes internos e externos no mecanismo oficial do Lovable, sem exibir valor de chave; e comparar types/RPC com schema remoto. A integração atual não disponibiliza operação segura de build-env, logo esse gate permanece BLOCKED.
