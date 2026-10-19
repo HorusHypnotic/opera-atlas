@@ -33,9 +33,11 @@ export interface EdgeObservability {
   correlationId: string;
   source: string;
   /** Cliente Supabase com service_role para chamar log_system_event mesmo sem JWT. */
-  client: ReturnType<typeof createClient>;
+  // deno-lint-ignore no-explicit-any
+  client: any;
   /** Cliente Supabase autenticado com o JWT do request (se houver). Use para ações em nome do usuário. */
-  userClient: ReturnType<typeof createClient> | null;
+  // deno-lint-ignore no-explicit-any
+  userClient: any | null;
   log: (input: EdgeLogInput) => Promise<string | null>;
   /** Medi duração e loga sucesso/falha. */
   traced: <T>(input: Omit<EdgeLogInput, "status" | "duration_ms" | "error_message">, fn: () => Promise<T>) => Promise<T>;
