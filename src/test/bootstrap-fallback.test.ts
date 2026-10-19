@@ -56,6 +56,15 @@ describe("pre-React bootstrap fallback", () => {
     expect(source).not.toContain('console.log(import.meta.env');
   });
 
+
+  it("checks configuration before importing the App module", () => {
+    const configCheck = source.indexOf('!import.meta.env.VITE_SUPABASE_URL');
+    const appImport = source.indexOf('import("./App.tsx")');
+    expect(configCheck).toBeGreaterThan(-1);
+    expect(appImport).toBeGreaterThan(configCheck);
+    expect(source).toContain('phase = "config"');
+  });
+
   it("defers route page modules so they do not block the initial App import", () => {
     const appSource = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
     expect(appSource).toContain('import { lazy, Suspense } from "react"');
