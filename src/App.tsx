@@ -9,6 +9,8 @@ import { ObraProvider } from "@/hooks/useObra";
 import { PeriodFilterProvider } from "@/hooks/usePeriodFilter";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PWAInstallBanner } from "./components/PWAInstallBanner";
+
 const DashboardOverview = lazy(() => import("./pages/DashboardOverview"));
 const OrganizacaoPage = lazy(() => import("./pages/OrganizacaoPage"));
 const PadronizacaoPage = lazy(() => import("./pages/PadronizacaoPage"));
@@ -33,7 +35,6 @@ const BetaStatusPage = lazy(() => import("./pages/BetaStatusPage"));
 const RelatorioMaoObraPage = lazy(() => import("./pages/RelatorioMaoObraPage"));
 const CronogramaPage = lazy(() => import("./pages/CronogramaPage"));
 const PesquisaPage = lazy(() => import("./pages/PesquisaPage"));
-import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 const queryClient = new QueryClient();
 
