@@ -5,7 +5,7 @@ import "./index.css";
 // App evaluate Supabase modules before a React error boundary can mount.
 const rootElement = document.getElementById("root");
 
-function showBootstrapFailure(phase: "boundary" | "app" | "render" | "config"): void {
+function showBootstrapFailure(phase: "boundary" | "app" | "render" | "config-url" | "config-key"): void {
   if (!rootElement) return;
   const wrapper = document.createElement("main");
   wrapper.setAttribute("role", "alert");
@@ -23,13 +23,17 @@ function showBootstrapFailure(phase: "boundary" | "app" | "render" | "config"): 
 
 async function bootstrap(): Promise<void> {
   if (!rootElement) throw new Error("OPERA_BOOTSTRAP_ROOT_MISSING");
-  let phase: "boundary" | "app" | "render" | "config" = "boundary";
+  let phase: "boundary" | "app" | "render" | "config-url" | "config-key" = "boundary";
   try {
     const { AppErrorBoundary } = await import("./components/AppErrorBoundary");
     // Diagnose missing public configuration without exposing URLs or keys.
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
-      phase = "config";
-      throw new Error("OPERA_BOOTSTRAP_CONFIG_MISSING");
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      phase = "config-url";
+      throw new Error("OPERA_BOOTSTRAP_URL_MISSING");
+    }
+    if (!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+      phase = "config-key";
+      throw new Error("OPERA_BOOTSTRAP_KEY_MISSING");
     }
     phase = "app";
     const { default: App } = await import("./App.tsx");
