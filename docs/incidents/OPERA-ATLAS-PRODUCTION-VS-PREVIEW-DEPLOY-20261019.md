@@ -154,3 +154,11 @@ Sem Publish, merge, migrations, GitHub Actions, edição de código, exposição
 
 ### Próximo gate
 Inspecionar **sem editar o app** a configuração de ambiente efetiva do processo de preview no Lovable (presença booleana da chave, modo e origem do build), e distinguir artefatos carregados quando o dashboard funciona vs. quando ocorre `ATLAS-CONFIG-KEY`. O conector Lovable retorna SHA do código, mas não garante o SHA do bundle servido nem oferece logs do iframe. Se o painel não expuser essas evidências, escalar ao suporte Lovable com capturas e horário. Não restaurar `.env` no Git, não inventar valor, não publicar, não gastar créditos de IA sem aprovação.
+
+
+## 19/10/2026 — Validação cruzada dos conectores (somente leitura)
+- Conector Supabase direto `list_projects` retorna apenas `cpmuobplnefltxdmoqzj` (opera-infrastructure, INACTIVE), **diferente** do `project_id = "aiyluolhojdszqitusum"` em `supabase/config.toml` do Atlas. Não usar chaves, URLs ou credenciais do primeiro projeto como substitutos para o Atlas.
+- Conector Lovable `get_database_status` para projeto `5198af1a-2d9b-4863-aced-2ac8cd06e9a9`: `enabled=true`, `stack=supabase`.
+- Conector Lovable `query_database` executou **apenas** `SELECT current_database() IS NOT NULL AS database_reachable, current_setting('server_version_num') IS NOT NULL AS postgres_running;` e retornou ambos `true`. Isso comprova acesso de leitura ao PostgreSQL gerenciado, **não** acesso às configurações do processo Vite nem à chave de build.
+- Nenhum segredo recuperado, nenhum SQL de escrita, nenhuma migration, nenhum publish, nenhuma chamada IA paga.
+- **Próximo gate:** inspeção de variáveis de ambiente do processo de build/preview via interface Lovable ou suporte. SQL PostgreSQL não injeta `VITE_SUPABASE_PUBLISHABLE_KEY` no build.
