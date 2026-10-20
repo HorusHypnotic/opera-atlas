@@ -130,3 +130,27 @@ Comando `#rebobine | OPERA-ATLAS-PREVIEW-RECOVERY-P0-V1`. Revalidação: `get_pr
 Obter inspeção autenticada do preview Lovable por interface com acesso ao iframe ou via suporte oficial: URL efetiva e bundle JS antes/depois de sair/voltar, build ID/SHA e confirmação booleana da variável na compilação. O conector disponível fornece SHA do projeto, mas não SHA do bundle nem acesso autenticado à rede do iframe; **não afirmar teste que não ocorreu**.
 ### Restrições
 Sem Publish, merge, migrations, GitHub Actions, edição de código, exposição de chave ou créditos Lovable adicionais sem aprovação. Estado geral: **P0 OPEN/BLOCKED**.
+
+
+## Evidência nova — 19/10/2026, 20:50–21:05 (horário local)
+**Origem:** capturas de tela fornecidas pelo operador no editor Lovable mobile. **Branch selecionada pelo operador:** `test/atlas-lovable-preview-p0-20261019`, não `main`.
+
+- 20:50 e 20:51: dashboard Dirceu Engenharia renderizado, sem erro visível; renderização pontual, **não** valida estabilidade, queries ou três ciclos PASS.
+- 21:05: falha `ATLAS-CONFIG-KEY` acompanhada do novo diagnóstico `Configuração do preview: URL presente | chave pública ausente`.
+- O texto adicional foi introduzido somente na branch de teste, commit `fbd8e6768e21c632a5f8778d196e20e911f22d7a`, arquivo `src/main.tsx`. Sua presença na captura confirma execução de código atualizado da branch de teste nesse carregamento; **não** prova build ID ou que todos os carregamentos usam o mesmo bundle.
+- **Confirmado no runtime com falha:** `Boolean(import.meta.env.VITE_SUPABASE_URL) === true` e `Boolean(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) === false`. A URL pode ser derivada do fallback de `supabase/config.toml`; a presença de URL não comprova injeção de env.
+- **Não confirmado:** por que a variável falta em alguns carregamentos; se a diferença ocorre em build, processo de preview, troca de documento, cache ou entrega de artefatos. Também não há prova de que a `main` falhe no mesmo instante.
+- O `vite.config.ts` candidato não solucionou o carregamento que falhou. **Não mergear PR #13** sem causa comprovada e QA.
+
+### Estado de gates após a evidência
+1. Baseline e isolamento GitHub: **PASS**. `main=f312092eccb84adbe59c5546b6ddd4da48e40a79`; branch de teste isolada; produção não republicada.
+2. Identificar bundle/contexto exato: **BLOCKED** (sem build ID/log do iframe).
+3. Presença da chave no JavaScript que falha: **FAIL CONFIRMADO** (chave ausente/vazia), URL presente.
+4. Causa de injeção/entrega da configuração: **UNKNOWN**.
+5. Correção definitiva: **NOT DONE**.
+6. Três retomadas consecutivas com landing/login/dashboard: **NOT DONE**.
+7. Segurança: nenhum segredo exposto; sem banco/RLS/signup/migration/publicação.
+8. Documentação: **ATUALIZADA** com evidência de captura.
+
+### Próximo gate
+Inspecionar **sem editar o app** a configuração de ambiente efetiva do processo de preview no Lovable (presença booleana da chave, modo e origem do build), e distinguir artefatos carregados quando o dashboard funciona vs. quando ocorre `ATLAS-CONFIG-KEY`. O conector Lovable retorna SHA do código, mas não garante o SHA do bundle servido nem oferece logs do iframe. Se o painel não expuser essas evidências, escalar ao suporte Lovable com capturas e horário. Não restaurar `.env` no Git, não inventar valor, não publicar, não gastar créditos de IA sem aprovação.
